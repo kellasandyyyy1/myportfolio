@@ -1,0 +1,534 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:wght@100..900&family=Pixelify+Sans:wght@400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Geist Pixel';
+  src: url('https://cdn.jsdelivr.net/fontsource/fonts/pixelify-sans@latest/latin-400-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+body {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 15px;
+}
+
+.font-sans, .font-geist {
+  font-family: Geist, system-ui, sans-serif;
+}
+
+.font-mono, .font-geist-mono {
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.font-pixel, .font-geist-pixel {
+  font-family: "Geist Pixel", "Geist Mono", monospace;
+}
+
+.font-serif, .font-source-serif {
+  font-family: "Source Serif 4", Georgia, serif;
+}
+
+/* ===== CREATIVE HALFTONE & CALM STYLING ===== */
+
+@keyframes halftone-fade {
+  0% {
+    opacity: 0.05;
+  }
+  50% {
+    opacity: 0.12;
+  }
+  100% {
+    opacity: 0.05;
+  }
+}
+
+:root {
+  --bg-page: #0b0b0d;
+  --bg-surface: #0a0a0a;
+  --bg-surface-alt: #171717;
+  --text-primary: #e5e5e5;
+  --text-secondary: #9a9a9a;
+  --text-muted: #777777;
+  --text-micro: #666666;
+  --border: #2a2a2a;
+  --border-subtle: #1e1e1e;
+  --accent: #7c8ce0;
+  --fill-primary: #ffffff;
+  --fill-primary-text: #0a0a0a;
+
+  --bg-primary: #0b0b0d;
+  --cursor-color: #ffffff;
+  --glass-bg: rgba(11, 11, 13, 0.85);
+}
+
+.light-mode, html[data-mode="light"] {
+  --bg-page: #fafafa;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #f0f0f0;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5a5a5a;
+  --text-muted: #8a8a8a;
+  --text-micro: #9a9a9a;
+  --border: #e0e0e0;
+  --border-subtle: #ececec;
+  --accent: #4c5bc4;
+  --fill-primary: #1a1a1a;
+  --fill-primary-text: #ffffff;
+
+  --bg-primary: #fafafa;
+  --cursor-color: #1a1a1a;
+  --glass-bg: rgba(250, 250, 250, 0.85);
+}
+
+@theme {
+  --font-sans: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-display: "Geist Pixel", "Geist Mono", monospace;
+  --font-serif: "Source Serif 4", Georgia, serif;
+  --font-pixel: "Geist Pixel", "Geist Mono", monospace;
+
+  --color-brand-bg: var(--bg-primary);
+  --color-brand-text: var(--text-primary);
+  --color-brand-muted: var(--text-secondary);
+  --color-brand-subtle: var(--text-muted);
+
+  --color-zinc-200: var(--text-primary);
+  --color-zinc-300: var(--text-secondary);
+  --color-zinc-400: var(--text-secondary);
+  --color-zinc-500: var(--text-muted);
+  --color-zinc-600: var(--text-muted);
+  --color-zinc-700: var(--border-primary);
+  --color-zinc-800: var(--border-primary);
+  --color-zinc-900: var(--border-primary);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    @apply font-sans antialiased selection:bg-brand-muted selection:text-brand-bg;
+    @apply transition-colors duration-500;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply tracking-tighter;
+    line-height: 1.1;
+  }
+
+  /* Headings are clean, elegant, and highly legible */
+  h1, h2 {
+    transition: transform 0.4s ease, letter-spacing 0.4s ease;
+  }
+
+  /* Custom Scrollbar - Minimal & Calm */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--bg-primary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--text-muted);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-secondary);
+  }
+
+  /* Selection color - Soft and high contrast */
+  ::selection {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    background-color: var(--glass-bg);
+    @apply backdrop-blur-md border-b border-zinc-900/40;
+    transition: border-color 0.3s ease;
+  }
+  
+  .light-mode .glass {
+    @apply border-b border-zinc-200/50;
+  }
+
+  .text-shadow-subtle {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ===== HALFTONE OVERLAY BACKGROUND EFFECT ===== */
+.halftone-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.12;
+  background-image: radial-gradient(circle, var(--text-primary) 0.5px, transparent 0.75px);
+  background-size: 14px 14px;
+  transition: opacity 0.5s ease;
+  /* Very gentle animation for high-end feel */
+  animation: halftone-fade 12s ease-in-out infinite;
+}
+
+.light-mode .halftone-overlay {
+  opacity: 0.08;
+}
+
+/* ===== MINIMALIST CUSTOM CURSOR ===== */
+.custom-cursor {
+  width: 6px;
+  height: 6px;
+  background-color: var(--cursor-color);
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.08s ease, width 0.25s ease, height 0.25s ease, background-color 0.25s ease;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
+
+.light-mode .custom-cursor {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Hover state is a beautiful creative dashed drafting ring */
+.custom-cursor.hovering {
+  width: 34px;
+  height: 34px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--cursor-color);
+  mix-blend-mode: normal;
+  box-shadow: none;
+}
+
+.light-mode .custom-cursor.hovering {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* ===== HERO ENTRANCE ANIMATION ===== */
+@keyframes hero-fade-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-animate {
+  opacity: 0;
+  animation: hero-fade-slide-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.scroll-animate-child {
+  opacity: 0;
+}
+
+.scroll-animate-child.animated {
+  animation: hero-fade-slide-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-animate,
+  .scroll-animate-child {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* Utility class for pixel font */
+.font-pixel {
+  font-family: "Press Start 2P", monospace !important;
+}
+
+/* ===== CALM INTERACTIVE ELEMENTS (NO RGB) ===== */
+
+/* Navbar logo - Clean Arimo font with stable color */
+nav a.text-2xl {
+  font-family: var(--font-sans) !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  transition: opacity 0.3s ease;
+}
+
+nav a.text-2xl:hover {
+  opacity: 0.75;
+}
+
+/* Heading section numbers */
+span.text-xs.font-mono.text-zinc-600 {
+  color: var(--text-muted);
+}
+
+/* Welcome badge pulse */
+.animate-pulse {
+  animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+/* Green status dot - stable and neat */
+span.bg-green-500 {
+  background-color: #10b981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Project cards - Professional halftone overlay grid on card hover */
+.group:hover>div:first-child {
+  border-color: var(--text-primary);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.light-mode .group:hover>div:first-child {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+/* Soft halftone mesh overlay on hovered cards */
+.group:hover>div:first-child::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--text-primary) 0.75px, transparent 0.75px);
+  background-size: 8px 8px;
+  pointer-events: none;
+  opacity: 0.08;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.light-mode .group:hover>div:first-child::before {
+  opacity: 0.05;
+}
+
+/* Skill tags - clean stable contrast shift */
+span.cursor-crosshair {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+span.cursor-crosshair:hover {
+  background-color: var(--text-primary) !important;
+  color: var(--bg-primary) !important;
+  border-color: var(--text-primary) !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+}
+
+.light-mode span.cursor-crosshair:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* CTA buttons - Clean hover styles */
+a[href="#projects"],
+a[href^="mailto:"] {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+a[href="#projects"]:hover,
+a[href^="mailto:"]:hover {
+  border-color: var(--text-primary);
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.05);
+}
+
+.light-mode a[href="#projects"]:hover,
+.light-mode a[href^="mailto:"]:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* Social icon buttons - clean hover */
+a.w-12 {
+  transition: all 0.3s ease;
+}
+
+a.w-12:hover {
+  border-color: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+  background-color: transparent !important;
+}
+
+/* Service section dividers - clean calm border lines */
+section#services .divide-zinc-900>div {
+  border-color: var(--border-primary);
+}
+
+/* Section top borders - Clean static border lines */
+section[id] {
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Footer border - Clean static line */
+footer {
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Modal borders - calm, clear drop shadows and solid borders */
+.rounded-3xl {
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.light-mode .rounded-3xl {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== PROGRESS BAR ===== */
+div.fixed.top-0.left-0.right-0.h-\[2px\] {
+  height: 2px !important;
+  background: var(--text-primary) !important;
+  opacity: 0.8;
+}
+
+/* ===== RETRO VIGNETTE CORNERS ===== */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9997;
+  background: radial-gradient(ellipse at center, transparent 70%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+/* ===== LIGHT MODE ADJUSTMENTS ===== */
+.light-mode body::after {
+  background: radial-gradient(ellipse at center, transparent 75%, rgba(0, 0, 0, 0.08) 100%);
+}
+
+.light-mode ::selection {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* ===== FONT ACCENTS ===== */
+span.uppercase.tracking-widest,
+span.tracking-\[0\.2em\],
+span.tracking-\[0\.3em\],
+span.tracking-\[0\.4em\] {
+  font-family: var(--font-sans);
+  letter-spacing: 0.12em;
+}
+
+/* Image hover - Clean professional contrast change with no RGB tint */
+.group:hover img {
+  filter: grayscale(0%) contrast(1.1) brightness(1.05);
+  transition: filter 0.4s ease;
+}
+
+/* ===== HALFTONE / NEWSPRINT PHOTO EFFECT ===== */
+.halftone-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+}
+
+.halftone-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.5) brightness(1.15);
+  transition: filter 0.4s ease;
+}
+
+/* Dot-screen overlay layer 1 - fine dark dots (main halftone texture) */
+.halftone-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 1px, transparent 1.3px);
+  background-size: 3.5px 3.5px;
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Dot-screen overlay layer 2 - slightly larger, offset dots for depth */
+.halftone-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.6) 1.5px, transparent 1.8px);
+  background-size: 6px 6px;
+  background-position: 1.75px 1.75px;
+  mix-blend-mode: multiply;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.halftone-frame:hover .halftone-img {
+  filter: grayscale(0.85) contrast(1.5) brightness(1.15);
+}
+
+/* ===== INFINITE MARQUEE ANIMATION ===== */
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(-100% - 1rem), 0, 0); /* 1rem matches gap-4 */
+  }
+}
+
+.marquee-container {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  display: flex;
+  gap: 1rem; /* matches gap-4 */
+  user-select: none;
+}
+
+.animate-marquee-left {
+  display: flex;
+  flex-shrink: 0;
+  gap: 1rem; /* matches gap-4 */
+  min-width: 100%;
+  justify-content: space-around;
+  animation: marquee-scroll 30s linear infinite;
+}
+
+.animate-marquee-right {
+  display: flex;
+  flex-shrink: 0;
+  gap: 1rem; /* matches gap-4 */
+  min-width: 100%;
+  justify-content: space-around;
+  animation: marquee-scroll 30s linear infinite reverse;
+}
+
+.marquee-container:hover .animate-marquee-left,
+.marquee-container:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
