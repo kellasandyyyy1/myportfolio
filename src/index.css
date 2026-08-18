@@ -263,6 +263,32 @@ body {
   }
 }
 
+/* ===== GIT-LOG PROCESS NODE PULSE (final "done" node only) ===== */
+@keyframes git-node-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Starts after the node's entrance chain finishes (~1s), then loops. */
+.git-node-pulse {
+  /* `backwards` holds the 0% frame during the delay so no static ring flashes first. */
+  animation: git-node-pulse 2s ease-in-out 1s infinite backwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .git-node-pulse {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
 /* Utility class for pixel font */
 .font-pixel {
   font-family: "Press Start 2P", monospace !important;
