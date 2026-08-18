@@ -1,6 +1,5 @@
-# Portfolio - Kellas Andrei
 
-A personal developer portfolio website showcasing experience, technical approach, tech stack, featured projects, services, and certifications. Built with React, TypeScript, and Tailwind CSS.
+.,
 
 ## Features
 
