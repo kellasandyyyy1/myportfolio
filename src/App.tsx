@@ -632,9 +632,35 @@ const CustomCursor = () => {
   );
 };
 
+/**
+ * Sun and moon stacked in a single grid cell so neither affects layout. Only
+ * `data-state` changes on theme flip; all motion lives in CSS (.theme-icon),
+ * which keeps rapid clicks interruptible instead of restarting a keyframe.
+ * The glyphs are wrapped in spans because Phosphor's IconBase doesn't accept
+ * arbitrary data-* props.
+ */
+const ThemeToggleIcon = ({ theme, size }: { theme: 'dark' | 'light'; size: number }) => (
+  <span className="grid place-items-center" style={{ width: size, height: size }}>
+    <span
+      className="theme-icon theme-icon-sun"
+      data-state={theme === 'dark' ? 'visible' : 'hidden'}
+    >
+      <Sun weight="light" size={size} />
+    </span>
+    <span
+      className="theme-icon theme-icon-moon"
+      data-state={theme === 'light' ? 'visible' : 'hidden'}
+    >
+      <Moon weight="light" size={size} />
+    </span>
+  </span>
+);
+
 interface SidebarNavigationProps {
   theme: 'dark' | 'light';
   toggleTheme: () => void;
+  /** True while a theme crossfade is in flight; disables the toggle. */
+  themeBusy?: boolean;
   onBookCall?: () => void;
   onOpenResume?: () => void;
   onOpenGame?: () => void;
@@ -643,6 +669,7 @@ interface SidebarNavigationProps {
 const SidebarNavigation = ({
   theme,
   toggleTheme,
+  themeBusy,
   onBookCall,
   onOpenResume,
   onOpenGame,
@@ -832,11 +859,12 @@ const SidebarNavigation = ({
             }`}>
             <button
               onClick={toggleTheme}
+            disabled={themeBusy}
               className={`transition-colors duration-150 flex items-center gap-1.5 cursor-pointer uppercase ${theme === 'light' ? 'hover:text-[#1a1a1a]' : 'hover:text-[#c9c9c4]'
                 }`}
               title="Toggle Theme"
             >
-              {theme === 'dark' ? <Sun weight="light" size={14} /> : <Moon weight="light" size={14} />}
+              <ThemeToggleIcon theme={theme} size={14} />
               <span>{theme}</span>
             </button>
             <span></span>
@@ -884,10 +912,11 @@ const SidebarNavigation = ({
 
           <button
             onClick={toggleTheme}
+            disabled={themeBusy}
             className={`p-1.5 transition-colors cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
               }`}
           >
-            {theme === 'dark' ? <Sun weight="light" size={16} /> : <Moon weight="light" size={16} />}
+            <ThemeToggleIcon theme={theme} size={16} />
           </button>
         </div>
       </header>
@@ -903,11 +932,12 @@ const SidebarNavigation = ({
         <div className="flex items-center gap-1">
           <button
             onClick={toggleTheme}
+            disabled={themeBusy}
             className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
               }`}
             aria-label="Toggle Theme"
           >
-            {theme === 'dark' ? <Sun weight="light" size={16} /> : <Moon weight="light" size={16} />}
+            <ThemeToggleIcon theme={theme} size={16} />
           </button>
 
           <button
@@ -2834,11 +2864,11 @@ interface ContributionDay {
 
 /** Size + brightness step per bucket. Flat fills only — no gradients or glow. */
 const CONTRIBUTION_BUCKETS = [
-  { min: 0, r: 1, dark: '#1a1a18', light: '#e8e8e5' },
-  { min: 1, r: 1.4, dark: '#2a2a27', light: '#d2d2ce' },
-  { min: 3, r: 2, dark: '#3a3a37', light: '#b0b0ab' },
-  { min: 6, r: 2.6, dark: '#6b6b68', light: '#6b6b68' },
-  { min: 10, r: 3.4, dark: '#f2f2ef', light: '#1a1a18' },
+  { min: 0, r: 1, fill: 'var(--gh-0)' },
+  { min: 1, r: 1.4, fill: 'var(--gh-1)' },
+  { min: 3, r: 2, fill: 'var(--gh-2)' },
+  { min: 6, r: 2.6, fill: 'var(--gh-3)' },
+  { min: 10, r: 3.4, fill: 'var(--gh-4)' },
 ];
 
 const bucketFor = (count: number) => {
@@ -2974,7 +3004,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
                   cx={col * spacing + spacing / 2}
                   cy={row * spacing + spacing / 2}
                   r={bucket.r}
-                  fill={isLight ? bucket.light : bucket.dark}
+                  fill={bucket.fill}
                 />
               );
             })}
@@ -3077,9 +3107,44 @@ export default function App() {
 
   const getAnimClass = (inView: boolean) => `scroll-animate-child ${inView ? 'animated' : ''}`;
 
+  // Guards the toggle while a crossfade is in flight. Without it, rapid clicks
+  // stack overlapping transitions and the fade visibly stutters.
+  const [isThemeSwitching, setIsThemeSwitching] = useState(false);
+
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    if (isThemeSwitching) return;
+
+    const flip = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+
+    if (prefersReducedMotion()) {
+      // Swap instantly; never add the transition class. NOTE: if the OS has
+      // "reduce motion" enabled, this path is why the theme snaps with no fade.
+      flip();
+      return;
+    }
+
+    const root = document.documentElement;
+    root.classList.add('theme-transition');
+    // Force a style flush so the browser computes one frame with the OLD colours
+    // and the transition already armed. Without this, the class and the new
+    // colours can land in a single recalculation, and whether a transition
+    // starts at all then depends on the engine.
+    void root.offsetHeight;
+
+    setIsThemeSwitching(true);
+    flip();
   };
+
+  useEffect(() => {
+    if (!isThemeSwitching) return;
+    // 450ms = 400ms transition + a small buffer, then the global override is
+    // torn down so per-element hover transitions behave normally again.
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+      setIsThemeSwitching(false);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [isThemeSwitching]);
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
@@ -3106,6 +3171,7 @@ export default function App() {
       <SidebarNavigation
         theme={theme}
         toggleTheme={toggleTheme}
+        themeBusy={isThemeSwitching}
         onBookCall={() => setShowBookCall(true)}
         onOpenResume={() => setShowResume(true)}
         onOpenGame={() => setShowGame(true)}
