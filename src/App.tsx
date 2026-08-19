@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
@@ -659,8 +660,6 @@ const ThemeToggleIcon = ({ theme, size }: { theme: 'dark' | 'light'; size: numbe
 interface SidebarNavigationProps {
   theme: 'dark' | 'light';
   toggleTheme: () => void;
-  /** True while a theme crossfade is in flight; disables the toggle. */
-  themeBusy?: boolean;
   onBookCall?: () => void;
   onOpenResume?: () => void;
   onOpenGame?: () => void;
@@ -669,7 +668,6 @@ interface SidebarNavigationProps {
 const SidebarNavigation = ({
   theme,
   toggleTheme,
-  themeBusy,
   onBookCall,
   onOpenResume,
   onOpenGame,
@@ -859,7 +857,6 @@ const SidebarNavigation = ({
             }`}>
             <button
               onClick={toggleTheme}
-            disabled={themeBusy}
               className={`transition-colors duration-150 flex items-center gap-1.5 cursor-pointer uppercase ${theme === 'light' ? 'hover:text-[#1a1a1a]' : 'hover:text-[#c9c9c4]'
                 }`}
               title="Toggle Theme"
@@ -912,7 +909,6 @@ const SidebarNavigation = ({
 
           <button
             onClick={toggleTheme}
-            disabled={themeBusy}
             className={`p-1.5 transition-colors cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
               }`}
           >
@@ -932,7 +928,6 @@ const SidebarNavigation = ({
         <div className="flex items-center gap-1">
           <button
             onClick={toggleTheme}
-            disabled={themeBusy}
             className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
               }`}
             aria-label="Toggle Theme"
@@ -3107,61 +3102,70 @@ export default function App() {
 
   const getAnimClass = (inView: boolean) => `scroll-animate-child ${inView ? 'animated' : ''}`;
 
-  // Guards the toggle while a crossfade is in flight. Without it, rapid clicks
-  // stack overlapping transitions and the fade visibly stutters.
-  const [isThemeSwitching, setIsThemeSwitching] = useState(false);
+  /** Writes the theme to the DOM and storage. Must be synchronous so it can run
+   *  inside a view transition's update callback. */
+  const applyTheme = (next: 'dark' | 'light') => {
+    const root = document.documentElement;
+    root.setAttribute('data-mode', next);
+    root.classList.toggle('light-mode', next === 'light');
+    document.body.classList.toggle('light-mode', next === 'light');
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      // Storage blocked (private mode) — theme still applies for this session.
+    }
+  };
 
-  const toggleTheme = () => {
-    if (isThemeSwitching) return;
+  const toggleTheme = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    const next = theme === 'dark' ? 'light' : 'dark';
 
-    const flip = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    // flushSync forces React to commit the 195 className ternaries *inside* the
+    // callback. Without it React would still be batching when the browser takes
+    // its "after" snapshot, and the transition would capture the old colours.
+    const commit = () => {
+      flushSync(() => setTheme(next));
+      applyTheme(next);
+    };
 
-    if (prefersReducedMotion()) {
-      // Swap instantly; never add the transition class. NOTE: if the OS has
-      // "reduce motion" enabled, this path is why the theme snaps with no fade.
-      flip();
+    const startViewTransition = (
+      document as Document & { startViewTransition?: (cb: () => void) => unknown }
+    ).startViewTransition;
+
+    // Firefox and older browsers have no View Transitions — instant swap is the
+    // intended graceful degradation, not a bug.
+    if (!startViewTransition || prefersReducedMotion()) {
+      commit();
       return;
     }
 
+    // Origin for the circular reveal: the toggle that was actually clicked.
+    // Falls back to viewport centre for keyboard activation, where the event
+    // reports 0,0. The radius is the distance to the furthest corner.
     const root = document.documentElement;
-    root.classList.add('theme-transition');
-    // Force a style flush so the browser computes one frame with the OLD colours
-    // and the transition already armed. Without this, the class and the new
-    // colours can land in a single recalculation, and whether a transition
-    // starts at all then depends on the engine.
-    void root.offsetHeight;
+    const x = event?.clientX || window.innerWidth / 2;
+    const y = event?.clientY || window.innerHeight / 2;
+    const radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+    root.style.setProperty('--vt-x', `${x}px`);
+    root.style.setProperty('--vt-y', `${y}px`);
+    root.style.setProperty('--vt-r', `${radius}px`);
 
-    setIsThemeSwitching(true);
-    flip();
+    // No debounce needed: calling this again mid-transition makes the browser
+    // skip the in-flight one cleanly rather than stacking animations.
+    startViewTransition.call(document, commit);
   };
 
+  // Keeps the DOM in step on mount and on any theme change that didn't come
+  // from the toggle. Idempotent, so re-running after applyTheme is a no-op.
   useEffect(() => {
-    if (!isThemeSwitching) return;
-    // 450ms = 400ms transition + a small buffer, then the global override is
-    // torn down so per-element hover transitions behave normally again.
-    const timer = setTimeout(() => {
-      document.documentElement.classList.remove('theme-transition');
-      setIsThemeSwitching(false);
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [isThemeSwitching]);
-
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light-mode');
-      root.setAttribute('data-mode', 'light');
-      document.body.classList.add('light-mode');
-    } else {
-      root.classList.remove('light-mode');
-      root.setAttribute('data-mode', 'dark');
-      document.body.classList.remove('light-mode');
-    }
+    applyTheme(theme);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
 
   return (
-    <div className={`min-h-screen font-sans text-[15px] selection:bg-zinc-800 selection:text-white lg:flex relative transition-colors duration-300 ${theme === 'light'
+    <div className={`min-h-screen font-sans text-[15px] selection:bg-zinc-800 selection:text-white lg:flex relative ${theme === 'light'
       ? 'bg-[#fafafa] text-[#5a5a5a] selection:bg-zinc-200 selection:text-black'
       : 'bg-[#0b0b0d] text-[#a1a1aa] selection:bg-zinc-800 selection:text-white'
       }`}>
@@ -3171,7 +3175,6 @@ export default function App() {
       <SidebarNavigation
         theme={theme}
         toggleTheme={toggleTheme}
-        themeBusy={isThemeSwitching}
         onBookCall={() => setShowBookCall(true)}
         onOpenResume={() => setShowResume(true)}
         onOpenGame={() => setShowGame(true)}
