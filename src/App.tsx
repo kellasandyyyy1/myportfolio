@@ -114,7 +114,7 @@ const PROJECTS: Project[] = [
     description: "A small project called yappr a social website that lets you interact with other existing user and share moments and music with them.",
     tags: ["React", "Tailwind", "node.js", "Express, Supabase, Vite"],
     image: "/img/p3.PNG",
-    link: "yapprr.vercel.app",
+    link: "yapprr.kelas.site",
     screenshots: [
       {
         url: "/img/p1.PNG",
@@ -223,7 +223,7 @@ const PROJECTS: Project[] = [
     description: "simple search engine for psychology students that helps you understand human behavior.",
     tags: ["React", "TypeScript", "tailwind", "AI integration"],
     image: "/img/m3.PNG",
-    link: "https://mindcomp.vercel.app/",
+    link: "https://mindcompass.kelas.site",
     screenshots: [
 
       {
@@ -268,7 +268,7 @@ const PROJECTS: Project[] = [
     description: "Crypto, weather, currency, and air quality updated in real time, in one view.",
     tags: ["Typescript", "NextJS", "Tailwind CSS", "WebSocket"],
     image: "/img/cl1.PNG",
-    link: "https://climexx.vercel.app",
+    link: "https://climexx.kelas.site",
     screenshots: [
       {
         url: "/img/cl1.PNG",
@@ -286,7 +286,7 @@ const PROJECTS: Project[] = [
     description: "A design reference web app for exploring graphic design movements, color palettes, typography systems, and layout styles built for designers who want a curated, searchable archive instead of scattered inspiration boards.",
     tags: ["React", "TypeScript", "Tailwind CSS", "Vite"],
     image: "/img/arc1.png",
-    link: "https://designarchive.vercel.app",
+    link: "https://designarchi.online",
     screenshots: [
       {
         url: "/img/arc1.png",
