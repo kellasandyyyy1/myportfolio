@@ -1,0 +1,30 @@
+# Netlify build + routing config.
+#
+# Kept here rather than in the dashboard so the settings are version-controlled
+# and can't drift. Values in this file OVERRIDE the dashboard's Build settings.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# ORDER MATTERS: Netlify applies redirects top-down and stops at the first
+# match. This API rule MUST stay above the SPA catch-all below, or "/*" would
+# swallow /api/* and serve index.html instead of invoking the function.
+#
+# Mapping here (rather than changing the client's fetch URL) keeps
+# /api/github-contributions working in BOTH environments: locally the Vite proxy
+# forwards it to the Express server on :8787, in production this rewrites it to
+# the function. The frontend stays environment-agnostic.
+[[redirects]]
+  from = "/api/github-contributions"
+  to = "/.netlify/functions/github-contributions"
+  status = 200
+
+# SPA fallback. This site has no client-side router today (navigation is #anchor
+# based), so this is a safety net rather than the fix for the earlier 404 — it
+# means any future deep link resolves instead of hitting Netlify's 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

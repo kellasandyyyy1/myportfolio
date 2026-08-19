@@ -2118,18 +2118,19 @@ function useRevealOnce() {
 }
 
 /**
- * Pixel-art "curious boy" mascot drawn on canvas over a 16x24 design grid.
+ * Pixel-art mascot: a boy seated in side profile, working at an open laptop.
+ * Drawn on canvas over a 34x27 design grid (~5.6x scale at 192px wide).
  *
- * The rAF loop drives bob, head-tilt and blink only; the active step is read
- * from a ref each frame so a step change recolors on the next frame rather than
- * tearing down and restarting the loop.
+ * The rAF loop drives head bob, blink, typing-arm bob and screen glow; the
+ * active step is read from a ref each frame so a step change recolors on the
+ * next frame rather than tearing down and restarting the loop.
  */
-const SPRITE_COLS = 16;
-const SPRITE_ROWS = 24;
+const SPRITE_COLS = 34;
+const SPRITE_ROWS = 27;
 
 const CuriousBoyMascot: React.FC<{
   activeIndex: number;
-  /** Rendered CSS width; height follows the 16:24 grid ratio. */
+  /** Rendered CSS width; height follows the 34:27 grid ratio. */
   width: number;
 }> = ({ activeIndex, width }) => {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -2163,93 +2164,145 @@ const CuriousBoyMascot: React.FC<{
       const SHIRT_DARK = '#5a8fc4';
       const PANTS = '#3a3a37';
       const SHOES = '#1a1a18';
+      // Laptop + desk, kept in the site's muted gray range.
+      const LID_FRAME = '#5a5a57';
+      const BODY_GRAY = '#4a4a47';
+      const DARK_GRAY = '#3a3a37';
+      const SCREEN_BG = '#0d0d0b';
+
+      // Lid geometry. One hinge point drives both the base's right edge and the
+      // lid's bottom slice, which is what makes the two read as one object.
+      const HINGE_X = 27.4;
+      const HINGE_Y = 19.2;
+      const LID_ROWS = 8;   // slices stacked upward
+      const LID_W = 4.3;    // slice width
+      const LID_LEAN = 0.3; // rightward shift per slice — the open angle
+      const lidX = (row: number) => HINGE_X + row * LID_LEAN;
+      const lidY = (row: number) => HINGE_Y - row - 1;
 
       const draw = () => {
         const accent = mascotAccent(activeRef.current);
 
-        // Three motions on independent timers so nothing feels mechanically synced.
+        // Independent timers so nothing looks mechanically linked.
         const bob = reduced ? 0 : Math.sin(frame * 0.05) * 0.25;
-        // Slower than the bob — a thoughtful look-around, not a twitch.
-        const tilt = reduced ? 0 : Math.round(Math.sin(frame * 0.02));
+        // Deliberately slower than the head bob, and not a harmonic of it.
+        const typeBob = reduced ? 0 : Math.sin(frame * 0.035) * 0.3;
         const blinking = !reduced && frame % 88 < 6;
         const markAlpha = reduced
           ? 0.6
           : 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(frame * ((Math.PI * 2) / 210)));
+        // Screen brightness rides the SAME timer as the arm, so glow and typing
+        // feel causally connected rather than two unrelated loops.
+        const glow = reduced ? 0.8 : 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(frame * 0.035));
 
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        /** Fills a rect given in grid units, snapped to whole device pixels. */
+        /** Fills a rect in grid units, snapped to whole device pixels. */
         const px = (x: number, y: number, w: number, h: number, color: string) => {
           ctx.fillStyle = color;
           ctx.fillRect(
             Math.round(x * unit),
-            Math.round((y + bob) * unit),
+            Math.round(y * unit),
             Math.round(w * unit),
             Math.round(h * unit)
           );
         };
+        /** Boy — carries the idle head bob. */
+        const pb = (x: number, y: number, w: number, h: number, c: string) =>
+          px(x, y + bob, w, h, c);
+        /** Typing arm — body bob plus its own slower oscillation. */
+        const pa = (x: number, y: number, w: number, h: number, c: string) =>
+          px(x, y + bob + typeBob, w, h, c);
 
-        // 1. Hair — rounded top block (two overlapping rects chamfer the corners)
-        //    plus thin side strands framing the face.
-        px(4.5, 2, 7, 3, HAIR);
-        px(4, 2.5, 8, 2.5, HAIR);
-        px(4, 5, 1, 3, HAIR);
-        px(11, 5, 1, 3, HAIR);
+        // ---- Desk: grounds the laptop so it isn't floating in space ----
+        px(12.5, 21.4, 21.5, 0.9, DARK_GRAY);
 
-        // 2. Face — skin block, with a hairline strip on top and 1px sideburns.
-        px(4.5, 4.5, 7, 6.5, SKIN);
-        px(4.5, 4.5, 7, 0.75, HAIR);
-        px(4.5, 5, 0.75, 4, HAIR);
-        px(10.75, 5, 0.75, 4, HAIR);
+        // ---- Boy, side profile facing right ----
 
-        // 3/4. Eyes — dots that drift with the head tilt, or closed lines on blink.
-        const eyeY = 7.4;
-        const leftEyeX = 6.25 + tilt * 0.25;
-        const rightEyeX = 8.75 + tilt * 0.25;
+        // Hair: back of skull + rounded crown
+        pb(4.5, 2.2, 7.5, 3, HAIR);
+        pb(4, 2.8, 8.5, 2.6, HAIR);
+        pb(3.8, 4.5, 2.2, 6, HAIR);
+
+        // Face
+        pb(5.8, 4.4, 6.8, 6.6, SKIN);
+        pb(5.8, 4.4, 6.8, 1, HAIR);        // hairline over the forehead
+        pb(12.4, 7.6, 0.8, 1, SKIN);       // nose, breaking the profile line
+        pb(7.6, 7.4, 1, 1.3, HAIR_MID);    // ear
+
+        // Eye — single, side-on
         if (blinking) {
-          px(leftEyeX - 0.15, eyeY + 0.25, 1.1, 0.4, HAIR_MID);
-          px(rightEyeX - 0.15, eyeY + 0.25, 1.1, 0.4, HAIR_MID);
+          pb(10, 7.7, 1.4, 0.45, HAIR_MID);
         } else {
-          px(leftEyeX, eyeY, 0.8, 0.8, HAIR);
-          px(rightEyeX, eyeY, 0.8, 0.8, HAIR);
+          pb(10.2, 7.2, 0.9, 0.9, HAIR);
+        }
+        pb(11.4, 9.4, 1.1, 0.45, accent);  // mouth mark
+
+        // Neck
+        pb(7.8, 10.8, 3, 1.4, SKIN);
+
+        // Torso, leaning very slightly forward as if seated at a desk
+        pb(5, 12, 7.6, 7.2, SHIRT);
+        pb(4.4, 12.8, 1.1, 5.4, SHIRT);    // rounded back
+        pb(5, 12, 7.6, 0.9, SHIRT_DARK);   // collar shading
+        pb(7.2, 14.6, 3.2, 2.6, SHIRT_DARK); // chest patch
+
+        // Legs: thigh forward under the desk, shin down, shoe at the base
+        pb(5, 19.2, 6.6, 2.1, PANTS);
+        pb(9.3, 21, 2.6, 3.2, PANTS);
+        pb(8.6, 23.9, 4.3, 1.5, SHOES);
+
+        // ---- Typing arm: shoulder -> forearm -> hand over the keys ----
+        pa(9.8, 13.2, 2.8, 3.4, SHIRT);    // sleeve
+        pa(11.6, 16.8, 4.6, 1.6, SKIN);    // forearm reaching right
+        pa(15.9, 17.6, 1.9, 1.5, SKIN);    // hand above the keyboard
+
+        // ---- Laptop: base + hinge + lid, all keyed off one hinge point ----
+
+        // Base slab: lighter top face, darker front edge for a shallow 3D read
+        px(15.2, 19.4, HINGE_X - 15.2 + 1.2, 0.7, LID_FRAME);
+        px(15.2, 20.1, HINGE_X - 15.2 + 1.2, 1.3, BODY_GRAY);
+        px(15.2, 21, HINGE_X - 15.2 + 1.2, 0.5, DARK_GRAY);
+
+        // Keyboard: discrete key notches, not one solid strip
+        for (let k = 0; k < 9; k++) {
+          px(16.1 + k * 1.15, 19.55, 0.75, 0.42, DARK_GRAY);
         }
 
-        // 5. Nose/mouth hint — deliberately just a mark, not a full mouth.
-        px(7.5, 9.3, 1, 0.5, accent);
+        // Hinge block — physically joins base and lid
+        px(HINGE_X - 0.3, HINGE_Y - 0.9, 1.9, 1.4, DARK_GRAY);
 
-        // 6. Neck gap — dark strip between face and collar.
-        px(5.75, 11, 4.5, 0.6, HAIR);
+        // Lid, drawn as slices stepping up and leaning right from the hinge
+        for (let r = 0; r < LID_ROWS; r++) {
+          px(lidX(r), lidY(r), LID_W, 1, LID_FRAME);                  // outer frame
+          if (r > 0 && r < LID_ROWS - 1) {
+            px(lidX(r) + 0.45, lidY(r), LID_W - 0.9, 1, BODY_GRAY);   // bezel
+            px(lidX(r) + 0.8, lidY(r), LID_W - 1.6, 1, SCREEN_BG);    // screen well
+          }
+        }
 
-        // 7. Torso — shirt block, darker collar strip, chest patch.
-        px(3.5, 11.6, 9, 6.4, SHIRT);
-        px(3.5, 11.6, 9, 0.75, SHIRT_DARK);
-        px(6.5, 14, 3, 2.5, SHIRT_DARK);
+        // Screen content: thin code-like bars of varying width, pulsing together
+        ctx.globalAlpha = glow;
+        const CODE_LINES: [number, number][] = [
+          [1, 2.1], [2, 1.4], [3, 2.4], [4, 1.1], [5, 1.9], [6, 1.5],
+        ];
+        for (const [row, barW] of CODE_LINES) {
+          px(lidX(row) + 0.95, lidY(row) + 0.3, barW, 0.42, accent);
+        }
+        ctx.globalAlpha = 1;
 
-        // 8. Arms — thin, slightly shorter than the torso.
-        px(2.5, 12.4, 1, 5, SKIN);
-        px(12.5, 12.4, 1, 5, SKIN);
-
-        // 9. Legs
-        px(5, 18, 2.5, 4, PANTS);
-        px(8.5, 18, 2.5, 4, PANTS);
-
-        // 10. Shoes — slightly wider than the legs.
-        px(4.5, 21.5, 3.5, 2, SHOES);
-        px(8, 21.5, 3.5, 2, SHOES);
-
-        // Thought mark — a "?" from blocks, upper-right of the head. Only this
-        // group fades, on its own slow timer.
+        // ---- Thought mark: "?" upper-right of the head, own slow timer ----
         ctx.globalAlpha = markAlpha;
-        px(12.9, 1.6, 2.1, 0.7, accent);
-        px(14.3, 2.2, 0.7, 1.4, accent);
-        px(13.6, 3.5, 0.7, 1.1, accent);
-        px(13.6, 5.2, 0.7, 0.7, accent);
+        pb(14.6, 1.2, 2.1, 0.7, accent);
+        pb(16, 1.8, 0.7, 1.4, accent);
+        pb(15.3, 3.1, 0.7, 1.1, accent);
+        pb(15.3, 4.8, 0.7, 0.7, accent);
         ctx.globalAlpha = 1;
       };
 
       if (reduced) {
-        // Single static frame — neutral head, eyes open, mark at fixed alpha.
+        // Single static frame — neutral pose, fixed glow and mark opacity.
         draw();
         return;
       }
@@ -2261,7 +2314,7 @@ const CuriousBoyMascot: React.FC<{
       };
       loop();
     } catch {
-      // Hide the panel entirely; the git log stays fully functional.
+      // Hide the mascot entirely; the git log stays fully functional.
       setFailed(true);
     }
 
@@ -2437,14 +2490,14 @@ const GitLogNode: React.FC<{
 
 const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [mascotWidth, setMascotWidth] = useState(85);
+  const [mascotWidth, setMascotWidth] = useState(176);
 
   // Distinct canvas sizes per breakpoint rather than CSS-scaling one canvas,
-  // so the pixel grid stays crisp at both sizes. 85->128 and 64->96 both keep
-  // the 16:24 grid ratio.
+  // so the pixel grid stays crisp at both sizes. 176->140 and the 0.75x mobile
+  // 132->105 both keep the 34:27 grid ratio.
   useEffect(() => {
     const query = window.matchMedia('(min-width: 768px)');
-    const apply = () => setMascotWidth(query.matches ? 85 : 64);
+    const apply = () => setMascotWidth(query.matches ? 176 : 132);
     apply();
     query.addEventListener('change', apply);
     return () => query.removeEventListener('change', apply);
@@ -2459,21 +2512,19 @@ const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
     // Left-anchored and capped, so leftover page width can't open a dead zone
     // between the log and the mascot. The 64px gap is measured from the log's
     // real content edge now that the log column hugs its content.
-    <div className="flex flex-col md:flex-row md:gap-16 md:items-start md:max-w-[700px]">
-      {/* Mascot: above the log on mobile (static, centered), sticky beside it on desktop */}
-      <div className="mb-7 md:mb-0 md:order-2 md:flex-none md:max-w-[140px] md:self-stretch flex flex-col items-center">
-        {/* 50vh + a half-height shift centres the sprite on the same viewport band
-            the tracking observer uses, so it settles beside the active node
-            instead of pinning near the top. Sticky stays bounded by this
-            column, which stretches to the log's height. */}
-        <div className="md:sticky md:top-[50vh] md:-translate-y-1/2 flex flex-col items-center">
-          <CuriousBoyMascot activeIndex={activeIndex} width={mascotWidth} />
-        </div>
+    <div className="flex flex-col md:flex-row md:gap-24 md:items-start md:max-w-[860px]">
+      {/* Mascot: above the log on mobile, beside it on desktop. Not sticky —
+          self-center parks it at the vertical midpoint of the log and it simply
+          scrolls with the page rather than tracking the viewport. */}
+      <div className="mb-7 md:mb-0 md:order-2 md:flex-none md:ml-auto md:max-w-[240px] md:self-center flex flex-col items-center">
+        <CuriousBoyMascot activeIndex={activeIndex} width={mascotWidth} />
       </div>
 
-      {/* Git log — structure unchanged */}
+      {/* Git log — structure unchanged. md:w-auto is load-bearing: w-full would
+          stretch this column across the whole row and push the mascot to the
+          far edge, reopening the dead zone the gap-16 is meant to control. */}
       <div
-        className="w-full min-w-0 md:order-1 md:flex-initial select-none [--seg:1rem] [--dot:0.875rem] [--rail:1.25rem] md:[--seg:1.375rem] md:[--dot:1.0625rem] md:[--rail:1.75rem]"
+        className="w-full md:w-auto min-w-0 md:order-1 md:flex-initial select-none [--seg:1rem] [--dot:0.875rem] [--rail:1.25rem] md:[--seg:1.375rem] md:[--dot:1.0625rem] md:[--rail:1.75rem]"
       >
         {PROCESS_NODES.map((node, idx) => (
           <GitLogNode
