@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { flushSync } from 'react-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
@@ -657,6 +658,48 @@ const ThemeToggleIcon = ({ theme, size }: { theme: 'dark' | 'light'; size: numbe
   </span>
 );
 
+/**
+ * Route path -> section element id. Every route renders the same continuous
+ * page and resolves to a scroll position; "work" is the one place where the
+ * nav key and the DOM id disagree (`/work` -> `#projects`).
+ */
+const NAV_SECTION_IDS: Record<string, string> = {
+  about: 'about',
+  experience: 'experience',
+  stack: 'stack',
+  certifications: 'certifications',
+  work: 'projects',
+  services: 'services',
+  resources: 'resources',
+  contact: 'contact',
+};
+
+/** Sticky header height to clear below lg, where the header overlays content. */
+const scrollOffsetForViewport = () =>
+  window.matchMedia('(min-width: 1024px)').matches ? 0 : 56;
+
+/**
+ * Scrolls to a section, retrying across frames until the element has a stable
+ * position. On a cold load the sections exist immediately but fonts and images
+ * are still settling, so a single early call lands at the wrong offset.
+ */
+function scrollToSection(sectionId: string, behavior: ScrollBehavior) {
+  let frames = 0;
+  const attempt = () => {
+    const el = document.getElementById(sectionId);
+    if (!el) {
+      // Give up rather than loop forever on an unknown id.
+      if (frames++ < 30) requestAnimationFrame(attempt);
+      return;
+    }
+    const top = el.getBoundingClientRect().top + window.scrollY - scrollOffsetForViewport();
+    window.scrollTo({ top, behavior });
+    // Re-measure once more after layout settles on first paint.
+    if (frames++ < 2) requestAnimationFrame(attempt);
+  };
+  requestAnimationFrame(attempt);
+}
+
 interface SidebarNavigationProps {
   theme: 'dark' | 'light';
   toggleTheme: () => void;
@@ -675,6 +718,10 @@ const SidebarNavigation = ({
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('about');
   const [soundMuted, toggleSound] = useSoundMuted();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // A deep link should land instantly; later navigations animate.
+  const isFirstRouteRef = React.useRef(true);
 
   const group1Links = [
     { id: 'about', name: 'About', href: '#about', icon: <User weight="light" size={16} /> },
@@ -714,6 +761,51 @@ const SidebarNavigation = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- Routing <-> scroll, kept in sync in both directions ---
+  //
+  // Marks a URL change that the scroll spy wrote, so the route effect below
+  // doesn't treat it as a navigation request and scroll-jack the user.
+  const urlFromScrollRef = React.useRef(false);
+  // Last section the spy published. Comparing against this is what makes the
+  // spy effect fire on SCROLL changes only — depending on location.pathname
+  // made it fire on clicks too, where it would navigate straight back to the
+  // section you were leaving and cancel the scroll.
+  const lastSyncedSectionRef = React.useRef(activeSection);
+  // A click starts a smooth scroll that sweeps past intermediate sections. Muting
+  // the spy for that window stops the URL churning through every section on the way.
+  const muteSpyUntilRef = React.useRef(0);
+
+  // URL -> scroll: clicks, deep links, back/forward. Declared first so a deep
+  // link is handled on mount before anything else can overwrite it.
+  useEffect(() => {
+    if (urlFromScrollRef.current) {
+      urlFromScrollRef.current = false;
+      return;
+    }
+    const sectionId = NAV_SECTION_IDS[location.pathname.replace(/^\//, '')];
+    const isFirst = isFirstRouteRef.current;
+    isFirstRouteRef.current = false;
+    if (!sectionId) return;
+
+    muteSpyUntilRef.current = Date.now() + 1200;
+    // Instant on first paint so a deep link doesn't animate down from the top.
+    scrollToSection(sectionId, isFirst ? 'auto' : 'smooth');
+  }, [location.pathname]);
+
+  // Scroll spy -> URL. Depends on activeSection ONLY. `replace` so scrolling
+  // never floods the back button.
+  useEffect(() => {
+    if (lastSyncedSectionRef.current === activeSection) return; // also skips mount
+    lastSyncedSectionRef.current = activeSection;
+    if (Date.now() < muteSpyUntilRef.current) return;
+
+    const path = `/${activeSection}`;
+    // Read live rather than from the closure, which may be a render behind.
+    if (window.location.pathname === path) return;
+    urlFromScrollRef.current = true;
+    navigate(path, { replace: true });
+  }, [activeSection, navigate]);
+
   // Play a transition only on a genuine change. The ref seeds with the initial
   // section so nothing sounds on first paint.
   const previousSection = React.useRef(activeSection);
@@ -723,38 +815,47 @@ const SidebarNavigation = ({
     playTransition();
   }, [activeSection]);
 
-  const renderDesktopNavLink = (link: { id: string; name: string; href: string; icon: React.ReactNode }) => {
-    const isActive = activeSection === link.id;
-    return (
-      <a
-        key={link.id}
-        href={link.href}
-        onClick={playNavTick}
-        className={`py-2 px-0 flex items-center gap-[9px] text-[12.5px] font-mono tracking-[0.5px] transition-colors duration-150 w-full group cursor-pointer ${isActive
+  const renderDesktopNavLink = (link: { id: string; name: string; href: string; icon: React.ReactNode }) => (
+    <NavLink
+      key={link.id}
+      to={`/${link.id}`}
+      onClick={playNavTick}
+      // Router match drives the active state. `/` has no match, so About takes
+      // it — that's where the page opens.
+      className={({ isActive }) => {
+        const active = isActive || (location.pathname === '/' && link.id === 'about');
+        return `py-2 px-0 flex items-center gap-[9px] text-[12.5px] font-mono tracking-[0.5px] transition-colors duration-150 w-full group cursor-pointer ${active
           ? theme === 'light'
             ? 'text-[#1a1a1a]'
             : 'text-[#e0e0e0]'
           : theme === 'light'
             ? 'text-[#8a8a85] hover:text-[#1a1a1a]'
             : 'text-[#444444] hover:text-[#c9c9c4]'
-          }`}
-      >
-        <span
-          aria-hidden="true"
-          className={`nav-arrow shrink-0 leading-none transition-colors duration-150 ${isActive
-            ? theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e0e0e0]'
-            : 'text-transparent'
-            }`}
-        >
-          ›
-        </span>
-        <span className="shrink-0 transition-colors duration-150">
-          {link.icon}
-        </span>
-        <span className="truncate">{link.name}</span>
-      </a>
-    );
-  };
+          }`;
+      }}
+    >
+      {({ isActive }) => {
+        const active = isActive || (location.pathname === '/' && link.id === 'about');
+        return (
+          <>
+            <span
+              aria-hidden="true"
+              className={`nav-arrow shrink-0 leading-none transition-colors duration-150 ${active
+                ? theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e0e0e0]'
+                : 'text-transparent'
+                }`}
+            >
+              ›
+            </span>
+            <span className="shrink-0 transition-colors duration-150">
+              {link.icon}
+            </span>
+            <span className="truncate">{link.name}</span>
+          </>
+        );
+      }}
+    </NavLink>
+  );
 
   return (
     <>
@@ -879,17 +980,20 @@ const SidebarNavigation = ({
 
         <div className="flex items-center gap-5">
           {navLinks.map((link) => (
-            <a
+            <NavLink
               key={link.id}
-              href={link.href}
+              to={`/${link.id}`}
               onClick={playNavTick}
-              className={`text-xs font-mono uppercase tracking-[0.5px] transition-colors ${activeSection === link.id
-                ? (theme === 'light' ? 'text-[#1a1a1a] font-medium' : 'text-white font-medium')
-                : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white')
-                }`}
+              className={({ isActive }) => {
+                const active = isActive || (location.pathname === '/' && link.id === 'about');
+                return `text-xs font-mono uppercase tracking-[0.5px] transition-colors ${active
+                  ? (theme === 'light' ? 'text-[#1a1a1a] font-medium' : 'text-white font-medium')
+                  : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white')
+                  }`;
+              }}
             >
               {link.name}
-            </a>
+            </NavLink>
           ))}
 
           <button
@@ -967,18 +1071,23 @@ const SidebarNavigation = ({
             >
               <div className="flex flex-col gap-1.5">
                 {navLinks.map((link) => (
-                  <a
+                  <NavLink
                     key={link.id}
-                    href={link.href}
+                    to={`/${link.id}`}
+                    // Closing the drawer here is what makes mobile behave like
+                    // desktop: route changes, menu dismisses, page scrolls.
                     onClick={() => { playNavTick(); setIsOpen(false); }}
-                    className={`text-xs py-2 flex items-center gap-2.5 border-b ${theme === 'light'
-                      ? 'text-[#5a5a5a] hover:text-[#1a1a1a] border-[#ececec]'
-                      : 'text-[#a1a1aa] hover:text-white border-[#1e1e1e]/60'
-                      }`}
+                    className={({ isActive }) => {
+                      const active = isActive || (location.pathname === '/' && link.id === 'about');
+                      return `text-xs py-2 flex items-center gap-2.5 border-b ${active
+                        ? (theme === 'light' ? 'text-[#1a1a1a]' : 'text-white')
+                        : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#a1a1aa] hover:text-white')
+                        } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]/60'}`;
+                    }}
                   >
                     <span>{link.icon}</span>
                     <span>{link.name}</span>
-                  </a>
+                  </NavLink>
                 ))}
               </div>
 
@@ -1051,7 +1160,7 @@ const SectionHeading = ({
           }`}
         style={isInView !== undefined ? { animationDelay: `${baseDelay}ms` } : undefined}
       >
-        {number} — 08
+        {number} — 
       </span>
       <h2
         className={`text-[26px] sm:text-[32px] font-mono font-medium leading-none tracking-normal lowercase ${animClass} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
@@ -1225,6 +1334,69 @@ const ResourcesGrid = ({ theme }: { theme: 'dark' | 'light' }) => {
   );
 };
 
+type WorksView = 'grid' | 'list';
+const WORKS_VIEW_KEY = 'works-view-mode';
+
+/**
+ * Grid/list switch for the mobile works section. Desktop (md+) already renders
+ * a grid unconditionally, so 'grid' is the default here to match it.
+ */
+const WorksViewToggle: React.FC<{
+  view: WorksView;
+  onChange: (next: WorksView) => void;
+  theme: 'dark' | 'light';
+  className?: string;
+}> = ({ view, onChange, theme, className = '' }) => {
+  const isLight = theme === 'light';
+
+  const button = (mode: WorksView, label: string, icon: React.ReactNode) => {
+    const active = view === mode;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(mode)}
+        aria-label={label}
+        aria-pressed={active}
+        className={`w-[26px] h-[26px] md:w-[32px] md:h-[32px] rounded-[5px] md:rounded-[6px] flex items-center justify-center transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-1 ${active
+          ? isLight
+            ? 'bg-[#1a1a1a] text-[#fafafa]'
+            : 'bg-[#f2f2ef] text-[#0b0b0d]'
+          : isLight
+            // Raised from the near-invisible original so the inactive state
+            // reads clearly against pure black / pure white.
+            ? 'bg-transparent text-[#8a8a8a] hover:text-[#1a1a1a]'
+            : 'bg-transparent text-[#8a8a86] hover:text-[#e5e5e5]'
+          } ${isLight ? 'focus-visible:ring-[#1a1a1a]' : 'focus-visible:ring-[#c9c9c4]'}`}
+      >
+        {icon}
+      </button>
+    );
+  };
+
+  // Tailwind sizing overrides the icon's width/height attributes, which is how
+  // one <LayoutGrid size={16}/> serves both breakpoints.
+  const iconClass = 'w-[13px] h-[13px] md:w-4 md:h-4';
+
+  return (
+    <div className={`inline-flex items-center gap-2 ${className}`}>
+      {/* Desktop-only affordance — unlabelled icon pairs are easy to miss,
+          which is exactly how this control went unnoticed. */}
+      <span className={`hidden md:inline text-[10px] font-mono lowercase tracking-[0.06em] ${isLight ? 'text-[#8a8a8a]' : 'text-[#666666]'
+        }`}>
+        view:
+      </span>
+
+      <span
+        className={`inline-flex items-center gap-[2px] p-[3px] md:p-[4px] rounded-[8px] md:rounded-[9px] border-[0.5px] ${isLight ? 'border-[#e6e6e3]' : 'border-[#232320]'
+          }`}
+      >
+        {button('grid', 'Grid view', <LayoutGrid weight="light" size={16} className={iconClass} />)}
+        {button('list', 'List view', <List weight="light" size={16} className={iconClass} />)}
+      </span>
+    </div>
+  );
+};
+
 const AllProjectsModal = ({
   isOpen,
   onClose,
@@ -1266,113 +1438,96 @@ const AllProjectsModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          transition={{ type: "spring", duration: 0.5 }}
-          className={`w-full max-h-[85vh] max-w-4xl flex flex-col rounded-[8px] md:rounded-3xl overflow-hidden border-[0.5px] md:border shadow-2xl ${theme === 'light'
-            ? 'bg-white border-[#e0e0e0] md:border-zinc-200 text-black'
-            : 'bg-[#0d0d0d] md:bg-[#0a0a0c] border-[#1e1e1e] md:border-zinc-800/80 text-white'
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          // ease-out, no spring — the rest of the site never overshoots.
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className={`w-full max-h-[85vh] max-w-4xl flex flex-col rounded-[10px] overflow-hidden border-[0.5px] ${theme === 'light'
+            ? 'bg-[#fafafa] border-[#e6e6e3] text-[#1a1a1a]'
+            : 'bg-[#0b0b0d] border-[#232320] text-[#e5e5e5]'
             }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Mobile: numbered list rows (below md) */}
-          <div className="md:hidden flex flex-col min-h-0">
-            {/* Header row */}
-            <div className={`px-4 py-[10px] flex items-center justify-between gap-3 shrink-0 border-b-[0.5px] ${theme === 'light' ? 'border-[#ececec]' : 'border-[#181818]'
-              }`}>
-              <span className={`text-[13px] font-mono font-normal ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#bbbbbb]'
+          {/* One header for every width, built like the site's section headers:
+              muted mono eyebrow over a lowercase mono heading. */}
+          <div className={`px-4 md:px-6 py-3 md:py-4 flex items-start justify-between gap-3 shrink-0 border-b-[0.5px] ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+            }`}>
+            <div className="min-w-0">
+              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
+                }`}>
+                {String(projects.length).padStart(2, '0')} — projects
+              </span>
+              <h3 className={`text-[18px] md:text-[22px] font-mono font-normal leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
                 }`}>
                 all projects
-              </span>
-              <button
-                onClick={onClose}
-                aria-label="Close"
-                className={`text-[11px] font-mono leading-none bg-transparent border-none cursor-pointer transition-colors ${theme === 'light' ? 'text-[#a0a0a0] hover:text-[#5a5a5a]' : 'text-[#333333] hover:text-[#888888]'
-                  }`}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Subtext */}
-            <div className={`px-4 pt-1 pb-2 text-[9px] font-mono shrink-0 ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#2a2a2a]'
-              }`}>
-              {String(projects.length).padStart(2, '0')} projects
-            </div>
-
-            {/* List rows */}
-            <div className="px-4 overflow-y-auto flex-1 min-h-0">
-              {projects.map((project, index) => (
-                <div
-                  key={project.id}
-                  onClick={() => {
-                    onSelectProject(project);
-                    onClose();
-                  }}
-                  className={`flex items-center justify-between gap-3 py-[10px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
-                    } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#181818]'}`}
-                >
-                  <span className="flex items-center gap-[10px] min-w-0">
-                    <span className={`w-[18px] shrink-0 text-[9px] font-mono ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#222222]'
-                      }`}>
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <span className={`text-[12px] font-mono truncate transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
-                      }`}>
-                      {project.title}
-                    </span>
-                  </span>
-
-                  <span className="shrink-0 flex items-center gap-2">
-                    <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
-                      ? 'border-[#ececec] text-[#a0a0a0]'
-                      : 'border-[#1a1a1a] text-[#2a2a2a]'
-                      }`}>
-                      {project.tags?.[0]?.toLowerCase() || 'web'}
-                    </span>
-                    <ArrowUpRight
-                      weight="light"
-                      size={10}
-                      className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#252525] group-hover:text-[#666666]'
-                        }`}
-                    />
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Header */}
-          <div className={`p-5 md:p-6 hidden md:flex items-center justify-between border-b gap-3 shrink-0 ${theme === 'light' ? 'border-zinc-200 bg-zinc-50/50' : 'border-zinc-800/80 bg-zinc-900/40'
-            }`}>
-            <div>
-              <span className="text-[10px] font-mono font-bold tracking-widest uppercase bg-brand-text/10 text-brand-text block mb-1">
-                Portfolio
-              </span>
-              <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter">
-                All Projects
               </h3>
             </div>
+
+            {/* Matches the sidebar's 32px icon-button language. */}
             <button
               onClick={onClose}
-              className={`p-2.5 rounded-full border transition-all shrink-0 ${theme === 'light'
-                ? 'border-zinc-300 hover:bg-zinc-200 text-zinc-700'
-                : 'border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white'
+              aria-label="Close"
+              className={`w-[32px] h-[32px] rounded-[8px] border-[0.5px] flex items-center justify-center shrink-0 transition-colors duration-150 cursor-pointer ${theme === 'light'
+                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
+                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
                 }`}
-              title="Close modal"
             >
-              <X size={16} />
+              <X weight="light" size={14} />
             </button>
           </div>
 
-          {/* Grid Area */}
-          <div className="p-6 hidden md:block overflow-y-auto flex-1 bg-black/20">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* Mobile (<md): compact numbered rows */}
+          <div className="md:hidden px-4 overflow-y-auto flex-1 min-h-0 pb-4">
+            {projects.map((project, index) => (
+              <div
+                key={project.id}
+                onClick={() => {
+                  onSelectProject(project);
+                  onClose();
+                }}
+                className={`flex items-center justify-between gap-3 py-[10px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
+                  } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#181818]'}`}
+              >
+                <span className="flex items-center gap-[10px] min-w-0">
+                  <span className={`w-[18px] shrink-0 text-[9px] font-mono ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#333333]'
+                    }`}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className={`text-[12px] font-mono truncate transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
+                    }`}>
+                    {project.title}
+                  </span>
+                </span>
+
+                <span className="shrink-0 flex items-center gap-2">
+                  <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
+                    ? 'border-[#ececec] text-[#a0a0a0]'
+                    : 'border-[#1e1e1e] text-[#5a5a57]'
+                    }`}>
+                    {project.tags?.[0]?.toLowerCase() || 'web'}
+                  </span>
+                  <ArrowUpRight
+                    weight="light"
+                    size={10}
+                    className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
+                      }`}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop (md+): same card as the works section grid — hairline
+              border, 16:10 thumbnail, mono title, lowercase tag. No fills,
+              no shadows, no hover scale. */}
+          <div className="hidden md:block px-6 py-5 overflow-y-auto flex-1 min-h-0">
+            <div className="grid grid-cols-3 gap-3">
               {projects.map((project) => (
                 <div
                   key={project.id}
@@ -1380,25 +1535,37 @@ const AllProjectsModal = ({
                     onSelectProject(project);
                     onClose();
                   }}
-                  className="cursor-pointer group flex flex-col"
+                  className={`cursor-pointer group rounded-[10px] border-[0.5px] overflow-hidden min-w-0 transition-colors duration-150 ${theme === 'light'
+                    ? 'border-[#e6e6e3] hover:border-[#c4c4c0]'
+                    : 'border-[#232320] hover:border-[#3d3d38]'
+                    }`}
                 >
-                  <div className="aspect-square w-full rounded-xl overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/25 transition-all duration-300 relative">
+                  <div className={`aspect-[16/10] w-full overflow-hidden flex items-center justify-center ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'
+                    }`}>
                     {project.image ? (
                       <img
                         src={project.image}
                         alt=""
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                        loading="lazy"
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-zinc-900 to-black" />
+                      // Flat block, not a gradient — matches the works grid.
+                      <div className={`w-1/2 h-1/2 rounded-[4px] ${theme === 'light' ? 'bg-[#e8e8e8]' : 'bg-[#1c1c1c]'
+                        }`} />
                     )}
                   </div>
-                  <div className="mt-2 flex flex-col gap-1 min-w-0">
-                    <h4 className="text-[12px] md:text-[13px] font-medium text-zinc-300 group-hover:text-white transition-colors truncate tracking-tight leading-snug">
+
+                  <div className="px-[9px] py-[8px] flex flex-col gap-1.5 min-w-0">
+                    <div className={`text-[11px] font-mono truncate ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#e5e5e5]'
+                      }`}>
                       {project.title}
-                    </h4>
-                    <span className="inline-flex self-start text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-900/60 border border-zinc-800 text-zinc-400 leading-none">
-                      {project.tags?.[0] || 'Web'}
+                    </div>
+                    <span className={`self-start inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] max-w-full truncate ${theme === 'light'
+                      ? 'border-[#ececec] text-[#a0a0a0]'
+                      : 'border-[#1e1e1e] text-[#5a5a57]'
+                      }`}>
+                      {project.tags?.[0]?.toLowerCase() || 'web'}
                     </span>
                   </div>
                 </div>
@@ -3088,6 +3255,24 @@ export default function App() {
   const [showBookCall, setShowBookCall] = useState(false);
   const [showGame, setShowGame] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
+
+  // Mirrors desktop, which is grid-only, unless the visitor chose otherwise.
+  const [worksView, setWorksViewState] = useState<WorksView>(() => {
+    try {
+      return localStorage.getItem(WORKS_VIEW_KEY) === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+
+  const setWorksView = (next: WorksView) => {
+    setWorksViewState(next);
+    try {
+      localStorage.setItem(WORKS_VIEW_KEY, next);
+    } catch {
+      // Storage blocked — choice still applies for this session.
+    }
+  };
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -3583,7 +3768,7 @@ export default function App() {
                   }`}
                 style={{ animationDelay: '0ms' }}
               >
-                05 - 08
+                
               </span>
               <h2
                 className={`text-[26px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
@@ -3647,7 +3832,7 @@ export default function App() {
             <div className="mb-8">
               <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                 }`}>
-                04 — 08
+                
               </span>
               <h2 className={`text-[26px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                 }`}>
@@ -3660,130 +3845,116 @@ export default function App() {
           {/* --- Projects Section --- */}
           <section id="projects" className={`py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t select-none overflow-hidden ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
+            <div className="flex justify-between items-start gap-4 mb-4">
+              <div className="min-w-0">
                 <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                   }`}>
-                  05 — 08
+                  
                 </span>
-                <h2 className={`text-[22px] font-mono font-normal leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                  }`}>
-                  my works
-                </h2>
+                {/* The toggle sits on the heading's own line so it reads as
+                    belonging to "my works". It is deliberately NOT grouped with
+                    the 01—08 page indicator, which is unrelated and stays far
+                    right on its own. */}
+                <div className="flex items-center gap-3 md:gap-4 mt-1">
+                  <h2 className={`text-[22px] font-mono font-normal leading-none tracking-normal lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+                    }`}>
+                    my works
+                  </h2>
+                  <WorksViewToggle
+                    view={worksView}
+                    onChange={setWorksView}
+                    theme={theme}
+                    className="shrink-0"
+                  />
+                </div>
               </div>
+
               <span className={`shrink-0 flex items-center gap-1 text-[10px] font-mono ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                 }`}>
-                01—08
+                
                 <ArrowUpRight weight="light" size={10} className="shrink-0" />
               </span>
             </div>
-            {/* Mobile: compact list rows, no thumbnails (below md) */}
-            <div className="md:hidden px-4">
-              {PROJECTS.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.04 }}
-                  className={`flex items-center justify-between gap-3 py-[10px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
-                    } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
-                  onClick={() => setSelectedProject(project)}
+
+            {/* Works — ONE state-driven render for every breakpoint. The old
+                separate `hidden md:grid` desktop block is gone, so the toggle is
+                the single source of truth for which view is active. Horizontal
+                padding comes from the <section> (px-6 md:px-12 max-w-7xl), the
+                same container the other sections use. */}
+            <div>
+              {worksView === 'grid' && (
+                <div
+                  key="works-grid"
+                  className="works-fade grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4"
                 >
-                  <span className={`text-[12px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
-                    }`}>
-                    {project.title}
-                  </span>
-
-                  <span className="shrink-0 flex items-center gap-2">
-                    <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
-                      ? 'border-[#ececec] text-[#a0a0a0]'
-                      : 'border-[#1e1e1e] text-[#333333]'
-                      }`}>
-                      {project.tags?.[0]?.toLowerCase() || 'web'}
-                    </span>
-                    <ArrowUpRight
-                      weight="light"
-                      size={10}
-                      className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
+                  {PROJECTS.map((project) => (
+                    <div
+                      key={project.id}
+                      onClick={() => setSelectedProject(project)}
+                      className={`cursor-pointer group rounded-[10px] border-[0.5px] overflow-hidden min-w-0 transition-colors duration-150 ${theme === 'light'
+                        ? 'border-[#e6e6e3] hover:border-[#c4c4c0]'
+                        : 'border-[#232320] hover:border-[#3d3d38]'
                         }`}
-                    />
-                  </span>
-                </motion.div>
-              ))}
-
-              {/* Browse all row — keeps the all-projects modal reachable on mobile */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className={`flex items-center justify-between gap-3 py-[10px] cursor-pointer group border-b-[0.5px] ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'
-                  }`}
-                onClick={() => setShowAllProjects(true)}
-              >
-                <span className={`text-[12px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
-                  }`}>
-                  browse all
-                </span>
-
-                <span className="shrink-0 flex items-center gap-2">
-                  <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
-                    ? 'border-[#ececec] text-[#a0a0a0]'
-                    : 'border-[#1e1e1e] text-[#333333]'
-                    }`}>
-                    grid
-                  </span>
-                  <ArrowUpRight
-                    weight="light"
-                    size={10}
-                    className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
-                      }`}
-                  />
-                </span>
-              </motion.div>
-            </div>
-
-            {/* Tablet 2-col / Desktop 4-col grid (md and above) */}
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-[1px] w-full rounded-[6px] overflow-hidden">
-              {PROJECTS.map((project, index) => {
-                const isFeatured = index === 0 || index === 5;
-                return (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`cursor-pointer group flex flex-col min-w-0 transition-colors duration-200 ring-[0.5px] ${isFeatured ? 'lg:col-span-2' : ''
-                      } ${theme === 'light' ? 'bg-[#ffffff] hover:bg-[#fafafa] ring-[#e0e0e0]' : 'bg-[#0d0d0d] hover:bg-[#111111] ring-[#1a1a1a]'}`}
-                    onClick={() => setSelectedProject(project)}
-                  >
-                    {/* Thumbnail */}
-                    <div className={`w-full relative overflow-hidden flex items-center justify-center aspect-[16/10] ${isFeatured ? 'lg:aspect-[2/1]' : 'lg:aspect-[4/3]'
-                      } ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'}`}>
-                      {project.image ? (
-                        <img
-                          src={project.image}
-                          alt=""
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                        />
-                      ) : (
-                        <div className={`w-1/2 h-1/2 transition-colors duration-300 ${theme === 'light'
-                          ? 'bg-[#e8e8e8] group-hover:bg-[#e0e0e0]'
-                          : 'bg-[#1c1c1c] group-hover:bg-[#202020]'
-                          }`} />
-                      )}
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="px-[10px] py-[8px] flex flex-col gap-1.5 min-w-0">
-                      <div className={`text-[11px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
+                    >
+                      {/* Fixed height keeps mobile cards compact; above md an
+                          aspect ratio lets the thumbnail scale with the column. */}
+                      <div className={`h-[70px] md:h-auto md:aspect-[16/10] w-full overflow-hidden flex items-center justify-center ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'
                         }`}>
-                        {project.title}
+                        {project.image ? (
+                          <img
+                            src={project.image}
+                            alt=""
+                            loading="lazy"
+                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                          />
+                        ) : (
+                          // Flat placeholder rather than a broken image
+                          <div className={`w-1/2 h-1/2 rounded-[4px] ${theme === 'light' ? 'bg-[#e8e8e8]' : 'bg-[#1c1c1c]'
+                            }`} />
+                        )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 min-w-0">
-                        <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] truncate ${theme === 'light'
+                      {/* Padding and type sizes stay constant across breakpoints
+                          so card text never looks inconsistently scaled. */}
+                      <div className="px-[9px] py-[8px] flex flex-col gap-1.5 min-w-0">
+                        <div className={`text-[11px] font-mono truncate ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#e5e5e5]'
+                          }`}>
+                          {project.title}
+                        </div>
+                        <span className={`self-start inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] max-w-full truncate ${theme === 'light'
+                          ? 'border-[#ececec] text-[#a0a0a0]'
+                          : 'border-[#1e1e1e] text-[#5a5a57]'
+                          }`}>
+                          {project.tags?.[0]?.toLowerCase() || 'web'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {worksView === 'list' && (
+                // Capped so rows don't stretch to absurd line lengths on wide
+                // screens; matches the max-width convention used elsewhere.
+                <div key="works-list" className="works-fade">
+                  {PROJECTS.map((project, index) => (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.04 }}
+                      className={`flex items-center justify-between gap-3 py-[10px] lg:py-[16px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
+                        } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
+                      onClick={() => setSelectedProject(project)}
+                    >
+                      <span className={`text-[12px] lg:text-[17px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
+                        }`}>
+                        {project.title}
+                      </span>
+
+                      <span className="shrink-0 flex items-center gap-2">
+                        <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
                           ? 'border-[#ececec] text-[#a0a0a0]'
                           : 'border-[#1e1e1e] text-[#333333]'
                           }`}>
@@ -3795,11 +3966,44 @@ export default function App() {
                           className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
                             }`}
                         />
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {/* Browse all row — shared by both views. In grid view it needs its
+                  own top edge; in list view it inherits one from the row above. */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className={`flex items-center justify-between gap-3 py-[10px] lg:py-[16px] cursor-pointer group border-b-[0.5px] ${worksView === 'grid'
+                  ? 'mt-2 md:mt-3 lg:mt-4 border-t-[0.5px]'
+                  : ''
+                  } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
+                onClick={() => setShowAllProjects(true)}
+              >
+                <span className={`text-[12px] lg:text-[17px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
+                  }`}>
+                  browse all
+                </span>
+
+                <span className="shrink-0 flex items-center gap-2">
+                  <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
+                    ? 'border-[#ececec] text-[#a0a0a0]'
+                    : 'border-[#1e1e1e] text-[#333333]'
+                    }`}>
+                    all
+                  </span>
+                  <ArrowUpRight
+                    weight="light"
+                    size={10}
+                    className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
+                      }`}
+                  />
+                </span>
+              </motion.div>
             </div>
           </section>
 
