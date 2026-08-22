@@ -137,36 +137,6 @@ const PROJECTS: Project[] = [
     ]
   },
   {
-    id: 2,
-    title: "Finance Tracker web application",
-    description: "lets you track all of your finances in one place with ai chatbot integration",
-    tags: ["Next.js", "Node.js", "Railway", "Express"],
-    image: "/img/t3.PNG",
-    link: "financetracker-blond-six.vercel.app",
-    screenshots: [
-      {
-        url: "/img/t1.PNG",
-        caption: ""
-      },
-      {
-        url: "/img/t2.PNG",
-        caption: ""
-      },
-      {
-        url: "/img/t4.PNG",
-        caption: ""
-      },
-      {
-        url: "/img/t3.PNG",
-        caption: ""
-      },
-      {
-        url: "/img/t5.PNG",
-        caption: ""
-      }
-    ]
-  },
-  {
     id: 3,
     title: "Burger restaurant website",
     description: "Experience artisan gourmet burgers with online ordering and live delivery tracking.",
@@ -300,6 +270,24 @@ const PROJECTS: Project[] = [
       },
       {
         url: "/img/arc3.png",
+        caption: ""
+      },
+    ]
+  },
+  {
+    id: 9,
+    title: "Business hub",
+    description: "A financial command centre for small businesses, freelancers and agencies. Everything lives in the browser — no accounts, no cloud, no backend for the core features. Open it, and your books are already there.",
+    tags: ["React", "TypeScript", "Tailwind CSS", "Vite"],
+    image: "/img/b1.png",
+    link: "https://businesshub.kelas.site",
+    screenshots: [
+      {
+        url: "/img/b1.png",
+        caption: ""
+      },
+      {
+        url: "/img/b2.png",
         caption: ""
       },
     ]
