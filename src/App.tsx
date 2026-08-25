@@ -276,11 +276,11 @@ const PROJECTS: Project[] = [
   },
   {
     id: 9,
-    title: "Business hub",
-    description: "A financial command centre for small businesses, freelancers and agencies. Everything lives in the browser — no accounts, no cloud, no backend for the core features. Open it, and your books are already there.",
+    title: "dual finance",
+    description: "Business and personal finance, in one place.",
     tags: ["React", "TypeScript", "Tailwind CSS", "Vite"],
     image: "/img/b1.png",
-    link: "https://businesshub.kelas.site",
+    link: "https://dualfinance.site",
     screenshots: [
       {
         url: "/img/b1.png",
