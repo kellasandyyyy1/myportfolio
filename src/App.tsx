@@ -4,7 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
-import { SiPearson, SiCisco, SiUpwork, SiFiverr } from 'react-icons/si';
+import { SiPearson, SiCisco, SiUpwork, SiFiverr, SiRakuten } from 'react-icons/si';
 import { playExternalLink, playNavTick, playTransition } from './lib/sound';
 import { useSoundMuted } from './lib/useSoundMuted';
 import { HarvestSnakeModal } from './components/HarvestSnake';
@@ -522,7 +522,24 @@ interface ExperienceEntry {
   id: string;
   initials: string;
   /** Official brand mark to render in the timeline tile instead of `initials`. */
-  logo?: 'upwork' | 'fiverr';
+  logo?: 'upwork' | 'fiverr' | 'rakuten';
+  /**
+   * Path to a logo image for companies with no Simple Icons mark (most brands
+   * outside tech). Takes precedence over `initials`; `logo` wins over both.
+   */
+  logoSrc?: string;
+  /**
+   * For opaque black-on-white artwork (a JPG with no alpha). Inverting gives
+   * white-on-black, then `screen` drops the black to transparent — so the mark
+   * reads white on the dark tile instead of sitting in a white box.
+   */
+  logoInvertOnDark?: boolean;
+  /**
+   * Box size in px for `logoSrc` (default 26). Artwork with baked-in padding
+   * or a wide aspect renders small under object-contain, so it needs a larger
+   * box to reach the same optical size as the others.
+   */
+  logoSize?: number;
   company: string;
   location: string;
   employmentType: string;
@@ -535,35 +552,52 @@ interface ExperienceEntry {
 
 const EXPERIENCES: ExperienceEntry[] = [
   {
-    id: 'freelance',
-    initials: 'UP',
-    logo: 'upwork',
-    company: 'Upwork freelance',
+    id: 'broadheader',
+    initials: 'BH',
+    logoSrc: '/img/broadheaderlogo.jpg',
+    // Opaque black-on-white JPG — knocked out to white on the dark theme.
+    logoInvertOnDark: true,
+    company: 'Broadheader',
+    location: 'Remote',
+    employmentType: 'Full-time',
+    role: 'Fullstack Engineer Lead',
+    period: 'August 2026 — PRESENT · 2 MOS',
+    description: 'Leading engineering across the stack — setting architecture direction, running code review, and taking products from API design through to interface polish. Mentoring the team and keeping delivery predictable as the codebase grows.',
+    skills: ['React', 'TypeScript', 'Node.js', 'Next.js'],
+    moreSkillsCount: 3,
+  },
+  {
+    id: 'png',
+    initials: 'P&G',
+    logoSrc: '/img/pglogo.webp',
+    // 600x300 artwork: a 44px box renders the sphere at ~22px, matching the others.
+    logoSize: 44,
+    company: 'P&G',
     location: 'Houston, Texas',
     employmentType: 'Contract',
     role: 'Fullstack web developer',
-    period: 'Jan 2026 — PRESENT ·  6 MOS',
+    period: 'February 2026 — July 2026 · 6 MOS',
     description: 'Developed SaaS and ecommerce website for clients with ai integrations , custom api and more.',
     skills: ['React', 'Express', 'TypeScript', 'Shopify'],
     moreSkillsCount: 4,
   },
   {
-    id: 'tech-labs',
-    initials: 'MVP',
-    company: 'Mercantile ventures partner',
+    id: 'rcbc',
+    initials: 'RCBC',
+    logoSrc: '/img/rcbclogo.svg',
+    company: 'RCBC',
     location: 'Makati, Metro Manila',
     employmentType: 'Full-time',
-    role: 'Frontend Developer',
+    role: 'Frontend Developer Intern',
     period: 'June 2025 — December 2025 · 6 MOS',
-    description: 'Built scalable client-side web architectures, responsive design systems, and real-time dashboard analytics. Improved web performance scores by 35%.',
-    skills: ['React', 'TypeScript', 'REST APIs', 'LLMs integration'],
-    moreSkillsCount: 3,
+    description: 'Built reusable React components and responsive Tailwind layouts, wired them to internal REST endpoints, and helped migrate legacy pages into a typed, accessible component library alongside the design team.',
+    skills: ['React', 'TypeScript', 'Tailwind CSS', 'REST APIs'],
   },
   {
-    id: 'digital-corp',
-    initials: 'FV',
-    logo: 'fiverr',
-    company: 'Fiverr Freelancing',
+    id: 'rakuten',
+    initials: 'RK',
+    logo: 'rakuten',
+    company: 'Rakuten',
     location: 'London, United kingdom',
     employmentType: 'Full-time',
     role: 'Web Developer & UI Designer',
@@ -578,12 +612,34 @@ const EXPERIENCES: ExperienceEntry[] = [
 const EXPERIENCE_LOGOS = {
   upwork: { Icon: SiUpwork, color: '#14A800', label: 'Upwork', size: 24 },
   fiverr: { Icon: SiFiverr, color: '#1DBF73', label: 'Fiverr', size: 26 },
+  rakuten: { Icon: SiRakuten, color: '#BF0000', label: 'Rakuten', size: 24 },
 } as const;
 
-const ExperienceLogo = ({ exp }: { exp: ExperienceEntry }) => {
-  if (!exp.logo) return <>{exp.initials}</>;
-  const { Icon, color, label, size } = EXPERIENCE_LOGOS[exp.logo];
-  return <Icon size={size} color={color} title={label} aria-label={label} />;
+const ExperienceLogo = ({ exp, theme }: { exp: ExperienceEntry; theme: 'dark' | 'light' }) => {
+  if (exp.logo) {
+    const { Icon, color, label, size } = EXPERIENCE_LOGOS[exp.logo];
+    return <Icon size={size} color={color} title={label} aria-label={label} />;
+  }
+
+  if (exp.logoSrc) {
+    const knockOut = theme === 'dark' && exp.logoInvertOnDark;
+    return (
+      <img
+        src={exp.logoSrc}
+        alt={exp.company}
+        // Contain, so a logo of any aspect ratio fits the 44px tile uncropped.
+        className="object-contain"
+        style={{
+          width: exp.logoSize ?? 26,
+          height: exp.logoSize ?? 26,
+          ...(knockOut ? { filter: 'invert(1)', mixBlendMode: 'screen' as const } : {}),
+        }}
+      />
+    );
+  }
+
+  // Falls back to initials — 4 characters still fit the tile at 12px mono.
+  return <>{exp.initials}</>;
 };
 
 // --- Components ---
@@ -3565,7 +3621,7 @@ export default function App() {
                         ? 'border-[#e0e0e0] bg-[#ffffff] text-[#1a1a1a]'
                         : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#e5e5e5]'
                         }`}>
-                        <ExperienceLogo exp={exp} />
+                        <ExperienceLogo exp={exp} theme={theme} />
                       </div>
                       {!isLast && (
                         <div className={`w-[1px] flex-1 my-2 min-h-[40px] ${theme === 'light' ? 'bg-[#d8d8d8]' : 'bg-[#242424]'
