@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { flushSync } from 'react-dom';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring, AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
 import { SiPearson, SiCisco, SiUpwork, SiFiverr, SiRakuten } from 'react-icons/si';
 import { playExternalLink, playNavTick, playTransition } from './lib/sound';
 import { useSoundMuted } from './lib/useSoundMuted';
+import BlogPage from './components/BlogPage';
 import { HarvestSnakeModal } from './components/HarvestSnake';
 import { ServiceCardCanvas } from './components/ServiceCardCanvas';
 import { InteractiveProfile } from './components/InteractiveProfile';
@@ -30,7 +31,6 @@ import {
   Moon,
   Eye,
   SquaresFour as LayoutGrid,
-  Download,
   FileText,
   Printer,
   Calendar,
@@ -573,7 +573,7 @@ const EXPERIENCES: ExperienceEntry[] = [
     // 600x300 artwork: a 44px box renders the sphere at ~22px, matching the others.
     logoSize: 44,
     company: 'P&G',
-    location: 'Houston, Texas',
+    location: 'BGC, Taguig',
     employmentType: 'Contract',
     role: 'Fullstack web developer',
     period: 'February 2026 — July 2026 · 6 MOS',
@@ -868,7 +868,7 @@ const SidebarNavigation = ({
       // it — that's where the page opens.
       className={({ isActive }) => {
         const active = isActive || (location.pathname === '/' && link.id === 'about');
-        return `py-2 px-0 flex items-center gap-[9px] text-[12.5px] font-mono tracking-[0.5px] transition-colors duration-150 w-full group cursor-pointer ${active
+        return `py-2 px-0 flex items-center gap-[9px] text-[12.5px] font-geist tracking-[0.5px] transition-colors duration-150 w-full group cursor-pointer ${active
           ? theme === 'light'
             ? 'text-[#1a1a1a]'
             : 'text-[#e0e0e0]'
@@ -926,7 +926,7 @@ const SidebarNavigation = ({
 
           {/* Group 2: Engagement */}
           <div className="flex flex-col gap-0">
-            <span className={`px-0 mt-6 pb-1 text-[10px] font-mono uppercase tracking-[1.5px] select-none ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#2a2a2a]'
+            <span className={`px-0 mt-6 pb-1 text-[10px] font-geist uppercase tracking-[1.5px] select-none ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#2a2a2a]'
               }`}>
               ENGAGE
             </span>
@@ -998,7 +998,7 @@ const SidebarNavigation = ({
           </div>
 
           {/* Divider & Theme Toggle */}
-          <div className={`pt-2 border-t flex items-center justify-between w-full font-mono text-[10px] uppercase tracking-[1px] ${theme === 'light' ? 'border-[#ececec] text-[#8a8a85]' : 'border-[#1c1c1c] text-[#777777]'
+          <div className={`pt-2 border-t flex items-center justify-between w-full font-geist text-[10px] uppercase tracking-[1px] ${theme === 'light' ? 'border-[#ececec] text-[#8a8a85]' : 'border-[#1c1c1c] text-[#777777]'
             }`}>
             <button
               onClick={toggleTheme}
@@ -1030,7 +1030,7 @@ const SidebarNavigation = ({
               onClick={playNavTick}
               className={({ isActive }) => {
                 const active = isActive || (location.pathname === '/' && link.id === 'about');
-                return `text-xs font-mono uppercase tracking-[0.5px] transition-colors ${active
+                return `text-xs font-geist uppercase tracking-[0.5px] transition-colors ${active
                   ? (theme === 'light' ? 'text-[#1a1a1a] font-medium' : 'text-white font-medium')
                   : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white')
                   }`;
@@ -1123,7 +1123,7 @@ const SidebarNavigation = ({
                     onClick={() => { playNavTick(); setIsOpen(false); }}
                     className={({ isActive }) => {
                       const active = isActive || (location.pathname === '/' && link.id === 'about');
-                      return `text-xs py-2 flex items-center gap-2.5 border-b ${active
+                      return `text-xs font-geist py-2 flex items-center gap-2.5 border-b ${active
                         ? (theme === 'light' ? 'text-[#1a1a1a]' : 'text-white')
                         : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#a1a1aa] hover:text-white')
                         } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]/60'}`;
@@ -1182,14 +1182,12 @@ const SidebarNavigation = ({
 
 const SectionHeading = ({
   children,
-  number,
   className = "mb-10",
   theme,
   isInView,
   baseDelay = 0
 }: {
   children: React.ReactNode;
-  number: string;
   className?: string;
   theme?: 'dark' | 'light';
   isInView?: boolean;
@@ -1199,17 +1197,10 @@ const SectionHeading = ({
   const animClass = isInView !== undefined ? `scroll-animate-child ${isInView ? 'animated' : ''}` : '';
   return (
     <div className={className}>
-      <span
-        className={`text-[10px] font-mono tracking-[1.5px] uppercase block mb-1 ${animClass} ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
+      <h2
+        className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none tracking-normal lowercase ${animClass} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
           }`}
         style={isInView !== undefined ? { animationDelay: `${baseDelay}ms` } : undefined}
-      >
-        {number} — 
-      </span>
-      <h2
-        className={`text-[26px] sm:text-[32px] font-mono font-medium leading-none tracking-normal lowercase ${animClass} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-          }`}
-        style={isInView !== undefined ? { animationDelay: `${baseDelay + 80}ms` } : undefined}
       >
         {textVal}
       </h2>
@@ -1277,9 +1268,9 @@ const ResourceCard = ({
 
   return (
     <div
-      className={`group/card h-full flex flex-col rounded-[12px] border-[0.5px] bg-transparent p-4 md:p-5 transition-colors ${isLight
-        ? 'border-[#e6e6e3] hover:border-[#c4c4c0]'
-        : 'border-[#232320] hover:border-[#3d3d38]'
+      className={`group/card h-full flex flex-col rounded-[12px] p-4 md:p-5 transition-[box-shadow,background-color] duration-200 ${isLight
+        ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
+        : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
         }`}
     >
       <span className={`text-[10px] font-mono uppercase tracking-[1.5px] block mb-4 md:mb-5 select-none ${isLight ? 'text-[#a0a0a0]' : 'text-[#4a4a46]'
@@ -1505,9 +1496,9 @@ const AllProjectsModal = ({
             <div className="min-w-0">
               <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                 }`}>
-                {String(projects.length).padStart(2, '0')} — projects
+                projects
               </span>
-              <h3 className={`text-[18px] md:text-[22px] font-mono font-normal leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+              <h3 className={`text-[18px] md:text-[22px] font-geist font-normal leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
                 }`}>
                 all projects
               </h3>
@@ -1579,9 +1570,9 @@ const AllProjectsModal = ({
                     onSelectProject(project);
                     onClose();
                   }}
-                  className={`cursor-pointer group rounded-[10px] border-[0.5px] overflow-hidden min-w-0 transition-colors duration-150 ${theme === 'light'
-                    ? 'border-[#e6e6e3] hover:border-[#c4c4c0]'
-                    : 'border-[#232320] hover:border-[#3d3d38]'
+                  className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 ${theme === 'light'
+                    ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
+                    : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
                     }`}
                 >
                   <div className={`aspect-[16/10] w-full overflow-hidden flex items-center justify-center ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'
@@ -2816,243 +2807,141 @@ const APPROACH_STAGES: ApproachStage[] = [
   },
 ];
 
-interface PipelineGeometry {
-  viewBox: string;
-  boxes: { x: number; y: number; w: number; h: number }[];
-  arrows: { x1: number; y1: number; x2: number; y2: number; head: string }[];
-  labelSize: number;
-  subSize: number;
-}
+/**
+ * Layer stack, bottom to top — the order mirrors the real dependency chain:
+ * backend underpins everything, UI sits above it, frontend renders on top.
+ * Colours are the section's existing stage colours so the left-column dots and
+ * the layer borders stay in step.
+ */
+const ISO_LAYERS = [
+  { id: 'api', label: 'api / backend', color: '#2dd4bf', zRest: 0, zOut: 0, zStatic: 0, delay: 0 },
+  { id: 'ui', label: 'ui / interaction', color: '#f472b6', zRest: 12, zOut: 54, zStatic: 24, delay: 100 },
+  { id: 'frontend', label: 'frontend', color: '#60a5fa', zRest: 24, zOut: 108, zStatic: 48, delay: 200 },
+];
 
-/** Horizontal flow, arrows point right. */
-const PIPELINE_DESKTOP: PipelineGeometry = {
-  viewBox: '0 0 720 72',
-  boxes: [
-    { x: 1, y: 4, w: 198, h: 64 },
-    { x: 261, y: 4, w: 198, h: 64 },
-    { x: 521, y: 4, w: 198, h: 64 },
-  ],
-  arrows: [
-    { x1: 209, y1: 36, x2: 249, y2: 36, head: 'M245,32 L251,36 L245,40' },
-    { x1: 469, y1: 36, x2: 509, y2: 36, head: 'M505,32 L511,36 L505,40' },
-  ],
-  labelSize: 12.5,
-  subSize: 9.5,
+/** Left-column reading order, which is not the stack order. */
+const STAGE_LIST_ORDER = ['frontend', 'api', 'ui'] as const;
+
+/** Stage colour at an arbitrary alpha. currentColor can't carry one, and the
+ *  hologram shading needs the same hue at several strengths. */
+const stageRgba = (hex: string, alpha: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
-/** Distinct vertical layout for narrow screens — arrows point down. */
-const PIPELINE_MOBILE: PipelineGeometry = {
-  viewBox: '0 0 320 276',
-  boxes: [
-    { x: 1, y: 4, w: 318, h: 64 },
-    { x: 1, y: 106, w: 318, h: 64 },
-    { x: 1, y: 208, w: 318, h: 64 },
-  ],
-  arrows: [
-    { x1: 160, y1: 78, x2: 160, y2: 94, head: 'M156,90 L160,96 L164,90' },
-    { x1: 160, y1: 180, x2: 160, y2: 196, head: 'M156,192 L160,198 L164,192' },
-  ],
-  labelSize: 13,
-  subSize: 10,
-};
+const IsoLayerStack: React.FC<{ reduced: boolean; play: boolean }> = ({ reduced, play }) => {
+  // Bumping this remounts the stack, which is what restarts the CSS animation.
+  const [playToken, setPlayToken] = useState(0);
 
-// Entrance choreography, in ms. Boxes cascade, each arrow starts as its
-// preceding box lands, caption follows box 3, then the detail rows.
-const BOX_DUR = 300;
-const BOX_STAGGER = 120;
-const ARROW_DUR = 250;
-const CAPTION_DUR = 200;
-const ROW_DUR = 250;
-const ROW_STAGGER = 80;
-
-const boxDelay = (i: number) => i * BOX_STAGGER;
-const arrowDelay = (i: number) => boxDelay(i) + BOX_DUR;
-const captionDelay = boxDelay(APPROACH_STAGES.length - 1) + BOX_DUR;
-const DIAGRAM_END = Math.max(
-  arrowDelay(APPROACH_STAGES.length - 2) + ARROW_DUR,
-  captionDelay + CAPTION_DUR
-);
-const rowDelay = (i: number) => DIAGRAM_END + i * ROW_STAGGER;
-
-const ApproachPipelineSvg: React.FC<{
-  geometry: PipelineGeometry;
-  revealed: boolean;
-  reduced: boolean;
-  theme: 'dark' | 'light';
-  className?: string;
-}> = ({ geometry, revealed, reduced, theme, className }) => {
-  const isLight = theme === 'light';
-  const labelColor = isLight ? '#1a1a1a' : '#e5e5e5';
-  const subColor = isLight ? '#8a8a8a' : '#777777';
-  const arrowColor = isLight ? '#b4b4b0' : '#3d3d38';
+  useEffect(() => {
+    if (play && !reduced) setPlayToken((n) => n + 1);
+  }, [play, reduced]);
 
   return (
-    <svg
-      viewBox={geometry.viewBox}
-      className={className}
-      style={{ width: '100%', height: 'auto' }}
-      role="img"
-      aria-label="Pipeline: UI and interaction, then API and backend, then frontend"
+    // Decorative: every stage name and its order is real text in the left column.
+    <div
+      className="iso-stage"
+      aria-hidden="true"
+      onMouseEnter={() => {
+        if (!reduced) setPlayToken((n) => n + 1);
+      }}
     >
-      {geometry.arrows.map((arrow, i) => {
-        const length = Math.hypot(arrow.x2 - arrow.x1, arrow.y2 - arrow.y1);
-        return (
-          <g key={`arrow-${i}`}>
-            <line
-              x1={arrow.x1}
-              y1={arrow.y1}
-              x2={arrow.x2}
-              y2={arrow.y2}
-              stroke={arrowColor}
-              strokeWidth={1}
-              strokeDasharray={length}
-              style={{
-                strokeDashoffset: revealed ? 0 : length,
-                transition: reduced
-                  ? 'none'
-                  : `stroke-dashoffset ${ARROW_DUR}ms ease-out ${arrowDelay(i)}ms`,
-              }}
-            />
-            {/* Arrowhead is its own path, not a marker, so it can fade in with the line
-                instead of sitting there fully drawn while the stroke is still hidden. */}
-            <path
-              d={arrow.head}
-              fill="none"
-              stroke={arrowColor}
-              strokeWidth={1}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                opacity: revealed ? 1 : 0,
-                transition: reduced
-                  ? 'none'
-                  : `opacity 120ms ease-out ${arrowDelay(i) + ARROW_DUR - 100}ms`,
-              }}
-            />
-          </g>
-        );
-      })}
-
-      {geometry.boxes.map((box, i) => {
-        const stage = APPROACH_STAGES[i];
-        const cx = box.x + box.w / 2;
-        const cy = box.y + box.h / 2;
-        return (
-          <g
-            key={stage.id}
+      <div
+        key={playToken}
+        className={`iso-stack ${playToken > 0 && !reduced ? 'is-playing' : ''}`}
+      >
+        {ISO_LAYERS.map((layer, i) => (
+          <div
+            key={layer.id}
+            className="iso-layer"
             style={{
-              opacity: revealed ? 1 : 0,
-              transform: revealed ? 'scale(1)' : 'scale(0.96)',
-              // Explicit user-space origin — SVG's default transform-box is view-box,
-              // so `center` would pivot on the whole diagram, not this box.
-              transformOrigin: `${cx}px ${cy}px`,
-              transition: reduced
-                ? 'none'
-                : `opacity ${BOX_DUR}ms ease-out ${boxDelay(i)}ms, transform ${BOX_DUR}ms ease-out ${boxDelay(i)}ms`,
-            }}
+              color: layer.color,
+              '--c-lit': stageRgba(layer.color, 0.26),
+              '--c-mid': stageRgba(layer.color, 0.1),
+              '--c-edge': stageRgba(layer.color, 0.72),
+              '--c-seam': stageRgba(layer.color, 0.42),
+              '--c-glow': stageRgba(layer.color, 0.55),
+              zIndex: i,
+              '--z-rest': `${layer.zRest}px`,
+              '--z-out': `${layer.zOut}px`,
+              '--z-static': `${layer.zStatic}px`,
+              '--delay': `${layer.delay}ms`,
+            } as React.CSSProperties}
           >
-            <rect
-              x={box.x}
-              y={box.y}
-              width={box.w}
-              height={box.h}
-              rx={8}
-              fill="none"
-              stroke={stage.color}
-              strokeWidth={1}
-            />
-            <text
-              x={cx}
-              y={cy - 4}
-              textAnchor="middle"
-              fill={labelColor}
-              className="font-mono"
-              style={{ fontSize: geometry.labelSize }}
-            >
-              {stage.label}
-            </text>
-            <text
-              x={cx}
-              y={cy + 13}
-              textAnchor="middle"
-              fill={subColor}
-              className="font-mono"
-              style={{ fontSize: geometry.subSize }}
-            >
-              {stage.sub}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+            <span className="iso-label font-mono">{layer.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
-const ApproachSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
+const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> = ({
+  theme,
+  isInView,
+}) => {
   const { ref, revealed, reduced } = useRevealOnce();
   const isLight = theme === 'light';
+  const animClass = `scroll-animate-child ${isInView ? 'animated' : ''}`;
+
+  const stages = STAGE_LIST_ORDER.map(
+    (id) => APPROACH_STAGES.find((s) => s.id === id)!
+  );
 
   return (
-    <div ref={ref}>
-      <div className="max-w-[720px]">
-        <ApproachPipelineSvg
-          geometry={PIPELINE_MOBILE}
-          revealed={revealed}
-          reduced={reduced}
-          theme={theme}
-          className="block md:hidden"
-        />
-        <ApproachPipelineSvg
-          geometry={PIPELINE_DESKTOP}
-          revealed={revealed}
-          reduced={reduced}
-          theme={theme}
-          className="hidden md:block"
-        />
+    <div ref={ref} className="grid md:grid-cols-2 gap-10 md:gap-14 items-start">
+      {/* Left column — the accessible source of truth for stages and order. */}
+      <div className="min-w-0">
+        <SectionHeading theme={theme} isInView={isInView} baseDelay={0}>
+          my approach
+        </SectionHeading>
 
         <p
-          className={`text-[10px] md:text-[10.5px] font-mono tracking-[0.04em] mt-3 ${isLight ? 'text-[#a0a0a0]' : 'text-[#666666]'
+          className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mb-8 ${animClass} ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
             }`}
-          style={{
-            opacity: revealed ? 1 : 0,
-            transition: reduced ? 'none' : `opacity ${CAPTION_DUR}ms ease-out ${captionDelay}ms`,
-          }}
+          style={{ animationDelay: '160ms' }}
+        >
+          I build products end to end, from API design to pixel-level UI polish, with a bias toward clean, maintainable code.
+        </p>
+
+        <ul className="space-y-3.5 md:space-y-4">
+          {stages.map((stage, i) => (
+            <li
+              key={stage.id}
+              className={`flex items-start gap-3 ${animClass}`}
+              style={{ animationDelay: `${240 + i * 60}ms` }}
+            >
+              <span
+                aria-hidden="true"
+                className="shrink-0 w-[7px] h-[7px] rounded-full mt-[6px] md:mt-[7px]"
+                style={{ backgroundColor: stage.color }}
+              />
+              <div className="min-w-0">
+                <h3 className={`text-[14px] md:text-[15px] font-sans font-semibold tracking-tight ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+                  }`}>
+                  {stage.detailLabel}
+                </h3>
+                <p className={`text-[12px] md:text-[13px] font-sans leading-relaxed mt-0.5 max-w-[420px] break-words ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
+                  }`}>
+                  {stage.detailDesc}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <p
+          className={`text-[10px] md:text-[10.5px] font-mono tracking-[0.04em] mt-7 ${animClass} ${isLight ? 'text-[#a0a0a0]' : 'text-[#666666]'
+            }`}
+          style={{ animationDelay: '440ms' }}
         >
           design → build → ship, in that order
         </p>
       </div>
 
-      {/* Detail list — single column at every size */}
-      <div className="mt-8 md:mt-10 space-y-3.5 md:space-y-4">
-        {APPROACH_STAGES.map((stage, i) => (
-          <div
-            key={stage.id}
-            className="flex items-start gap-3"
-            style={{
-              opacity: revealed ? 1 : 0,
-              transform: revealed ? 'translateY(0)' : 'translateY(6px)',
-              transition: reduced
-                ? 'none'
-                : `opacity ${ROW_DUR}ms ease-out ${rowDelay(i)}ms, transform ${ROW_DUR}ms ease-out ${rowDelay(i)}ms`,
-            }}
-          >
-            <span
-              aria-hidden="true"
-              className="shrink-0 w-[7px] h-[7px] rounded-full mt-[6px] md:mt-[7px]"
-              style={{ backgroundColor: stage.color }}
-            />
-            <div className="min-w-0">
-              <h4 className={`text-[14px] md:text-[15px] font-sans font-semibold tracking-tight ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                }`}>
-                {stage.detailLabel}
-              </h4>
-              <p className={`text-[12px] md:text-[13px] font-sans leading-relaxed mt-0.5 max-w-[480px] break-words ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-                }`}>
-                {stage.detailDesc}
-              </p>
-            </div>
-          </div>
-        ))}
+      {/* Right column — stack sits beside the text on desktop, below and centred on mobile. */}
+      <div className="flex justify-center md:justify-end">
+        <IsoLayerStack reduced={reduced} play={revealed} />
       </div>
     </div>
   );
@@ -3329,6 +3218,7 @@ export default function App() {
   const [stackRef, stackInView] = useSectionInView();
   const [certRef, certInView] = useSectionInView();
 
+  const blogLocation = useLocation();
   const getAnimClass = (inView: boolean) => `scroll-animate-child ${inView ? 'animated' : ''}`;
 
   /** Writes the theme to the DOM and storage. Must be synchronous so it can run
@@ -3393,13 +3283,17 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme]);
 
+  // /blog is a standalone route: its own shell, no sidebar nav, and therefore
+  // none of the scroll-spy <-> URL syncing that drives the portfolio page.
+  if (blogLocation.pathname.startsWith('/blog')) {
+    return <BlogPage theme={theme} toggleTheme={toggleTheme} />;
+  }
+
   return (
     <div className={`min-h-screen font-sans text-[15px] selection:bg-zinc-800 selection:text-white lg:flex relative ${theme === 'light'
       ? 'bg-[#fafafa] text-[#5a5a5a] selection:bg-zinc-200 selection:text-black'
       : 'bg-[#0b0b0d] text-[#a1a1aa] selection:bg-zinc-800 selection:text-white'
       }`}>
-      {/* Creative Halftone Dot Overlay for editorial design aesthetic */}
-      <div className="halftone-overlay" aria-hidden="true" />
       <CustomCursor />
       <SidebarNavigation
         theme={theme}
@@ -3523,6 +3417,24 @@ export default function App() {
                     } />
                   </button>
                 </div>
+
+                {/* Blog lives on its own route and is intentionally absent from the nav. */}
+                <Link
+                  to="/blog"
+                  onClick={playNavTick}
+                  className={`mt-5 inline-flex items-center gap-2 rounded-[8px] border-[0.5px] px-3.5 py-2 text-[12px] font-geist transition-colors duration-150 cursor-pointer group hero-animate ${theme === 'light'
+                    ? 'border-[#e0e0e0] text-[#1a1a1a] hover:border-[#a0a0a0]'
+                    : 'border-[#262626] text-[#e5e5e5] hover:border-[#3d3d38]'
+                    }`}
+                  style={{ animationDelay: '400ms' }}
+                >
+                  <span>see my blogs</span>
+                  <ArrowRight
+                    weight="light"
+                    size={14}
+                    className="shrink-0 transition-transform duration-150 group-hover:translate-x-0.5"
+                  />
+                </Link>
               </div>
             </div>
 
@@ -3538,19 +3450,19 @@ export default function App() {
                     }`}
                   style={{ animationDelay: '480ms' }}
                 >
-                  <div className={`text-[19px] sm:text-[20px] font-pixel leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                     }`}>1+ YRS</div>
-                  <div className={`text-[10px] font-mono uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                    }`}>EXPERIENCE</div>
+                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
+                    }`}>SHIPPING</div>
                 </div>
                 <div
                   className={`px-[18px] py-[16px] flex flex-col justify-center hero-animate ${theme === 'light' ? 'bg-[#ffffff]' : 'bg-[#0a0a0a]'
                     }`}
                   style={{ animationDelay: '530ms' }}
                 >
-                  <div className={`text-[19px] sm:text-[20px] font-pixel leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                     }`}>15+</div>
-                  <div className={`text-[10px] font-mono uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
+                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
                     }`}>PROJECTS BUILT</div>
                 </div>
                 <div
@@ -3558,9 +3470,9 @@ export default function App() {
                     }`}
                   style={{ animationDelay: '580ms' }}
                 >
-                  <div className={`text-[19px] sm:text-[20px] font-pixel leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                     }`}>12+</div>
-                  <div className={`text-[10px] font-mono uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
+                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
                     }`}>technologies</div>
                 </div>
                 <div
@@ -3568,9 +3480,9 @@ export default function App() {
                     }`}
                   style={{ animationDelay: '630ms' }}
                 >
-                  <div className={`text-[19px] sm:text-[20px] font-pixel leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                     }`}>Manila, PH</div>
-                  <div className={`text-[10px] font-mono uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
+                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
                     }`}>LOCATION</div>
                 </div>
               </div>
@@ -3580,23 +3492,14 @@ export default function App() {
           {/* --- 01 / Overview Section --- */}
           <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 md:pt-16 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <SectionHeading number="01" theme={theme} isInView={aboutInView} baseDelay={0}>my approach</SectionHeading>
-
-            <p className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mb-8 md:mb-10 ${getAnimClass(aboutInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#888888]'
-              }`}
-              style={{ animationDelay: '160ms' }}
-            >
-              I build products end to end, from API design to pixel-level UI polish, with a bias toward clean, maintainable code.
-            </p>
-
-            <ApproachSection theme={theme} />
+            <ApproachSection theme={theme} isInView={aboutInView} />
           </section>
 
           {/* --- 02 / Experience Section --- */}
           <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="mb-10">
-              <SectionHeading number="02" className="mb-2" theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
+              <SectionHeading className="mb-2" theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
               <p
                 className={`text-[15px] font-sans mt-2 max-w-xl ${getAnimClass(expInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
                   }`}
@@ -3745,7 +3648,7 @@ export default function App() {
           <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="mb-10">
-              <SectionHeading number="03" className="mb-2" theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
+              <SectionHeading className="mb-2" theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
               <p
                 className={`text-[13px] font-sans mt-2 max-w-[480px] ${getAnimClass(stackInView)} ${theme === 'light' ? 'text-[#4c5bc4]' : 'text-[#7c8ce0]'
                   }`}
@@ -3807,15 +3710,8 @@ export default function App() {
           <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="mb-8">
-              <span
-                className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                  }`}
-                style={{ animationDelay: '0ms' }}
-              >
-                
-              </span>
               <h2
-                className={`text-[26px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                   }`}
                 style={{ animationDelay: '80ms' }}
               >
@@ -3874,11 +3770,7 @@ export default function App() {
           <section id="process" className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="mb-8">
-              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                }`}>
-                
-              </span>
-              <h2 className={`text-[26px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+              <h2 className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                 }`}>
                 how i think
               </h2>
@@ -3891,16 +3783,12 @@ export default function App() {
             }`}>
             <div className="flex justify-between items-start gap-4 mb-4">
               <div className="min-w-0">
-                <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                  }`}>
-                  
-                </span>
                 {/* The toggle sits on the heading's own line so it reads as
                     belonging to "my works". It is deliberately NOT grouped with
                     the 01—08 page indicator, which is unrelated and stays far
                     right on its own. */}
                 <div className="flex items-center gap-3 md:gap-4 mt-1">
-                  <h2 className={`text-[22px] font-mono font-normal leading-none tracking-normal lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+                  <h2 className={`text-[22px] font-geist font-normal leading-none tracking-normal lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
                     }`}>
                     my works
                   </h2>
@@ -3935,9 +3823,9 @@ export default function App() {
                     <div
                       key={project.id}
                       onClick={() => setSelectedProject(project)}
-                      className={`cursor-pointer group rounded-[10px] border-[0.5px] overflow-hidden min-w-0 transition-colors duration-150 ${theme === 'light'
-                        ? 'border-[#e6e6e3] hover:border-[#c4c4c0]'
-                        : 'border-[#232320] hover:border-[#3d3d38]'
+                      className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 ${theme === 'light'
+                        ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
+                        : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
                         }`}
                     >
                       {/* Fixed height keeps mobile cards compact; above md an
@@ -4054,7 +3942,7 @@ export default function App() {
           {/* --- Services Section --- */}
           <section id="services" className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <SectionHeading number="06" theme={theme}>Services</SectionHeading>
+            <SectionHeading theme={theme}>Services</SectionHeading>
 
             <div className={`border-t mt-8 lg:mt-12 ${theme === 'light' ? 'border-[#ececec]' : 'border-zinc-900/30 dark:border-zinc-800/60'
               }`}>
@@ -4123,11 +4011,7 @@ export default function App() {
           <section id="resources" className={`py-16 md:py-24 px-5 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="mb-6 md:mb-8">
-              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                }`}>
-                07 — 08
-              </span>
-              <h2 className={`text-[26px] sm:text-[32px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+              <h2 className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
                 }`}>
                 resources
               </h2>
@@ -4154,9 +4038,9 @@ export default function App() {
             <div className="mb-8">
               <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                 }`}>
-                08 — 08 / CONTACT
+                CONTACT
               </span>
-              <h2 className={`text-[26px] font-mono font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+              <h2 className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
                 }`}>
 
               </h2>
@@ -4195,21 +4079,6 @@ export default function App() {
                     theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
                   } />
                 </button>
-
-                <a
-                  href="/resume.pdf"
-                  download="Kellas-Andrei-Resume.pdf"
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
-                >
-                  <Download weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                  } />
-                  <span>DOWNLOAD RESUME</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                  } />
-                </a>
 
                 <a
                   href="https://github.com/kellasandyyyy1"

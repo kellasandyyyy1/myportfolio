@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:wght@100..900&family=Pixelify+Sans:wght@400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:wght@100..900&family=Pixelify+Sans:wght@400..700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 
 @font-face {
@@ -9,11 +9,17 @@
 }
 
 body {
-  font-family: Geist, system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", Geist, system-ui, sans-serif;
   font-size: 15px;
 }
 
-.font-sans, .font-geist {
+.font-sans {
+  font-family: "Plus Jakarta Sans", Geist, system-ui, sans-serif;
+}
+
+/* Geist proportional — section headings. Distinct from .font-sans so the
+   two can diverge without one silently inheriting the other. */
+.font-geist {
   font-family: Geist, system-ui, sans-serif;
 }
 
@@ -30,18 +36,6 @@ body {
 }
 
 /* ===== CREATIVE HALFTONE & CALM STYLING ===== */
-
-@keyframes halftone-fade {
-  0% {
-    opacity: 0.05;
-  }
-  50% {
-    opacity: 0.12;
-  }
-  100% {
-    opacity: 0.05;
-  }
-}
 
 :root {
   --bg-page: #0b0b0d;
@@ -96,7 +90,8 @@ body {
 }
 
 @theme {
-  --font-sans: "Geist", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Geist", system-ui, sans-serif;
+  --font-geist: "Geist", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-display: "Geist Pixel", "Geist Mono", monospace;
   --font-serif: "Source Serif 4", Georgia, serif;
@@ -189,26 +184,6 @@ body {
   }
 }
 
-/* ===== HALFTONE OVERLAY BACKGROUND EFFECT ===== */
-.halftone-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 9998;
-  opacity: 0.12;
-  background-image: radial-gradient(circle, var(--text-primary) 0.5px, transparent 0.75px);
-  background-size: 14px 14px;
-  transition: opacity 0.5s ease;
-  /* Very gentle animation for high-end feel */
-  animation: halftone-fade 12s ease-in-out infinite;
-}
-
-.light-mode .halftone-overlay {
-  opacity: 0.08;
-}
 
 /* ===== MINIMALIST CUSTOM CURSOR ===== */
 .custom-cursor {
@@ -403,6 +378,144 @@ body {
   .works-fade { animation: none; }
 }
 
+/* ===== APPROACH — EXPLODING ISOMETRIC LAYER STACK =====
+ *
+ * Decorative only; the stage names and their order also exist as real text in
+ * the left column, so the whole stack is aria-hidden.
+ *
+ * Every layer shares one base transform and differs only in translateZ, so the
+ * explode is a pure transform animation — no layout properties touched.
+ */
+.iso-stage {
+  perspective: 900px;
+  width: 280px;
+  height: 220px;
+}
+
+.iso-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.iso-layer {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 14px;
+  border: 1px solid var(--c-edge);
+  /* Shading: light lands on the near corner and falls away across the panel,
+     so each pane reads as a lit surface rather than a flat swatch. Panels stay
+     translucent so the layers below show through, which is what sells the
+     projection. */
+  background:
+    linear-gradient(
+      135deg,
+      var(--c-lit) 0%,
+      var(--c-mid) 34%,
+      rgba(11, 11, 13, 0.58) 78%,
+      rgba(11, 11, 13, 0.66) 100%
+    );
+  box-shadow:
+    /* emissive bleed, the panel casting its own colour */
+    0 0 20px -4px var(--c-glow),
+    /* top edge catching the light */
+    inset 0 1px 0 var(--c-edge),
+    /* bounce along the lower edge */
+    inset 0 -18px 26px -20px var(--c-glow);
+  /* Collapsed: the deck reads as one solid object. */
+  transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest));
+  transform-style: preserve-3d;
+}
+
+/* Scanlines. Kept very faint and on a pseudo-element so they ride the same 3D
+   transform as the panel instead of sitting flat over it. */
+.iso-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.055) 0 1px,
+    transparent 1px 4px
+  );
+}
+
+/* A soft darkening in the lower-left corner, so the label always has a floor
+   to sit on no matter which stage colour the panel is tinted with. */
+.iso-layer .iso-label::before {
+  content: '';
+  position: absolute;
+  inset: -6px -10px -5px -8px;
+  z-index: -1;
+  border-radius: 8px;
+  background: radial-gradient(
+    ellipse at 30% 60%,
+    rgba(6, 6, 8, 0.72) 0%,
+    rgba(6, 6, 8, 0) 72%
+  );
+}
+
+/* A brighter seam along the leading edges, like a projected wireframe. */
+.iso-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border-top: 1px solid var(--c-seam);
+  border-left: 1px solid var(--c-seam);
+}
+
+.iso-stack.is-playing .iso-layer {
+  animation: iso-explode 1.8s cubic-bezier(0.45, 0, 0.35, 1) var(--delay, 0ms) both;
+}
+
+@keyframes iso-explode {
+  0%   { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest)); }
+  32%  { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-out)); }
+  62%  { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-out)); }
+  100% { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest)); }
+}
+
+.iso-label {
+  position: absolute;
+  left: 13px;
+  bottom: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* Near-white instead of the stage hue: the panel is already tinted with that
+     colour, so coloured text on it was fighting its own background. The hue
+     stays present in the glow. */
+  color: #f4f4f1;
+  /* rotateX(58deg) squashes everything vertically to ~0.53. Scaling Y back up
+     partly compensates; the text still reads as lying on the panel because it
+     is left foreshortened, just legibly so. */
+  transform: scaleY(1.4);
+  transform-origin: left bottom;
+  text-shadow:
+    0 0 10px var(--c-glow),
+    0 0 2px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No motion, but hold a separated pose so the depth still reads. */
+  .iso-layer {
+    transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-static));
+  }
+  .iso-stack.is-playing .iso-layer {
+    animation: none;
+  }
+}
+
 /* Utility class for pixel font */
 .font-pixel {
   font-family: "Press Start 2P", monospace !important;
@@ -447,23 +560,6 @@ span.bg-green-500 {
 
 .light-mode .group:hover>div:first-child {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-}
-
-/* Soft halftone mesh overlay on hovered cards */
-.group:hover>div:first-child::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--text-primary) 0.75px, transparent 0.75px);
-  background-size: 8px 8px;
-  pointer-events: none;
-  opacity: 0.08;
-  transition: opacity 0.4s ease;
-  z-index: 2;
-}
-
-.light-mode .group:hover>div:first-child::before {
-  opacity: 0.05;
 }
 
 /* Skill tags - clean stable contrast shift */
