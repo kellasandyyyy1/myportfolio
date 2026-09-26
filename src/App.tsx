@@ -82,7 +82,8 @@ interface Certification {
   title: string;
   issuer: string;
   verifyUrl: string;
-  icon: React.ReactNode;
+  /** Brand mark component, rendered small as the seal and large as the watermark. */
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 // --- Data ---
@@ -92,21 +93,21 @@ const CERTIFICATIONS: Certification[] = [
     title: 'AWS Cloud Foundation',
     issuer: 'AWS',
     verifyUrl: 'https://www.credly.com/badges/3f85a03a-b171-48bb-9a37-776bae850bda',
-    icon: <FaAws size={17} />,
+    Icon: FaAws,
   },
   {
     id: 'it-database-specialist',
     title: 'IT Database Specialist',
     issuer: 'Pearson',
     verifyUrl: 'https://www.credly.com/badges/d17211de-6231-4497-af5e-ca3d724d34f3',
-    icon: <SiPearson size={16} />,
+    Icon: SiPearson,
   },
   {
     id: 'data-analytics-scalability',
     title: 'Data Analytics & Scalability',
     issuer: 'Cisco',
     verifyUrl: 'https://www.credly.com/badges/ce9f9917-d96e-4bc0-ae66-1039a57a1982',
-    icon: <SiCisco size={16} />,
+    Icon: SiCisco,
   },
 ];
 const PROJECTS: Project[] = [
@@ -3709,58 +3710,75 @@ export default function App() {
           {/* --- Certifications Section --- */}
           <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-8">
-              <h2
-                className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                  }`}
-                style={{ animationDelay: '80ms' }}
-              >
-                certifications
-              </h2>
-              <p
-                className={`text-[13px] font-sans ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#888888]'} mt-2.5 max-w-xl leading-relaxed`}
-                style={{ animationDelay: '160ms' }}
-              >
-                verified industry certifications and technical credentials issued by official platforms.
-              </p>
+            <div className="flex items-start justify-between gap-8">
+              <div className="min-w-0">
+                <h2
+                  className={`text-[26px] font-geist font-medium leading-none tracking-normal lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
+                    }`}
+                  style={{ animationDelay: '80ms' }}
+                >
+                  certifications
+                </h2>
+                <p
+                  className={`text-[13px] font-sans mt-2.5 max-w-xl leading-relaxed ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#7a7a80]'
+                    }`}
+                  style={{ animationDelay: '160ms' }}
+                >
+                  verified industry certifications and technical credentials issued by official platforms.
+                </p>
+              </div>
             </div>
 
-            <div className={`border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1C1C1A]'}`}>
+            {/* No outer border, no card fills: only the dividers between columns. */}
+            <div className="grid grid-cols-1 md:grid-cols-3 mt-14 md:mt-20">
               {CERTIFICATIONS.map((cert, index) => (
                 <a
                   key={cert.id}
                   href={cert.verifyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-[15px] px-1 transition-colors group min-h-[44px] cursor-pointer ${getAnimClass(certInView)} ${index === CERTIFICATIONS.length - 1
-                    ? ''
-                    : theme === 'light'
-                      ? 'border-b border-[#ececec]'
-                      : 'border-b border-[#1C1C1A]'
+                  onClick={playExternalLink}
+                  aria-label={`${cert.title}, issued by ${cert.issuer}`}
+                  className={`group relative isolate overflow-hidden flex flex-col items-center text-center px-6 py-10 md:py-4 ${getAnimClass(certInView)} ${
+                    // Divider between columns only: never on the outside, never when stacked.
+                    index > 0
+                      ? `md:border-l ${theme === 'light' ? 'md:border-[#ececec]' : 'md:border-[#232326]'}`
+                      : ''
                     }`}
-                  style={{ animationDelay: `${240 + index * 50}ms` }}
+                  style={{ animationDelay: `${240 + index * 80}ms` }}
                 >
-                  {/* Left: Brand Icon + Title */}
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <span className={`shrink-0 flex items-center justify-center text-[17px] ${theme === 'light' ? 'text-[#1a1a1a] group-hover:text-black' : 'text-[#E5E5E0] group-hover:text-white'
-                      } transition-colors`}>
-                      {cert.icon}
-                    </span>
-                    <span className={`text-[clamp(13px,3vw,14px)] font-sans font-normal leading-snug break-words ${theme === 'light' ? 'text-[#1a1a1a] group-hover:text-black' : 'text-[#E5E5E0] group-hover:text-white'
-                      } transition-colors`}>
-                      {cert.title}
-                    </span>
-                  </div>
+                  {/* Brand watermark. Decorative, sits behind the cell's own
+                      content and is clipped so it never crosses a divider. */}
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+                      }`}
+                    style={{ opacity: theme === 'light' ? 0.04 : 0.06 }}
+                  >
+                    <cert.Icon size={190} />
+                  </span>
 
-                  {/* Right: Issuer + External Link Icon */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2.5 pl-[29px] sm:pl-0 mt-1.5 sm:mt-0 shrink-0">
-                    <span className={`text-[11px] font-mono uppercase tracking-[1px] ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#5a5a5a]' : 'text-[#888888] group-hover:text-[#aaaaaa]'
-                      } transition-colors`}>
-                      {cert.issuer}
-                    </span>
-                    <ArrowUpRight size={14} className={`transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0 ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                      }`} />
-                  </div>
+                  <span
+                    className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 border-[0.5px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 ${theme === 'light'
+                      ? 'border-[#e6e6e3] text-[#1a1a1a]'
+                      : 'border-[#232326] text-[#e5e5e5]'
+                      }`}
+                  >
+                    <cert.Icon size={17} />
+                  </span>
+
+                  <h3 className={`text-[14px] md:text-[15px] font-sans font-medium tracking-tight mt-5 ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
+                    }`}>
+                    {cert.title}
+                  </h3>
+
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono lowercase tracking-[0.06em] mt-2 transition-colors duration-200 ease-out ${theme === 'light'
+                    ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]'
+                    : 'text-[#7a7a80] group-hover:text-[#e5e5e5]'
+                    }`}>
+                    {cert.issuer}
+                    <ArrowUpRight weight="light" size={11} className="shrink-0" />
+                  </span>
                 </a>
               ))}
             </div>
@@ -3947,7 +3965,6 @@ export default function App() {
             <div className={`border-t mt-8 lg:mt-12 ${theme === 'light' ? 'border-[#ececec]' : 'border-zinc-900/30 dark:border-zinc-800/60'
               }`}>
               {SERVICES.map((service, index) => {
-                const numStr = String(index + 1).padStart(2, '0');
                 return (
                   <motion.div
                     key={service.title}
@@ -3962,8 +3979,12 @@ export default function App() {
                       : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20'
                       }`}>
                       <div className="flex items-center gap-2.5 pr-8">
-                        <span className={`text-[11px] font-mono shrink-0 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
-                          }`}>{numStr}</span>
+                        <ArrowRight
+                          weight="light"
+                          size={13}
+                          className={`shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
+                            }`}
+                        />
                         <h4 className={`text-[14px] font-medium uppercase font-sans tracking-tight break-words ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
                           }`}>
                           {service.title}
@@ -3984,9 +4005,15 @@ export default function App() {
                       ? 'border-[#ececec] hover:bg-[#f0f0f0]/60'
                       : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-900/20'
                       }`}>
-                      <span className={`w-6 shrink-0 text-[13px] font-mono ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
+                      {/* Keeps the w-6 column so the titles stay aligned now that
+                          the two-digit number is gone. */}
+                      <span className={`w-6 shrink-0 flex items-center ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
                         }`}>
-                        {numStr}
+                        <ArrowRight
+                          weight="light"
+                          size={14}
+                          className="transition-transform duration-150 group-hover:translate-x-0.5"
+                        />
                       </span>
                       <div className="flex-1 flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-5">
                         <h4 className={`text-base font-medium font-sans uppercase tracking-tight lg:flex-1 truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
