@@ -2723,16 +2723,36 @@ const GitLogNode: React.FC<{
   );
 };
 
+const AUTO_STEP_MS = 3000;
+/** How long a hovered/clicked step holds before auto-cycling picks back up. */
+const AUTO_STEP_HOLD_MS = 6000;
+
 const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
-  // Opens on "plan"; log interaction moves it from there.
+  // Opens on "plan", then cycles through the steps on its own.
   const [activeIndex, setActiveIndex] = useState(1);
-  // Bumped on every log interaction so the mascot counts it as activity
-  // (resets its sleep timer / wakes it), even when the step doesn't change.
+  // Bumped on every log interaction and auto step so the mascot counts it as
+  // activity (resets its sleep timer / wakes it), even when the step doesn't change.
   const [logActivity, setLogActivity] = useState(0);
+  // Manual interaction holds the chosen step for a while before cycling resumes.
+  const holdUntilRef = React.useRef(0);
+  const pointerInLogRef = React.useRef(false);
 
   const handleActivate = React.useCallback((index: number) => {
     setActiveIndex(index);
     setLogActivity((n) => n + 1);
+    holdUntilRef.current = Date.now() + AUTO_STEP_HOLD_MS;
+  }, []);
+
+  // Auto-cycle: one step every 3s, skipped while the visitor is driving the log
+  // or the tab is hidden. Off under reduced motion, since it's self-changing content.
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const id = window.setInterval(() => {
+      if (document.hidden || pointerInLogRef.current || Date.now() < holdUntilRef.current) return;
+      setActiveIndex((i) => (i + 1) % PROCESS_NODES.length);
+      setLogActivity((n) => n + 1);
+    }, AUTO_STEP_MS);
+    return () => window.clearInterval(id);
   }, []);
 
   return (
@@ -2756,6 +2776,11 @@ const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
           stretch this column across the whole row and push the mascot to the
           far edge, reopening the dead zone the gap-16 is meant to control. */}
       <div
+        onMouseEnter={() => { pointerInLogRef.current = true; }}
+        onMouseLeave={() => {
+          pointerInLogRef.current = false;
+          holdUntilRef.current = Date.now() + AUTO_STEP_HOLD_MS;
+        }}
         className="w-full md:w-auto min-w-0 md:order-1 md:flex-initial select-none [--seg:1rem] [--dot:0.875rem] [--rail:1.25rem] md:[--seg:1.375rem] md:[--dot:1.0625rem] md:[--rail:1.75rem]"
       >
         {PROCESS_NODES.map((node, idx) => (
