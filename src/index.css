@@ -1102,3 +1102,7 @@ span.tracking-\[0\.4em\] {
   .mobile-menu-item:active .mobile-menu-arrow,
   .mobile-menu-item:focus-visible .mobile-menu-arrow { transform: none; }
 }
+
+/* AWS wordmark text: white on dark, official navy on light. */
+.aws-logo-text { fill: #ffffff; }
+.light-mode .aws-logo-text { fill: #252f3e; }
