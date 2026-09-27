@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { motion, useScroll, useSpring, AnimatePresence } from 'motion/react';
+import { motion, useScroll, useSpring, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
 import { SiPearson, SiCisco, SiUpwork, SiFiverr, SiRakuten } from 'react-icons/si';
@@ -54,6 +54,17 @@ import {
   Lightning as Zap,
   FigmaLogo,
 } from '@phosphor-icons/react';
+// Stroke-based set for the nav, so the hover draw-in can animate each outline.
+import {
+  User as NavUser,
+  Layers as NavLayers,
+  Cpu as NavCpu,
+  CircleCheck as NavCheck,
+  Briefcase as NavBriefcase,
+  Wrench as NavWrench,
+  Library as NavLibrary,
+  Mail as NavMail,
+} from 'lucide-react';
 
 // --- Types ---
 interface ProjectScreenshot {
@@ -745,9 +756,254 @@ function scrollToSection(sectionId: string, behavior: ScrollBehavior) {
   requestAnimationFrame(attempt);
 }
 
+type ToggleTheme = (event?: React.MouseEvent<HTMLButtonElement>) => void;
+
+/**
+ * Two-way dark/light switch. The thumb only reflects `theme`; every change goes
+ * through `toggleTheme`, so the view-transition reveal and persistence behave
+ * exactly as they do for the other theme toggles.
+ */
+const ThemePill = ({ theme, toggleTheme }: { theme: 'dark' | 'light'; toggleTheme: ToggleTheme }) => {
+  const optionRefs = React.useRef<Record<'dark' | 'light', HTMLButtonElement | null>>({ dark: null, light: null });
+  const options = [
+    { value: 'dark' as const, label: 'Dark', icon: <Moon weight="light" size={12} /> },
+    { value: 'light' as const, label: 'Light', icon: <Sun weight="light" size={12} /> },
+  ];
+
+  // Radio-group keyboard pattern: arrows move the selection, and focus follows it.
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const next = theme === 'dark' ? 'light' : 'dark';
+    toggleTheme();
+    optionRefs.current[next]?.focus();
+  };
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Colour theme"
+      data-theme={theme}
+      onKeyDown={handleKeyDown}
+      className="theme-pill font-geist"
+    >
+      <span aria-hidden="true" className="theme-pill-thumb" />
+      {options.map((option) => {
+        const checked = theme === option.value;
+        return (
+          <button
+            key={option.value}
+            ref={(el) => { optionRefs.current[option.value] = el; }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            onClick={(event) => { if (!checked) toggleTheme(event); }}
+            className="theme-pill-option"
+          >
+            {option.icon}
+            <span>{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+interface MobileMenuProps {
+  open: boolean;
+  onClose: () => void;
+  theme: 'dark' | 'light';
+  toggleTheme: ToggleTheme;
+  links: { id: string; name: string }[];
+  activeSection: string;
+  onNavigate: (id: string) => void;
+  onBookCall?: () => void;
+  soundMuted: boolean;
+  toggleSound: () => boolean;
+  /** The hamburger; focus goes back to it when the menu closes. */
+  returnFocusRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Full-screen index-style menu for <768px. */
+const MobileMenu = ({
+  open,
+  onClose,
+  theme,
+  toggleTheme,
+  links,
+  activeSection,
+  onNavigate,
+  onBookCall,
+  soundMuted,
+  toggleSound,
+  returnFocusRef,
+}: MobileMenuProps) => {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const closeRef = React.useRef<HTMLButtonElement>(null);
+  const reduceMotion = useReducedMotion();
+
+  // Scroll lock, Escape, focus trap, and focus return, all scoped to `open`.
+  useEffect(() => {
+    if (!open) return;
+    const returnTo = returnFocusRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable: HTMLElement[] = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      // preventScroll so a nav tap's smooth scroll isn't yanked back to the header.
+      returnTo?.focus({ preventScroll: true });
+    };
+  }, [open, onClose, returnFocusRef]);
+
+  const listVariants = {
+    visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.03, delayChildren: reduceMotion ? 0 : 0.05 } },
+  };
+  const itemVariants = {
+    hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const } },
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          ref={dialogRef}
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.2 }}
+          className="mobile-menu md:hidden"
+        >
+          <div className="mobile-menu-header">
+            <span className="mobile-menu-name font-sans">Kellas Andrei</span>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+                title="Toggle theme"
+                className="mobile-menu-icon-btn"
+              >
+                <ThemeToggleIcon theme={theme} size={16} />
+              </button>
+              <button
+                ref={closeRef}
+                type="button"
+                onClick={onClose}
+                aria-label="Close menu"
+                title="Close menu"
+                className="mobile-menu-icon-btn"
+              >
+                <X weight="light" size={18} />
+              </button>
+            </div>
+          </div>
+
+          <motion.ul
+            className="mobile-menu-list"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {links.map((link) => {
+              const active = activeSection === link.id;
+              return (
+                <motion.li key={link.id} variants={itemVariants}>
+                  <NavLink
+                    to={`/${link.id}`}
+                    onClick={() => onNavigate(link.id)}
+                    aria-current={active ? 'true' : undefined}
+                    className="mobile-menu-item font-geist"
+                  >
+                    <span aria-hidden="true" className="mobile-menu-arrow">
+                      <ArrowRight weight="light" size={14} />
+                    </span>
+                    <span>{link.name}</span>
+                  </NavLink>
+                </motion.li>
+              );
+            })}
+          </motion.ul>
+
+          <div className="mobile-menu-footer font-geist">
+            <div className="flex items-center gap-2">
+              {onBookCall && (
+                <button
+                  type="button"
+                  onClick={() => { playExternalLink(); onClose(); onBookCall(); }}
+                  className="mobile-menu-book"
+                >
+                  <Calendar weight="light" size={16} />
+                  <span>Book Call</span>
+                </button>
+              )}
+              {/* Stays open on toggle so the state change is visible */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nowMuted = toggleSound();
+                  if (!nowMuted) playNavTick();
+                }}
+                aria-pressed={!soundMuted}
+                aria-label={soundMuted ? 'Sound Off' : 'Sound On'}
+                title={soundMuted ? 'Sound Off' : 'Sound On'}
+                className="mobile-menu-sound"
+              >
+                {soundMuted
+                  ? <SpeakerSlash weight="light" size={16} />
+                  : <SpeakerHigh weight="light" size={16} />}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <a href="mailto:kellasandrei00@gmail.com" onClick={playExternalLink} className="mobile-menu-email">
+                kellasandrei00@gmail.com
+              </a>
+              <span className="mobile-menu-status">
+                <span aria-hidden="true" className="mobile-menu-status-dot" />
+                available
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 interface SidebarNavigationProps {
   theme: 'dark' | 'light';
-  toggleTheme: () => void;
+  toggleTheme: ToggleTheme;
   onBookCall?: () => void;
   onOpenResume?: () => void;
   onOpenGame?: () => void;
@@ -767,19 +1023,29 @@ const SidebarNavigation = ({
   const navigate = useNavigate();
   // A deep link should land instantly; later navigations animate.
   const isFirstRouteRef = React.useRef(true);
+  const menuButtonRef = React.useRef<HTMLButtonElement>(null);
+  // Stable so the menu's lock/trap effect doesn't re-run on every render.
+  const closeMenu = React.useCallback(() => setIsOpen(false), []);
+  const handleMobileNavigate = (id: string) => {
+    playNavTick();
+    setIsOpen(false);
+    // Tapping the section you're already on doesn't change the route, so the
+    // URL -> scroll effect never fires; scroll directly instead.
+    if (location.pathname === `/${id}`) scrollToSection(NAV_SECTION_IDS[id], 'smooth');
+  };
 
   const group1Links = [
-    { id: 'about', name: 'About', href: '#about', icon: <User weight="light" size={16} /> },
-    { id: 'experience', name: 'Experience', href: '#experience', icon: <Layers weight="light" size={16} /> },
-    { id: 'stack', name: 'Stack', href: '#stack', icon: <Cpu weight="light" size={16} /> },
-    { id: 'certifications', name: 'Certifications', href: '#certifications', icon: <CheckCircle weight="light" size={16} /> },
+    { id: 'about', name: 'About', href: '#about', icon: <NavUser strokeWidth={1.25} size={16} /> },
+    { id: 'experience', name: 'Experience', href: '#experience', icon: <NavLayers strokeWidth={1.25} size={16} /> },
+    { id: 'stack', name: 'Stack', href: '#stack', icon: <NavCpu strokeWidth={1.25} size={16} /> },
+    { id: 'certifications', name: 'Certifications', href: '#certifications', icon: <NavCheck strokeWidth={1.25} size={16} /> },
   ];
 
   const group2Links = [
-    { id: 'work', name: 'Work', href: '#projects', icon: <Briefcase weight="light" size={16} /> },
-    { id: 'services', name: 'Services', href: '#services', icon: <Toolbox weight="light" size={16} /> },
-    { id: 'resources', name: 'Resources', href: '#resources', icon: <Books weight="light" size={16} /> },
-    { id: 'contact', name: 'Contact', href: '#contact', icon: <Envelope weight="light" size={16} /> },
+    { id: 'work', name: 'Work', href: '#projects', icon: <NavBriefcase strokeWidth={1.25} size={16} /> },
+    { id: 'services', name: 'Services', href: '#services', icon: <NavWrench strokeWidth={1.25} size={16} /> },
+    { id: 'resources', name: 'Resources', href: '#resources', icon: <NavLibrary strokeWidth={1.25} size={16} /> },
+    { id: 'contact', name: 'Contact', href: '#contact', icon: <NavMail strokeWidth={1.25} size={16} /> },
   ];
 
   const navLinks = [...group1Links, ...group2Links];
@@ -892,7 +1158,7 @@ const SidebarNavigation = ({
             >
               ›
             </span>
-            <span className="shrink-0 transition-colors duration-150">
+            <span className="nav-icon shrink-0 transition-colors duration-150">
               {link.icon}
             </span>
             <span className="truncate">{link.name}</span>
@@ -935,21 +1201,18 @@ const SidebarNavigation = ({
           </div>
         </nav>
 
-        {/* Bottom Area: Social Icons Row + Divider + Theme & Version */}
-        <div className={`mt-auto space-y-3 pt-3 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+        {/* Bottom Area: borderless icon row + divider + theme pill */}
+        <div className={`sidebar-footer mt-auto space-y-3 pt-3 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
           }`}>
-          {/* Social Row: 32x32px buttons with 8px rounded corners & 0.5/1px border */}
           <div className="flex items-center gap-2">
             <a
               href="https://github.com/kellasandyyyy1"
               target="_blank"
               rel="noopener noreferrer"
               onClick={playExternalLink}
-              className={`w-[32px] h-[32px] rounded-[8px] border flex items-center justify-center transition-colors duration-150 cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
-                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
-                }`}
+              aria-label="GitHub"
               title="GitHub"
+              className="sidebar-icon-btn cursor-pointer"
             >
               <GithubLogo weight="light" size={16} />
             </a>
@@ -958,22 +1221,18 @@ const SidebarNavigation = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={playExternalLink}
-              className={`w-[32px] h-[32px] rounded-[8px] border flex items-center justify-center transition-colors duration-150 cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
-                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
-                }`}
+              aria-label="LinkedIn"
               title="LinkedIn"
+              className="sidebar-icon-btn cursor-pointer"
             >
               <LinkedinLogo weight="light" size={16} />
             </a>
             <a
               href="mailto:kellasandrei00@gmail.com"
               onClick={playExternalLink}
-              className={`w-[32px] h-[32px] rounded-[8px] border flex items-center justify-center transition-colors duration-150 cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
-                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
-                }`}
+              aria-label="Email"
               title="Email"
+              className="sidebar-icon-btn cursor-pointer"
             >
               <Envelope weight="light" size={16} />
             </a>
@@ -984,13 +1243,11 @@ const SidebarNavigation = ({
                 const nowMuted = toggleSound();
                 if (!nowMuted) playNavTick();
               }}
-              aria-pressed={soundMuted}
-              aria-label={soundMuted ? 'Unmute interface sounds' : 'Mute interface sounds'}
-              className={`w-[32px] h-[32px] rounded-[8px] border flex items-center justify-center transition-colors duration-150 cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
-                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
-                }`}
+              // Pressed means sound is on, so the static label reads correctly.
+              aria-pressed={!soundMuted}
+              aria-label="Toggle sound"
               title={soundMuted ? 'Sound off' : 'Sound on'}
+              className="sidebar-icon-btn cursor-pointer"
             >
               {soundMuted
                 ? <SpeakerSlash weight="light" size={16} />
@@ -998,19 +1255,8 @@ const SidebarNavigation = ({
             </button>
           </div>
 
-          {/* Divider & Theme Toggle */}
-          <div className={`pt-2 border-t flex items-center justify-between w-full font-geist text-[10px] uppercase tracking-[1px] ${theme === 'light' ? 'border-[#ececec] text-[#8a8a85]' : 'border-[#1c1c1c] text-[#777777]'
-            }`}>
-            <button
-              onClick={toggleTheme}
-              className={`transition-colors duration-150 flex items-center gap-1.5 cursor-pointer uppercase ${theme === 'light' ? 'hover:text-[#1a1a1a]' : 'hover:text-[#c9c9c4]'
-                }`}
-              title="Toggle Theme"
-            >
-              <ThemeToggleIcon theme={theme} size={14} />
-              <span>{theme}</span>
-            </button>
-            <span></span>
+          <div className={`pt-3 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1c1c1c]'}`}>
+            <ThemePill theme={theme} toggleTheme={toggleTheme} />
           </div>
         </div>
       </aside>
@@ -1085,98 +1331,33 @@ const SidebarNavigation = ({
           </button>
 
           <button
-            onClick={() => setIsOpen(!isOpen)}
+            ref={menuButtonRef}
+            onClick={() => setIsOpen(true)}
             className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer ${theme === 'light' ? 'text-[#1a1a1a] hover:text-black' : 'text-white hover:text-zinc-300'
               }`}
-            aria-label="Toggle Navigation Menu"
+            aria-label="Open navigation menu"
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
           >
-            {isOpen ? <X weight="light" size={18} /> : <List weight="light" size={18} />}
+            <List weight="light" size={18} />
           </button>
         </div>
       </header>
 
-      {/* Mobile Drawer Overlay (<768px) */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
-            />
-            <motion.div
-              initial={{ y: -10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -10, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={`fixed top-[49px] left-0 right-0 border-b p-5 z-50 flex flex-col gap-4 md:hidden ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
-                }`}
-            >
-              <div className="flex flex-col gap-1.5">
-                {navLinks.map((link) => (
-                  <NavLink
-                    key={link.id}
-                    to={`/${link.id}`}
-                    // Closing the drawer here is what makes mobile behave like
-                    // desktop: route changes, menu dismisses, page scrolls.
-                    onClick={() => { playNavTick(); setIsOpen(false); }}
-                    className={({ isActive }) => {
-                      const active = isActive || (location.pathname === '/' && link.id === 'about');
-                      return `text-xs font-geist py-2 flex items-center gap-2.5 border-b ${active
-                        ? (theme === 'light' ? 'text-[#1a1a1a]' : 'text-white')
-                        : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#a1a1aa] hover:text-white')
-                        } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]/60'}`;
-                    }}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.name}</span>
-                  </NavLink>
-                ))}
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                {onBookCall && (
-                  <button
-                    onClick={() => { playExternalLink(); setIsOpen(false); onBookCall(); }}
-                    className={`text-left text-xs py-2 flex items-center gap-1.5 cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#a1a1aa] hover:text-white'
-                      }`}
-                  >
-                    <Calendar weight="light" size={15} />
-                    <span>Book Call</span>
-                  </button>
-                )}
-
-                {/* Stays open on toggle so the state change is visible */}
-                <button
-                  onClick={() => {
-                    const nowMuted = toggleSound();
-                    if (!nowMuted) playNavTick();
-                  }}
-                  aria-pressed={soundMuted}
-                  className={`text-left text-xs py-2 flex items-center gap-1.5 cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#a1a1aa] hover:text-white'
-                    }`}
-                >
-                  {soundMuted
-                    ? <SpeakerSlash weight="light" size={15} />
-                    : <SpeakerHigh weight="light" size={15} />}
-                  <span>{soundMuted ? 'Sound Off' : 'Sound On'}</span>
-                </button>
-              </div>
-
-              <div className={`pt-3 border-t flex items-center justify-between text-[11px] ${theme === 'light' ? 'border-[#ececec] text-[#8a8a8a]' : 'border-[#1e1e1e] text-[#71717a]'
-                }`}>
-                <span>kellasandrei00@gmail.com</span>
-                <span className="flex items-center gap-1.5 text-emerald-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  available
-                </span>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Mobile Menu Overlay (<768px) */}
+      <MobileMenu
+        open={isOpen}
+        onClose={closeMenu}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        links={navLinks}
+        activeSection={activeSection}
+        onNavigate={handleMobileNavigate}
+        onBookCall={onBookCall}
+        soundMuted={soundMuted}
+        toggleSound={toggleSound}
+        returnFocusRef={menuButtonRef}
+      />
     </>
   );
 };
