@@ -12,6 +12,7 @@ import { HarvestSnakeModal } from './components/HarvestSnake';
 import { ServiceCardCanvas } from './components/ServiceCardCanvas';
 import { InteractiveProfile } from './components/InteractiveProfile';
 import { WalkingCat } from './components/WalkingCat';
+import { VisorOrbMascot } from './components/VisorOrbMascot';
 import {
   GithubLogo,
   GithubLogo as Github,
@@ -2592,237 +2593,6 @@ function useRevealOnce() {
   return { ref, revealed, reduced };
 }
 
-/**
- * Pixel-art mascot: a boy seated in side profile, working at an open laptop.
- * Drawn on canvas over a 34x27 design grid (~5.6x scale at 192px wide).
- *
- * The rAF loop drives head bob, blink, typing-arm bob and screen glow; the
- * active step is read from a ref each frame so a step change recolors on the
- * next frame rather than tearing down and restarting the loop.
- */
-const SPRITE_COLS = 34;
-const SPRITE_ROWS = 27;
-
-const CuriousBoyMascot: React.FC<{
-  activeIndex: number;
-  /** Rendered CSS width; height follows the 34:27 grid ratio. */
-  width: number;
-}> = ({ activeIndex, width }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const activeRef = React.useRef(activeIndex);
-  const [failed, setFailed] = useState(false);
-  activeRef.current = activeIndex;
-
-  const height = Math.round((width * SPRITE_ROWS) / SPRITE_COLS);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    let frame = 0;
-    let rafId = 0;
-    const reduced = prefersReducedMotion();
-
-    try {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('2d context unavailable');
-
-      const dpr = window.devicePixelRatio || 1;
-      const unit = (width * dpr) / SPRITE_COLS;
-      canvas.width = Math.round(unit * SPRITE_COLS);
-      canvas.height = Math.round(unit * SPRITE_ROWS);
-
-      const SKIN = '#e0a878';
-      const HAIR = '#2a2119';
-      const HAIR_MID = '#4a3f33';
-      const SHIRT = '#7db6f0';
-      const SHIRT_DARK = '#5a8fc4';
-      const PANTS = '#3a3a37';
-      const SHOES = '#1a1a18';
-      // Laptop + desk, kept in the site's muted gray range.
-      const LID_FRAME = '#5a5a57';
-      const BODY_GRAY = '#4a4a47';
-      const DARK_GRAY = '#3a3a37';
-      const SCREEN_BG = '#0d0d0b';
-
-      // Lid geometry. One hinge point drives both the base's right edge and the
-      // lid's bottom slice, which is what makes the two read as one object.
-      const HINGE_X = 27.4;
-      const HINGE_Y = 19.2;
-      const LID_ROWS = 8;   // slices stacked upward
-      const LID_W = 4.3;    // slice width
-      const LID_LEAN = 0.3; // rightward shift per slice — the open angle
-      const lidX = (row: number) => HINGE_X + row * LID_LEAN;
-      const lidY = (row: number) => HINGE_Y - row - 1;
-
-      const draw = () => {
-        const accent = mascotAccent(activeRef.current);
-
-        // Independent timers so nothing looks mechanically linked.
-        const bob = reduced ? 0 : Math.sin(frame * 0.05) * 0.25;
-        // Deliberately slower than the head bob, and not a harmonic of it.
-        const typeBob = reduced ? 0 : Math.sin(frame * 0.035) * 0.3;
-        const blinking = !reduced && frame % 88 < 6;
-        const markAlpha = reduced
-          ? 0.6
-          : 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(frame * ((Math.PI * 2) / 210)));
-        // Screen brightness rides the SAME timer as the arm, so glow and typing
-        // feel causally connected rather than two unrelated loops.
-        const glow = reduced ? 0.8 : 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(frame * 0.035));
-
-        ctx.imageSmoothingEnabled = false;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        /** Fills a rect in grid units, snapped to whole device pixels. */
-        const px = (x: number, y: number, w: number, h: number, color: string) => {
-          ctx.fillStyle = color;
-          ctx.fillRect(
-            Math.round(x * unit),
-            Math.round(y * unit),
-            Math.round(w * unit),
-            Math.round(h * unit)
-          );
-        };
-        /** Boy — carries the idle head bob. */
-        const pb = (x: number, y: number, w: number, h: number, c: string) =>
-          px(x, y + bob, w, h, c);
-        /** Typing arm — body bob plus its own slower oscillation. */
-        const pa = (x: number, y: number, w: number, h: number, c: string) =>
-          px(x, y + bob + typeBob, w, h, c);
-
-        // ---- Desk: grounds the laptop so it isn't floating in space ----
-        px(12.5, 21.4, 21.5, 0.9, DARK_GRAY);
-
-        // ---- Boy, side profile facing right ----
-
-        // Hair: back of skull + rounded crown
-        pb(4.5, 2.2, 7.5, 3, HAIR);
-        pb(4, 2.8, 8.5, 2.6, HAIR);
-        pb(3.8, 4.5, 2.2, 6, HAIR);
-
-        // Face
-        pb(5.8, 4.4, 6.8, 6.6, SKIN);
-        pb(5.8, 4.4, 6.8, 1, HAIR);        // hairline over the forehead
-        pb(12.4, 7.6, 0.8, 1, SKIN);       // nose, breaking the profile line
-        pb(7.6, 7.4, 1, 1.3, HAIR_MID);    // ear
-
-        // Eye — single, side-on
-        if (blinking) {
-          pb(10, 7.7, 1.4, 0.45, HAIR_MID);
-        } else {
-          pb(10.2, 7.2, 0.9, 0.9, HAIR);
-        }
-        pb(11.4, 9.4, 1.1, 0.45, accent);  // mouth mark
-
-        // Neck
-        pb(7.8, 10.8, 3, 1.4, SKIN);
-
-        // Torso, leaning very slightly forward as if seated at a desk
-        pb(5, 12, 7.6, 7.2, SHIRT);
-        pb(4.4, 12.8, 1.1, 5.4, SHIRT);    // rounded back
-        pb(5, 12, 7.6, 0.9, SHIRT_DARK);   // collar shading
-        pb(7.2, 14.6, 3.2, 2.6, SHIRT_DARK); // chest patch
-
-        // Legs: thigh forward under the desk, shin down, shoe at the base
-        pb(5, 19.2, 6.6, 2.1, PANTS);
-        pb(9.3, 21, 2.6, 3.2, PANTS);
-        pb(8.6, 23.9, 4.3, 1.5, SHOES);
-
-        // ---- Typing arm: shoulder -> forearm -> hand over the keys ----
-        pa(9.8, 13.2, 2.8, 3.4, SHIRT);    // sleeve
-        pa(11.6, 16.8, 4.6, 1.6, SKIN);    // forearm reaching right
-        pa(15.9, 17.6, 1.9, 1.5, SKIN);    // hand above the keyboard
-
-        // ---- Laptop: base + hinge + lid, all keyed off one hinge point ----
-
-        // Base slab: lighter top face, darker front edge for a shallow 3D read
-        px(15.2, 19.4, HINGE_X - 15.2 + 1.2, 0.7, LID_FRAME);
-        px(15.2, 20.1, HINGE_X - 15.2 + 1.2, 1.3, BODY_GRAY);
-        px(15.2, 21, HINGE_X - 15.2 + 1.2, 0.5, DARK_GRAY);
-
-        // Keyboard: discrete key notches, not one solid strip
-        for (let k = 0; k < 9; k++) {
-          px(16.1 + k * 1.15, 19.55, 0.75, 0.42, DARK_GRAY);
-        }
-
-        // Hinge block — physically joins base and lid
-        px(HINGE_X - 0.3, HINGE_Y - 0.9, 1.9, 1.4, DARK_GRAY);
-
-        // Lid, drawn as slices stepping up and leaning right from the hinge
-        for (let r = 0; r < LID_ROWS; r++) {
-          px(lidX(r), lidY(r), LID_W, 1, LID_FRAME);                  // outer frame
-          if (r > 0 && r < LID_ROWS - 1) {
-            px(lidX(r) + 0.45, lidY(r), LID_W - 0.9, 1, BODY_GRAY);   // bezel
-            px(lidX(r) + 0.8, lidY(r), LID_W - 1.6, 1, SCREEN_BG);    // screen well
-          }
-        }
-
-        // Screen content: thin code-like bars of varying width, pulsing together
-        ctx.globalAlpha = glow;
-        const CODE_LINES: [number, number][] = [
-          [1, 2.1], [2, 1.4], [3, 2.4], [4, 1.1], [5, 1.9], [6, 1.5],
-        ];
-        for (const [row, barW] of CODE_LINES) {
-          px(lidX(row) + 0.95, lidY(row) + 0.3, barW, 0.42, accent);
-        }
-        ctx.globalAlpha = 1;
-
-        // ---- Thought mark: "?" upper-right of the head, own slow timer ----
-        ctx.globalAlpha = markAlpha;
-        pb(14.6, 1.2, 2.1, 0.7, accent);
-        pb(16, 1.8, 0.7, 1.4, accent);
-        pb(15.3, 3.1, 0.7, 1.1, accent);
-        pb(15.3, 4.8, 0.7, 0.7, accent);
-        ctx.globalAlpha = 1;
-      };
-
-      if (reduced) {
-        // Single static frame — neutral pose, fixed glow and mark opacity.
-        draw();
-        return;
-      }
-
-      const loop = () => {
-        frame += 1;
-        draw();
-        rafId = requestAnimationFrame(loop);
-      };
-      loop();
-    } catch {
-      // Hide the mascot entirely; the git log stays fully functional.
-      setFailed(true);
-    }
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-    // activeIndex is deliberately absent — it is read via activeRef so the loop
-    // is never torn down and restarted on a step change.
-  }, [width]);
-
-  if (failed) return null;
-
-  const node = PROCESS_NODES[activeIndex];
-  const accent = mascotAccent(activeIndex);
-
-  return (
-    <div className="flex flex-col items-center">
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label={`Mascot: currently ${node.verb}`}
-        style={{ width, height, imageRendering: 'pixelated' }}
-      />
-      <span
-        className="mt-2 text-[11px] font-mono tracking-[0.06em] lowercase"
-        style={{ color: accent }}
-      >
-        {node.verb}
-      </span>
-    </div>
-  );
-};
-
 const GitLogNode: React.FC<{
   node: ProcessNode;
   index: number;
@@ -2834,26 +2604,9 @@ const GitLogNode: React.FC<{
   const { ref, revealed, reduced } = useRevealOnce();
   const isLight = theme === 'light';
 
-  // Second, persistent observer: tracks which node is most centered so the
-  // mascot can mirror scroll position. Unlike the entrance observer, this one
-  // is never disconnected while the section is mounted.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) onActivate(index);
-      },
-      // Narrowing the root to a band across the viewport middle is what makes
-      // "most centered" meaningful — several small nodes clear 0.55 at once
-      // against the full viewport.
-      { threshold: 0.55, rootMargin: '-35% 0px -35% 0px' }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [index, onActivate, ref]);
+  // The mascot follows direct interaction with the log (hover, focus, click),
+  // not scroll position, so the default "plan" step holds until someone engages.
+  const activate = () => onActivate(index);
 
   const railColor = isLight ? '#dcdcd8' : '#2a2a26';
   const restingBorder = isLight ? '#e6e6e3' : '#232320';
@@ -2870,7 +2623,14 @@ const GitLogNode: React.FC<{
     : 'opacity 350ms ease-out 650ms, transform 350ms ease-out 650ms';
 
   return (
-    <div ref={ref} className={`relative flex ${isLast ? '' : 'pb-[1.125rem] md:pb-[1.375rem]'}`}>
+    <div
+      ref={ref}
+      tabIndex={0}
+      onMouseEnter={activate}
+      onFocus={activate}
+      onClick={activate}
+      className={`relative flex cursor-pointer rounded-sm outline-none focus-visible:outline-1 focus-visible:outline-dashed focus-visible:outline-offset-4 ${isLight ? 'focus-visible:outline-[#a0a0a0]' : 'focus-visible:outline-[#44444a]'} ${isLast ? '' : 'pb-[1.125rem] md:pb-[1.375rem]'}`}
+    >
       {/* Branch rail: line draws downward through the node */}
       <div className="relative shrink-0 flex justify-center" style={{ width: 'var(--rail)' }}>
         <span
@@ -2964,23 +2724,15 @@ const GitLogNode: React.FC<{
 };
 
 const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [mascotWidth, setMascotWidth] = useState(176);
+  // Opens on "plan"; log interaction moves it from there.
+  const [activeIndex, setActiveIndex] = useState(1);
+  // Bumped on every log interaction so the mascot counts it as activity
+  // (resets its sleep timer / wakes it), even when the step doesn't change.
+  const [logActivity, setLogActivity] = useState(0);
 
-  // Distinct canvas sizes per breakpoint rather than CSS-scaling one canvas,
-  // so the pixel grid stays crisp at both sizes. 176->140 and the 0.75x mobile
-  // 132->105 both keep the 34:27 grid ratio.
-  useEffect(() => {
-    const query = window.matchMedia('(min-width: 768px)');
-    const apply = () => setMascotWidth(query.matches ? 176 : 132);
-    apply();
-    query.addEventListener('change', apply);
-    return () => query.removeEventListener('change', apply);
-  }, []);
-
-  // Stable identity so the per-node tracking observers aren't rebuilt each render.
   const handleActivate = React.useCallback((index: number) => {
     setActiveIndex(index);
+    setLogActivity((n) => n + 1);
   }, []);
 
   return (
@@ -2991,8 +2743,13 @@ const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
       {/* Mascot: above the log on mobile, beside it on desktop. Not sticky —
           self-center parks it at the vertical midpoint of the log and it simply
           scrolls with the page rather than tracking the viewport. */}
-      <div className="mb-7 md:mb-0 md:order-2 md:flex-none md:ml-auto md:max-w-[240px] md:self-center flex flex-col items-center">
-        <CuriousBoyMascot activeIndex={activeIndex} width={mascotWidth} />
+      <div className="w-full max-w-[240px] mx-auto mb-7 md:mb-0 md:order-2 md:flex-none md:mr-0 md:ml-auto md:w-[300px] md:max-w-[320px] md:self-center flex flex-col items-center">
+        <VisorOrbMascot
+          step={activeIndex}
+          accent={mascotAccent(activeIndex)}
+          activity={logActivity}
+          theme={theme}
+        />
       </div>
 
       {/* Git log — structure unchanged. md:w-auto is load-bearing: w-full would
