@@ -13,6 +13,7 @@ import { ServiceCardCanvas } from './components/ServiceCardCanvas';
 import { InteractiveProfile } from './components/InteractiveProfile';
 import { WalkingCat } from './components/WalkingCat';
 import { VisorOrbMascot } from './components/VisorOrbMascot';
+import { NavIcon3D } from './components/NavIcon3D';
 import {
   GithubLogo,
   GithubLogo as Github,
@@ -55,17 +56,6 @@ import {
   Lightning as Zap,
   FigmaLogo,
 } from '@phosphor-icons/react';
-// Stroke-based set for the nav, so the hover draw-in can animate each outline.
-import {
-  User as NavUser,
-  Layers as NavLayers,
-  Cpu as NavCpu,
-  CircleCheck as NavCheck,
-  Briefcase as NavBriefcase,
-  Wrench as NavWrench,
-  Library as NavLibrary,
-  Mail as NavMail,
-} from 'lucide-react';
 
 // --- Types ---
 interface ProjectScreenshot {
@@ -1086,6 +1076,7 @@ const SidebarNavigation = ({
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('about');
   const [soundMuted, toggleSound] = useSoundMuted();
+  const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
   // A deep link should land instantly; later navigations animate.
@@ -1102,17 +1093,17 @@ const SidebarNavigation = ({
   };
 
   const group1Links = [
-    { id: 'about', name: 'About', href: '#about', icon: <NavUser strokeWidth={1.25} size={16} /> },
-    { id: 'experience', name: 'Experience', href: '#experience', icon: <NavLayers strokeWidth={1.25} size={16} /> },
-    { id: 'stack', name: 'Stack', href: '#stack', icon: <NavCpu strokeWidth={1.25} size={16} /> },
-    { id: 'certifications', name: 'Certifications', href: '#certifications', icon: <NavCheck strokeWidth={1.25} size={16} /> },
+    { id: 'about', name: 'About', href: '#about', icon: <NavIcon3D name="about" /> },
+    { id: 'experience', name: 'Experience', href: '#experience', icon: <NavIcon3D name="experience" /> },
+    { id: 'stack', name: 'Stack', href: '#stack', icon: <NavIcon3D name="stack" /> },
+    { id: 'certifications', name: 'Certifications', href: '#certifications', icon: <NavIcon3D name="certifications" /> },
   ];
 
   const group2Links = [
-    { id: 'work', name: 'Work', href: '#projects', icon: <NavBriefcase strokeWidth={1.25} size={16} /> },
-    { id: 'services', name: 'Services', href: '#services', icon: <NavWrench strokeWidth={1.25} size={16} /> },
-    { id: 'resources', name: 'Resources', href: '#resources', icon: <NavLibrary strokeWidth={1.25} size={16} /> },
-    { id: 'contact', name: 'Contact', href: '#contact', icon: <NavMail strokeWidth={1.25} size={16} /> },
+    { id: 'work', name: 'Work', href: '#projects', icon: <NavIcon3D name="work" /> },
+    { id: 'services', name: 'Services', href: '#services', icon: <NavIcon3D name="services" /> },
+    { id: 'resources', name: 'Resources', href: '#resources', icon: <NavIcon3D name="resources" /> },
+    { id: 'contact', name: 'Contact', href: '#contact', icon: <NavIcon3D name="contact" /> },
   ];
 
   const navLinks = [...group1Links, ...group2Links];
@@ -1193,45 +1184,36 @@ const SidebarNavigation = ({
     playTransition();
   }, [activeSection]);
 
+  // Router match drives the active state. `/` has no match, so About takes
+  // it — that's where the page opens.
+  const isLinkActive = (id: string, isActive: boolean) =>
+    isActive || (location.pathname === '/' && id === 'about');
+
   const renderDesktopNavLink = (link: { id: string; name: string; href: string; icon: React.ReactNode }) => (
     <NavLink
       key={link.id}
       to={`/${link.id}`}
       onClick={playNavTick}
-      // Router match drives the active state. `/` has no match, so About takes
-      // it — that's where the page opens.
-      className={({ isActive }) => {
-        const active = isActive || (location.pathname === '/' && link.id === 'about');
-        return `py-2 px-0 flex items-center gap-[9px] text-[12.5px] font-geist tracking-[0.5px] transition-colors duration-150 w-full group cursor-pointer ${active
-          ? theme === 'light'
-            ? 'text-[#1a1a1a]'
-            : 'text-[#e0e0e0]'
-          : theme === 'light'
-            ? 'text-[#8a8a85] hover:text-[#1a1a1a]'
-            : 'text-[#444444] hover:text-[#c9c9c4]'
-          }`;
-      }}
+      className={({ isActive }) => `sb-link group ${isLinkActive(link.id, isActive) ? 'is-active' : ''}`}
     >
-      {({ isActive }) => {
-        const active = isActive || (location.pathname === '/' && link.id === 'about');
-        return (
-          <>
-            <span
+      {({ isActive }) => (
+        <>
+          {/* One shared pill: layoutId slides it between rows as the active
+              section changes, so scrolling visibly moves the nav. */}
+          {isLinkActive(link.id, isActive) && (
+            <motion.span
+              layoutId="sb-active-pill"
               aria-hidden="true"
-              className={`nav-arrow shrink-0 leading-none transition-colors duration-150 ${active
-                ? theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e0e0e0]'
-                : 'text-transparent'
-                }`}
+              className="sb-pill"
+              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }}
             >
-              ›
-            </span>
-            <span className="nav-icon shrink-0 transition-colors duration-150">
-              {link.icon}
-            </span>
-            <span className="truncate">{link.name}</span>
-          </>
-        );
-      }}
+              <span className="sb-pill-bar" />
+            </motion.span>
+          )}
+          <span className="sb-icon">{link.icon}</span>
+          <span className="sb-label">{link.name}</span>
+        </>
+      )}
     </NavLink>
   );
 
@@ -1241,29 +1223,21 @@ const SidebarNavigation = ({
       <aside className={`hidden lg:flex w-[210px] flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none transition-colors overflow-y-auto ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
         }`}>
         {/* Top: Identity Block */}
-        <div className="pt-1 pb-2 px-1">
-          <div className={`text-[15px] font-sans font-medium tracking-normal leading-tight truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#f5f5f5]'
-            }`}>
-            Kellas Andrei
-          </div>
+        <div className="sb-identity">
+          <img src="/img/drei.jpg" alt="" className="sb-avatar" />
+          <div className="min-w-0 t-small font-sans font-medium truncate c-primary">Kellas Andrei</div>
         </div>
 
-        {/* Vertical Nav Links (Grouped into Group 1 & Group 2 with divider) */}
-        <nav className="flex flex-col w-full mt-6 mb-auto space-y-1">
-          {/* Group 1: Profile Info */}
-          <div className="flex flex-col gap-0">
+        {/* Vertical Nav Links, two groups */}
+        <nav className="flex flex-col w-full mt-7 mb-auto" aria-label="Sections">
+          <div className="flex flex-col gap-0.5">
             {group1Links.map(renderDesktopNavLink)}
           </div>
 
-          {/* Thin Horizontal Divider */}
-          <div className={`my-2.5 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1c1c1c]'}`} />
-
-          {/* Group 2: Engagement */}
-          <div className="flex flex-col gap-0">
-            <span className={`px-0 mt-6 pb-1 text-[10px] font-geist uppercase tracking-[1.5px] select-none ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#2a2a2a]'
-              }`}>
-              ENGAGE
-            </span>
+          <span className="sb-group-label t-label font-mono uppercase c-tertiary">
+            ENGAGE
+          </span>
+          <div className="flex flex-col gap-0.5">
             {group2Links.map(renderDesktopNavLink)}
           </div>
         </nav>
@@ -1332,8 +1306,7 @@ const SidebarNavigation = ({
       <header className={`hidden md:flex lg:hidden w-full border-b px-6 py-3.5 items-center justify-between sticky top-0 z-50 transition-colors ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
         }`}>
         <div className="flex items-center gap-2.5">
-          <span className={`text-[15px] font-sans font-medium ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-            }`}>Kellas Andrei</span>
+          <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
         </div>
 
         <div className="flex items-center gap-5">
@@ -1344,7 +1317,7 @@ const SidebarNavigation = ({
               onClick={playNavTick}
               className={({ isActive }) => {
                 const active = isActive || (location.pathname === '/' && link.id === 'about');
-                return `text-xs font-geist uppercase tracking-[0.5px] transition-colors ${active
+                return `t-label font-geist uppercase transition-colors ${active
                   ? (theme === 'light' ? 'text-[#1a1a1a] font-medium' : 'text-white font-medium')
                   : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white')
                   }`;
@@ -1383,8 +1356,7 @@ const SidebarNavigation = ({
       <header className={`flex md:hidden w-full border-b px-4 py-3 items-center justify-between sticky top-0 z-50 transition-colors ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
         }`}>
         <div className="flex items-center gap-2">
-          <span className={`text-[15px] font-sans font-medium ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-            }`}>Kellas Andrei</span>
+          <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -1431,7 +1403,7 @@ const SidebarNavigation = ({
 
 const SectionHeading = ({
   children,
-  className = "mb-10",
+  className = "",
   theme,
   isInView,
   baseDelay = 0
@@ -1447,8 +1419,7 @@ const SectionHeading = ({
   return (
     <div className={className}>
       <h2
-        className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none tracking-normal lowercase ${animClass} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-          }`}
+        className={`t-h2 c-primary font-geist lowercase ${animClass}`}
         style={isInView !== undefined ? { animationDelay: `${baseDelay}ms` } : undefined}
       >
         {textVal}
@@ -1497,7 +1468,7 @@ const ResourceCard = ({
         href={resource.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`transition-colors inline-flex items-center gap-2 text-[13.5px] md:text-[14px] font-sans font-medium tracking-tight w-fit max-w-full group cursor-pointer ${isLight ? 'text-[#1a1a1a] hover:text-black' : 'text-[#cccccc] hover:text-white'
+        className={`transition-colors inline-flex items-center gap-2 t-h3 font-sans w-fit max-w-full group cursor-pointer ${isLight ? 'text-[#1a1a1a] hover:text-black' : 'text-[#cccccc] hover:text-white'
           }`}
       >
         <span className="truncate min-w-0">{resource.name}</span>
@@ -1508,8 +1479,7 @@ const ResourceCard = ({
             }`}
         />
       </a>
-      <p className={`text-[13px] font-sans leading-relaxed break-words ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-        }`}>
+      <p className={`t-body font-sans break-words c-secondary`}>
         {resource.description}
       </p>
     </div>
@@ -1522,8 +1492,7 @@ const ResourceCard = ({
         : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
         }`}
     >
-      <span className={`text-[10px] font-mono uppercase tracking-[1.5px] block mb-4 md:mb-5 select-none ${isLight ? 'text-[#a0a0a0]' : 'text-[#4a4a46]'
-        }`}>
+      <span className={`t-label font-mono uppercase block mb-4 md:mb-5 select-none c-tertiary`}>
         {group.category}
       </span>
 
@@ -1547,7 +1516,7 @@ const ResourceCard = ({
             type="button"
             onClick={() => setIsExpanded((prev: boolean) => !prev)}
             aria-expanded={isExpanded}
-            className={`mt-auto pt-4 self-start text-[10.5px] font-mono tracking-[0.06em] px-0 bg-transparent border-none cursor-pointer transition-colors ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'
+            className={`mt-auto pt-4 self-start t-mono font-mono px-0 bg-transparent border-none cursor-pointer transition-colors ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'
               }`}
           >
             {isExpanded ? '− show less' : `+ ${hiddenItems.length} more`}
@@ -1578,7 +1547,7 @@ const ResourcesGrid = ({ theme }: { theme: 'dark' | 'light' }) => {
               type="button"
               onClick={() => setActiveFilter(filter)}
               aria-pressed={isActive}
-              className={`rounded-full border-[0.5px] px-3 py-1.5 text-[11px] font-mono lowercase tracking-[0.06em] cursor-pointer transition-colors ${isActive
+              className={`rounded-full border-[0.5px] px-3 py-1.5 t-mono font-mono lowercase cursor-pointer transition-colors ${isActive
                 ? isLight
                   ? 'border-[#1a1a1a] bg-[#1a1a1a] text-[#fafafa]'
                   : 'border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]'
@@ -1665,8 +1634,7 @@ const WorksViewToggle: React.FC<{
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {/* Desktop-only affordance — unlabelled icon pairs are easy to miss,
           which is exactly how this control went unnoticed. */}
-      <span className={`hidden md:inline text-[10px] font-mono lowercase tracking-[0.06em] ${isLight ? 'text-[#8a8a8a]' : 'text-[#666666]'
-        }`}>
+      <span className={`hidden md:inline t-label font-mono lowercase c-tertiary`}>
         view:
       </span>
 
@@ -1790,7 +1758,7 @@ const AllProjectsModal = ({
                 </span>
 
                 <span className="shrink-0 flex items-center gap-2">
-                  <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
+                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
                     ? 'border-[#ececec] text-[#a0a0a0]'
                     : 'border-[#1e1e1e] text-[#5a5a57]'
                     }`}>
@@ -1845,7 +1813,7 @@ const AllProjectsModal = ({
                       }`}>
                       {project.title}
                     </div>
-                    <span className={`self-start inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] max-w-full truncate ${theme === 'light'
+                    <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate ${theme === 'light'
                       ? 'border-[#ececec] text-[#a0a0a0]'
                       : 'border-[#1e1e1e] text-[#5a5a57]'
                       }`}>
@@ -2697,25 +2665,22 @@ const GitLogNode: React.FC<{
           className="flex items-center gap-2 flex-wrap"
           style={{ lineHeight: 'var(--dot)' }}
         >
-          <span className={`text-[11px] md:text-[11.5px] font-mono ${isLight ? 'text-[#a0a0a0]' : 'text-[#555555]'
-            }`}>
+          <span className={`t-mono font-mono c-tertiary`}>
             {node.hash}
           </span>
-          <span className={`text-[14px] md:text-[15px] font-sans font-semibold tracking-tight ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-            }`}>
+          <span className={`t-h3 font-sans c-primary`}>
             {node.name}
           </span>
           {isLast && (
             <span
-              className="text-[10px] md:text-[10.5px] font-mono tracking-[0.04em] whitespace-nowrap"
+              className="t-label font-mono whitespace-nowrap"
               style={{ color: node.color }}
             >
               HEAD → main
             </span>
           )}
         </div>
-        <p className={`text-[12px] md:text-[13px] font-sans leading-relaxed mt-1 max-w-[460px] break-words ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-          }`}>
+        <p className={`t-body font-sans mt-1 max-w-[460px] break-words c-secondary`}>
           {node.desc}
         </p>
       </div>
@@ -2922,19 +2887,20 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
     <div ref={ref} className="grid md:grid-cols-2 gap-10 md:gap-14 items-start">
       {/* Left column — the accessible source of truth for stages and order. */}
       <div className="min-w-0">
+        <div className="section-head">
         <SectionHeading theme={theme} isInView={isInView} baseDelay={0}>
           my approach
         </SectionHeading>
 
         <p
-          className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mb-8 ${animClass} ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-            }`}
+          className={`t-lead font-sans c-secondary ${animClass}`}
           style={{ animationDelay: '160ms' }}
         >
           I build products end to end, from API design to pixel-level UI polish, with a bias toward clean, maintainable code.
         </p>
+        </div>
 
-        <ul className="space-y-3.5 md:space-y-4">
+        <ul className="space-y-[var(--item-gap)]">
           {stages.map((stage, i) => (
             <li
               key={stage.id}
@@ -2943,16 +2909,14 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
             >
               <span
                 aria-hidden="true"
-                className="shrink-0 w-[7px] h-[7px] rounded-full mt-[6px] md:mt-[7px]"
+                className="shrink-0 w-[7px] h-[7px] rounded-full mt-[8px]"
                 style={{ backgroundColor: stage.color }}
               />
               <div className="min-w-0">
-                <h3 className={`text-[14px] md:text-[15px] font-sans font-semibold tracking-tight ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                  }`}>
+                <h3 className="t-h3 font-sans c-primary">
                   {stage.detailLabel}
                 </h3>
-                <p className={`text-[12px] md:text-[13px] font-sans leading-relaxed mt-0.5 max-w-[420px] break-words ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-                  }`}>
+                <p className="t-body font-sans c-secondary mt-1 max-w-[420px] break-words">
                   {stage.detailDesc}
                 </p>
               </div>
@@ -2961,8 +2925,7 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
         </ul>
 
         <p
-          className={`text-[10px] md:text-[10.5px] font-mono tracking-[0.04em] mt-7 ${animClass} ${isLight ? 'text-[#a0a0a0]' : 'text-[#666666]'
-            }`}
+          className={`t-label font-mono c-tertiary mt-8 ${animClass}`}
           style={{ animationDelay: '440ms' }}
         >
           design → build → ship, in that order
@@ -3077,8 +3040,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
       {/* Header row — stays on one line at every width */}
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-[11px] md:text-[12px] font-mono tracking-[0.04em] whitespace-nowrap ${isLight ? 'text-[#8a8a8a]' : 'text-[#666666]'
-            }`}>
+          <span className={`t-mono font-mono whitespace-nowrap c-tertiary`}>
             github
           </span>
           <span className="flex items-center gap-1 shrink-0">
@@ -3087,7 +3049,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
               className="w-[5px] h-[5px] rounded-full"
               style={{ backgroundColor: '#22c55e' }}
             />
-            <span className="text-[9px] md:text-[10px] font-mono tracking-[0.06em] text-[#22c55e]">
+            <span className="t-label font-mono text-[#22c55e]">
               live
             </span>
           </span>
@@ -3098,7 +3060,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
           target="_blank"
           rel="noopener noreferrer"
           onClick={playExternalLink}
-          className={`inline-flex items-center gap-1 text-[11px] md:text-[12px] font-mono transition-colors min-w-0 ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#666666] hover:text-[#e0e0e0]'
+          className={`inline-flex items-center gap-1 t-mono font-mono transition-colors min-w-0 ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#666666] hover:text-[#e0e0e0]'
             }`}
         >
           <span className="truncate">github.com/kellasandyyyy1</span>
@@ -3139,14 +3101,148 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
 
       {/* Caption is omitted entirely on failure rather than showing a fabricated number */}
       {data && (
-        <p className={`text-[10px] md:text-[11px] font-mono tracking-[0.04em] mt-4 ${isLight ? 'text-[#a0a0a0]' : 'text-[#666666]'
-          }`}>
+        <p className={`t-label font-mono mt-4 c-tertiary`}>
           {data.total.toLocaleString()} contributions in the last year
         </p>
       )}
     </div>
   );
 };
+
+// Headline split into word tokens so each can sit in its own reveal mask.
+// `tone` is purely visual; the sentence reads the same without colour.
+const HERO_HEADLINE: { text: string; tone?: 'accent' | 'faint'; tail?: string }[] = [
+  { text: 'I' }, { text: 'like' }, { text: 'software' }, { text: "that's" },
+  { text: 'fast', tone: 'accent', tail: ',' }, { text: 'honest', tone: 'accent', tail: ',' },
+  { text: 'and' }, { text: "doesn't" }, { text: 'waste' }, { text: "anyone's" }, { text: 'time' },
+  { text: 'including', tone: 'faint' }, { text: 'mine.', tone: 'faint' },
+];
+
+const HERO_STATS = [
+  { value: '1+ YRS', label: 'SHIPPING' },
+  { value: '15+', label: 'PROJECTS BUILT' },
+  { value: '12+', label: 'TECHNOLOGIES' },
+];
+
+/** Groups the headline's words by rendered line (offsetTop) and hands each a
+ *  --line index, so the CSS stagger runs per line rather than per word. Runs
+ *  once before first paint; the animation is load-in only. */
+function HeroHeadline() {
+  const ref = React.useRef<HTMLParagraphElement>(null);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let line = -1;
+    let lastTop = -Infinity;
+    el.querySelectorAll<HTMLElement>('.mh-word').forEach((word) => {
+      if (word.offsetTop > lastTop + 2) {
+        line += 1;
+        lastTop = word.offsetTop;
+      }
+      (word.firstElementChild as HTMLElement).style.setProperty('--line', String(line));
+    });
+  }, []);
+
+  return (
+    <p ref={ref} className="mh-headline">
+      {HERO_HEADLINE.map((w, i) => (
+        <React.Fragment key={i}>
+          <span className="mh-word">
+            <span className="mh-word-inner">
+              {w.tone ? <span className={w.tone === 'accent' ? 'mh-accent' : 'mh-faint'}>{w.text}</span> : w.text}
+              {w.tail}
+            </span>
+          </span>
+          {i < HERO_HEADLINE.length - 1 && ' '}
+        </React.Fragment>
+      ))}
+    </p>
+  );
+}
+
+function ManifestoHero({ onBookCall }: { onBookCall: () => void }) {
+  return (
+    <section className="section mh">
+      <div className="mh-byline mh-in-byline">
+        <img
+          src="/img/drei.jpg"
+          alt="Kellas Andrei"
+          className="mh-photo"
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = 'none';
+          }}
+        />
+        <div className="mh-byline-text">
+          <h1 className="mh-name">Kellas Andrei</h1>
+          <p className="mh-role">Fullstack Web developer</p>
+          <p className="mh-location">Manila, PH</p>
+        </div>
+      </div>
+
+      <div className="mh-body">
+        <HeroHeadline />
+        <p className="mh-copy mh-in-copy">
+          I care more about whether something works under real load than whether it looks good in a demo.
+          Currently obsessed with agentic dev workflows and what they change about how software gets built.
+        </p>
+
+        <div className="mh-actions mh-in-actions">
+          {/* Blog lives on its own route and is intentionally absent from the nav. */}
+          <Link to="/blog" onClick={playNavTick} className="mh-primary">
+            <span>see my blogs</span>
+            <ArrowRight weight="regular" size={15} className="mh-primary-arrow" />
+          </Link>
+          <div className="mh-links">
+            <a
+              href="https://github.com/kellasandyyyy1"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={playExternalLink}
+              className="mh-link"
+            >
+              <GithubLogo weight="light" size={16} />
+              <span className="mh-link-label">github</span>
+              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
+            </a>
+            <a
+              href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={playExternalLink}
+              className="mh-link"
+            >
+              <LinkedinLogo weight="light" size={16} />
+              <span className="mh-link-label">linkedin</span>
+              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
+            </a>
+            <button
+              type="button"
+              onClick={() => { playExternalLink(); onBookCall(); }}
+              className="mh-link"
+            >
+              <Calendar weight="light" size={16} />
+              <span className="mh-link-label">book call</span>
+              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ol className="mh-stats mh-in-stats">
+        {HERO_STATS.map((s, i) => (
+          <li key={s.label} className="mh-stat">
+            <span className="mh-stat-value">
+              {s.value}
+              <sup aria-hidden="true">{i + 1}</sup>
+            </span>
+            <span className="mh-stat-label">{s.label}</span>
+          </li>
+        ))}
+      </ol>
+  </section>
+  );
+}
 
 const heroButtonContainerVariants = {
   hidden: { opacity: 0 },
@@ -3347,192 +3443,21 @@ export default function App() {
       <div className="flex-1 min-w-0">
         <main>
           {/* --- Hero Section --- */}
-          <section className="min-h-[calc(100vh-60px)] md:min-h-0 lg:min-h-0 flex flex-col justify-center md:justify-start p-6 md:p-12 max-w-7xl mx-auto py-12 md:py-20 md:pt-[clamp(4rem,12vh,7rem)] md:pb-8 my-auto md:my-0">
-            {/* Bio Block: Photo + Name/Bio */}
-            <div className="flex flex-col md:flex-row items-start gap-7 lg:gap-10">
-              {/* Photo: 96x96 rounded-2xl */}
-              <div
-                className={`w-[96px] h-[96px] md:w-28 md:h-28 rounded-[14px] overflow-hidden shrink-0 shadow-lg border transition-colors hero-animate ${theme === 'light'
-                  ? 'bg-gradient-to-b from-[#e8e8e8] to-[#f5f5f5] border-[#e0e0e0]'
-                  : 'bg-gradient-to-b from-[#2a2a2a] to-[#161616] border-[#2a2a2a]'
-                  }`}
-                style={{ animationDelay: '0ms' }}
-              >
-                <img
-                  src="/img/drei.jpg"
-                  alt="Kellas Andrei"
-                  className="w-full h-full object-cover filter grayscale contrast-[1.25] brightness-[1.05]"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-
-              {/* Text block beside photo */}
-              <div className="flex-1 space-y-3.5 w-full">
-                <div>
-                  <h1
-                    className={`text-[36px] sm:text-[48px] font-sans font-medium tracking-[-0.5px] leading-tight hero-animate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                      }`}
-                    style={{ animationDelay: '80ms' }}
-                  >
-                    Kellas Andrei
-                  </h1>
-                  <p
-                    className={`text-[14px] font-mono font-normal lowercase tracking-[1px] mt-1 hero-animate ${theme === 'light' ? 'text-[#4c5bc4]' : 'text-[#7c8ce0]'
-                      }`}
-                    style={{ animationDelay: '160ms' }}
-                  >
-                    Fullstack Web developer
-                  </p>
-                </div>
-
-                <p
-                  className={`text-[15px] font-sans leading-[1.6] max-w-[480px] hero-animate ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
-                    }`}
-                  style={{ animationDelay: '240ms' }}
-                >
-                  I like software that's fast, honest, and doesn't waste anyone's time including mine. I care more about whether something works under real load than whether it looks good in a demo.
-                  Currently obsessed with agentic dev workflows and what they change about how software gets built.
-                </p>
-
-                {/* Styled text links row below bio */}
-                <div
-                  className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2 hero-animate"
-                  style={{ animationDelay: '320ms' }}
-                >
-                  <a
-                    href="https://github.com/kellasandyyyy1"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={playExternalLink}
-                    className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                      }`}
-                  >
-                    <GithubLogo weight="light" size={16} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                    <span>github</span>
-                    <ArrowUpRight weight="light" size={14} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                  </a>
-                  <a
-                    href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={playExternalLink}
-                    className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                      }`}
-                  >
-                    <LinkedinLogo weight="light" size={16} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                    <span>linkedin</span>
-                    <ArrowUpRight weight="light" size={14} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                  </a>
-                  <button
-                    onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                    className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                      }`}
-                  >
-                    <Calendar weight="light" size={16} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                    <span>book call</span>
-                    <ArrowUpRight weight="light" size={14} className={
-                      theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-                    } />
-                  </button>
-                </div>
-
-                {/* Blog lives on its own route and is intentionally absent from the nav. */}
-                <Link
-                  to="/blog"
-                  onClick={playNavTick}
-                  className={`mt-5 inline-flex items-center gap-2 rounded-[8px] border-[0.5px] px-3.5 py-2 text-[12px] font-geist transition-colors duration-150 cursor-pointer group hero-animate ${theme === 'light'
-                    ? 'border-[#e0e0e0] text-[#1a1a1a] hover:border-[#a0a0a0]'
-                    : 'border-[#262626] text-[#e5e5e5] hover:border-[#3d3d38]'
-                    }`}
-                  style={{ animationDelay: '400ms' }}
-                >
-                  <span>see my blogs</span>
-                  <ArrowRight
-                    weight="light"
-                    size={14}
-                    className="shrink-0 transition-transform duration-150 group-hover:translate-x-0.5"
-                  />
-                </Link>
-              </div>
-            </div>
-
-            {/* Stat Grid */}
-            <div
-              className={`pt-6 mt-8 border-t hero-animate ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'}`}
-              style={{ animationDelay: '400ms' }}
-            >
-              <div className={`grid grid-cols-2 md:grid-cols-4 md:w-full gap-[1px] rounded-xl overflow-hidden border ${theme === 'light' ? 'bg-[#ececec] border-[#ececec]' : 'bg-[#1e1e1e] border-[#1e1e1e]'
-                }`}>
-                <div
-                  className={`px-[18px] py-[16px] flex flex-col justify-center hero-animate ${theme === 'light' ? 'bg-[#ffffff]' : 'bg-[#0a0a0a]'
-                    }`}
-                  style={{ animationDelay: '480ms' }}
-                >
-                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                    }`}>1+ YRS</div>
-                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                    }`}>SHIPPING</div>
-                </div>
-                <div
-                  className={`px-[18px] py-[16px] flex flex-col justify-center hero-animate ${theme === 'light' ? 'bg-[#ffffff]' : 'bg-[#0a0a0a]'
-                    }`}
-                  style={{ animationDelay: '530ms' }}
-                >
-                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                    }`}>15+</div>
-                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                    }`}>PROJECTS BUILT</div>
-                </div>
-                <div
-                  className={`px-[18px] py-[16px] flex flex-col justify-center hero-animate ${theme === 'light' ? 'bg-[#ffffff]' : 'bg-[#0a0a0a]'
-                    }`}
-                  style={{ animationDelay: '580ms' }}
-                >
-                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                    }`}>12+</div>
-                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                    }`}>technologies</div>
-                </div>
-                <div
-                  className={`px-[18px] py-[16px] flex flex-col justify-center hero-animate ${theme === 'light' ? 'bg-[#ffffff]' : 'bg-[#0a0a0a]'
-                    }`}
-                  style={{ animationDelay: '630ms' }}
-                >
-                  <div className={`text-[19px] sm:text-[20px] font-geist leading-tight ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                    }`}>Manila, PH</div>
-                  <div className={`text-[10px] font-sans uppercase tracking-[1px] mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                    }`}>LOCATION</div>
-                </div>
-              </div>
-            </div>
-          </section>
+          <ManifestoHero onBookCall={() => setShowBookCall(true)} />
 
           {/* --- 01 / Overview Section --- */}
-          <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 md:pt-16 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <ApproachSection theme={theme} isInView={aboutInView} />
           </section>
 
           {/* --- 02 / Experience Section --- */}
-          <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-10">
-              <SectionHeading className="mb-2" theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
+            <div className="section-head">
+              <SectionHeading theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
               <p
-                className={`text-[15px] font-sans mt-2 max-w-xl ${getAnimClass(expInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
-                  }`}
+                className={`t-lead font-sans c-secondary ${getAnimClass(expInView)}`}
                 style={{ animationDelay: '160ms' }}
               >
                 1+ years of building scalable full-stack applications, modern web interfaces, and digital products.
@@ -3565,24 +3490,19 @@ export default function App() {
                     {/* Timeline right column */}
                     <div className="pb-10 flex-1 min-w-0">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <h3 className={`text-[16px] font-sans font-medium ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                          }`}>{exp.company}</h3>
-                        <span className={`text-[11px] font-mono lowercase tracking-[1px] ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                          }`}>· {exp.employmentType} ({exp.location})</span>
+                        <h3 className="t-h3 font-sans c-primary">{exp.company}</h3>
+                        <span className="t-label font-mono lowercase c-tertiary">· {exp.employmentType} ({exp.location})</span>
                       </div>
 
-                      <div className={`text-[15px] font-sans font-medium mt-0.5 ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                        }`}>
+                      <div className="t-h3 font-sans c-secondary mt-0.5">
                         {exp.role}
                       </div>
 
-                      <div className={`text-[11px] tracking-[1px] font-mono uppercase mt-1 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#777777]'
-                        }`}>
+                      <div className="t-label font-mono uppercase c-tertiary mt-1.5">
                         {exp.period}
                       </div>
 
-                      <p className={`text-[15px] font-sans leading-[1.6] mt-2.5 max-w-2xl ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
-                        }`}>
+                      <p className="t-body font-sans c-secondary mt-3 max-w-2xl">
                         {exp.description}
                       </p>
 
@@ -3591,7 +3511,7 @@ export default function App() {
                         {exp.skills.map((skill, sIdx) => (
                           <span
                             key={sIdx}
-                            className={`border rounded-md px-2.5 py-1 text-[12px] font-mono lowercase tracking-[0.5px] ${theme === 'light'
+                            className={`border rounded-md px-2.5 py-1 t-mono font-mono lowercase ${theme === 'light'
                               ? 'border-[#e0e0e0] text-[#5a5a5a] bg-[#f0f0f0]'
                               : 'border-[#2a2a2a] text-[#cccccc] bg-[#111113]'
                               }`}
@@ -3600,7 +3520,7 @@ export default function App() {
                           </span>
                         ))}
                         {exp.moreSkillsCount && (
-                          <span className={`border border-dashed rounded-md px-2.5 py-1 text-[11px] font-mono lowercase tracking-[1px] ${theme === 'light'
+                          <span className={`border border-dashed rounded-md px-2.5 py-1 t-mono font-mono lowercase ${theme === 'light'
                             ? 'border-[#e0e0e0] text-[#8a8a8a]'
                             : 'border-[#2a2a2a] text-[#777777]'
                             }`}>
@@ -3620,8 +3540,7 @@ export default function App() {
                 }`}
               style={{ animationDelay: `${240 + EXPERIENCES.length * 60}ms` }}
             >
-              <div className={`text-[13px] font-sans ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#777777]'
-                }`}>
+              <div className="t-small font-sans c-secondary">
                 Interested in collaborating or discussing technical roles?
               </div>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -3630,7 +3549,7 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <GithubLogo weight="light" size={16} className={
@@ -3646,7 +3565,7 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <LinkedinLogo weight="light" size={16} className={
@@ -3659,7 +3578,7 @@ export default function App() {
                 </a>
                 <button
                   onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] whitespace-nowrap shrink-0 cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <Calendar weight="light" size={16} className={
@@ -3675,12 +3594,12 @@ export default function App() {
           </section>
 
           {/* --- 03 / Stack Section --- */}
-          <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-10">
-              <SectionHeading className="mb-2" theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
+            <div className="section-head">
+              <SectionHeading theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
               <p
-                className={`text-[13px] font-sans mt-2 max-w-[480px] ${getAnimClass(stackInView)} ${theme === 'light' ? 'text-[#4c5bc4]' : 'text-[#7c8ce0]'
+                className={`t-lead font-sans ${getAnimClass(stackInView)} ${theme === 'light' ? 'text-[#4c5bc4]' : 'text-[#7c8ce0]'
                   }`}
                 style={{ animationDelay: '160ms' }}
               >
@@ -3697,7 +3616,7 @@ export default function App() {
                   style={{ animationDelay: `${240 + groupIdx * 60}ms` }}
                 >
                   {/* Category Header */}
-                  <div className={`text-[10px] font-mono uppercase tracking-[1.5px] mb-2.5 select-none border-b pb-1.5 ${theme === 'light' ? 'text-[#8a8a8a] border-[#e0e0e0]' : 'text-[#666666] border-[#222222]'
+                  <div className={`t-label font-mono uppercase mb-2.5 select-none border-b pb-1.5 c-tertiary ${theme === 'light' ? 'border-[#e0e0e0]' : 'border-[#222222]'
                     }`}>
                     {group.category}
                   </div>
@@ -3722,8 +3641,7 @@ export default function App() {
                             ) : (
                               <Cpu size={14} className={`shrink-0 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#888888]'}`} />
                             )}
-                            <span className={`text-[13px] font-sans font-normal truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                              }`}>
+                            <span className={`t-body font-sans truncate c-primary`}>
                               {tool.name}
                             </span>
                           </div>
@@ -3737,20 +3655,18 @@ export default function App() {
           </section>
 
           {/* --- Certifications Section --- */}
-          <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="flex items-start justify-between gap-8">
+            <div className="section-head flex items-start justify-between gap-8">
               <div className="min-w-0">
                 <h2
-                  className={`text-[26px] font-geist font-medium leading-none tracking-normal lowercase ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                    }`}
+                  className={`t-h2 c-primary font-geist lowercase ${getAnimClass(certInView)}`}
                   style={{ animationDelay: '80ms' }}
                 >
                   certifications
                 </h2>
                 <p
-                  className={`text-[13px] font-sans mt-2.5 max-w-xl leading-relaxed ${getAnimClass(certInView)} ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#7a7a80]'
-                    }`}
+                  className={`t-lead font-sans c-secondary ${getAnimClass(certInView)}`}
                   style={{ animationDelay: '160ms' }}
                 >
                   verified industry certifications and technical credentials issued by official platforms.
@@ -3759,7 +3675,7 @@ export default function App() {
             </div>
 
             {/* No outer border, no card fills: only the dividers between columns. */}
-            <div className="grid grid-cols-1 md:grid-cols-3 mt-14 md:mt-20">
+            <div className="grid grid-cols-1 md:grid-cols-3">
               {CERTIFICATIONS.map((cert, index) => (
                 <a
                   key={cert.id}
@@ -3796,12 +3712,11 @@ export default function App() {
                     <cert.Icon size={17} />
                   </span>
 
-                  <h3 className={`text-[14px] md:text-[15px] font-sans font-medium tracking-tight mt-5 ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                    }`}>
+                  <h3 className="t-h3 font-sans c-primary mt-5">
                     {cert.title}
                   </h3>
 
-                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono lowercase tracking-[0.06em] mt-2 transition-colors duration-200 ease-out ${theme === 'light'
+                  <span className={`inline-flex items-center gap-1.5 t-label font-mono lowercase mt-2 transition-colors duration-200 ease-out ${theme === 'light'
                     ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]'
                     : 'text-[#7a7a80] group-hover:text-[#e5e5e5]'
                     }`}>
@@ -3814,11 +3729,10 @@ export default function App() {
           </section>
 
           {/* --- How I Think Section --- */}
-          <section id="process" className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="process" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-8">
-              <h2 className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                }`}>
+            <div className="section-head">
+              <h2 className="t-h2 c-primary font-geist lowercase">
                 how i think
               </h2>
             </div>
@@ -3826,17 +3740,16 @@ export default function App() {
           </section>
 
           {/* --- Projects Section --- */}
-          <section id="projects" className={`py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t select-none overflow-hidden ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="projects" className={`section border-t select-none overflow-hidden ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="flex justify-between items-start gap-4 mb-4">
+            <div className="section-head flex justify-between items-start gap-4">
               <div className="min-w-0">
                 {/* The toggle sits on the heading's own line so it reads as
                     belonging to "my works". It is deliberately NOT grouped with
                     the 01—08 page indicator, which is unrelated and stays far
                     right on its own. */}
-                <div className="flex items-center gap-3 md:gap-4 mt-1">
-                  <h2 className={`text-[22px] font-geist font-normal leading-none tracking-normal lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                    }`}>
+                <div className="flex items-center gap-3 md:gap-4">
+                  <h2 className="t-h2 c-primary font-geist lowercase">
                     my works
                   </h2>
                   <WorksViewToggle
@@ -3848,7 +3761,7 @@ export default function App() {
                 </div>
               </div>
 
-              <span className={`shrink-0 flex items-center gap-1 text-[10px] font-mono ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
+              <span className={`shrink-0 flex items-center gap-1 t-label font-mono ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
                 }`}>
                 
                 <ArrowUpRight weight="light" size={10} className="shrink-0" />
@@ -3896,11 +3809,10 @@ export default function App() {
                       {/* Padding and type sizes stay constant across breakpoints
                           so card text never looks inconsistently scaled. */}
                       <div className="px-[9px] py-[8px] flex flex-col gap-1.5 min-w-0">
-                        <div className={`text-[11px] font-mono truncate ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#e5e5e5]'
-                          }`}>
+                        <div className="t-mono font-mono truncate c-primary">
                           {project.title}
                         </div>
-                        <span className={`self-start inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] max-w-full truncate ${theme === 'light'
+                        <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate ${theme === 'light'
                           ? 'border-[#ececec] text-[#a0a0a0]'
                           : 'border-[#1e1e1e] text-[#5a5a57]'
                           }`}>
@@ -3927,13 +3839,13 @@ export default function App() {
                         } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
                       onClick={() => setSelectedProject(project)}
                     >
-                      <span className={`text-[12px] lg:text-[17px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
+                      <span className={`t-h3 font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
                         }`}>
                         {project.title}
                       </span>
 
                       <span className="shrink-0 flex items-center gap-2">
-                        <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
+                        <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
                           ? 'border-[#ececec] text-[#a0a0a0]'
                           : 'border-[#1e1e1e] text-[#333333]'
                           }`}>
@@ -3963,13 +3875,13 @@ export default function App() {
                   } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
                 onClick={() => setShowAllProjects(true)}
               >
-                <span className={`text-[12px] lg:text-[17px] font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
+                <span className={`t-h3 font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
                   }`}>
                   browse all
                 </span>
 
                 <span className="shrink-0 flex items-center gap-2">
-                  <span className={`inline-flex text-[8px] font-mono uppercase leading-none px-[5px] py-[1px] rounded-[2px] border-[0.5px] ${theme === 'light'
+                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
                     ? 'border-[#ececec] text-[#a0a0a0]'
                     : 'border-[#1e1e1e] text-[#333333]'
                     }`}>
@@ -3987,11 +3899,11 @@ export default function App() {
           </section>
 
           {/* --- Services Section --- */}
-          <section id="services" className={`py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="services" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <SectionHeading theme={theme}>Services</SectionHeading>
+            <SectionHeading className="section-head" theme={theme}>Services</SectionHeading>
 
-            <div className={`border-t mt-8 lg:mt-12 ${theme === 'light' ? 'border-[#ececec]' : 'border-zinc-900/30 dark:border-zinc-800/60'
+            <div className={`border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-zinc-900/30 dark:border-zinc-800/60'
               }`}>
               {SERVICES.map((service, index) => {
                 return (
@@ -4003,7 +3915,7 @@ export default function App() {
                     transition={{ delay: index * 0.08, duration: 0.4 }}
                   >
                     {/* Mobile Layout (< 768px) */}
-                    <div className={`flex flex-col gap-1.5 py-3.5 px-0 border-b relative group cursor-pointer transition-all duration-200 md:hidden ${theme === 'light'
+                    <div className={`flex flex-col gap-1.5 py-5 px-0 border-b relative group cursor-pointer transition-all duration-200 md:hidden ${theme === 'light'
                       ? 'border-[#ececec] hover:bg-[#f0f0f0]/60'
                       : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20'
                       }`}>
@@ -4014,23 +3926,22 @@ export default function App() {
                           className={`shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
                             }`}
                         />
-                        <h4 className={`text-[14px] font-medium uppercase font-sans tracking-tight break-words ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
+                        <h4 className={`t-h3 uppercase font-sans break-words ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
                           }`}>
                           {service.title}
                         </h4>
                       </div>
-                      <p className={`text-[12px] break-words pr-8 leading-relaxed ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-zinc-500 dark:text-zinc-400'
-                        }`}>
+                      <p className="t-body break-words pr-8 c-secondary">
                         {service.description}
                       </p>
-                      <div className={`absolute right-0 top-3.5 transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white'
+                      <div className={`absolute right-0 top-5 transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white'
                         }`}>
                         <ArrowUpRight className="w-4 h-4" />
                       </div>
                     </div>
 
                     {/* Tablet & Desktop Layout (>= 768px) */}
-                    <div className={`hidden md:flex items-center gap-5 py-[18px] px-1 border-b group cursor-pointer transition-all duration-200 ${theme === 'light'
+                    <div className={`hidden md:flex items-center gap-5 py-[var(--item-gap)] px-1 border-b group cursor-pointer transition-all duration-200 ${theme === 'light'
                       ? 'border-[#ececec] hover:bg-[#f0f0f0]/60'
                       : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-900/20'
                       }`}>
@@ -4045,12 +3956,11 @@ export default function App() {
                         />
                       </span>
                       <div className="flex-1 flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-5">
-                        <h4 className={`text-base font-medium font-sans uppercase tracking-tight lg:flex-1 truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
+                        <h4 className={`t-h3 font-sans uppercase lg:flex-1 truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
                           }`}>
                           {service.title}
                         </h4>
-                        <p className={`text-[12px] lg:text-[13px] lg:flex-1 break-words leading-relaxed ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-zinc-500 dark:text-zinc-400'
-                          }`}>
+                        <p className="t-body lg:flex-1 break-words c-secondary">
                           {service.description}
                         </p>
                       </div>
@@ -4064,15 +3974,13 @@ export default function App() {
           </section>
 
           {/* --- Resources Section --- */}
-          <section id="resources" className={`py-16 md:py-24 px-5 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="resources" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-6 md:mb-8">
-              <h2 className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                }`}>
+            <div className="section-head">
+              <h2 className="t-h2 c-primary font-geist lowercase">
                 resources
               </h2>
-              <p className={`text-[13px] font-sans mt-2.5 max-w-xl leading-relaxed ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#888888]'
-                }`}>
+              <p className="t-lead font-sans c-secondary">
                 the courses, docs, and writing i actually go back to. curated, not collected.
               </p>
             </div>
@@ -4081,7 +3989,7 @@ export default function App() {
           </section>
 
           {/* --- GitHub Section --- */}
-          <section id="github" className={`py-16 md:py-24 px-5 md:px-12 max-w-7xl mx-auto border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="github" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
             <div className="max-w-[640px]">
               <GithubSection theme={theme} />
@@ -4089,29 +3997,23 @@ export default function App() {
           </section>
 
           {/* --- Contact Section --- */}
-          <section id="contact" className={`py-20 md:py-24 px-6 md:px-12 max-w-7xl mx-auto border-t mb-16 ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
+          <section id="contact" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
             }`}>
-            <div className="mb-8">
-              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                }`}>
+            <div className="mb-4">
+              <span className="t-label font-mono uppercase block c-tertiary">
                 CONTACT
               </span>
-              <h2 className={`text-[26px] font-geist font-medium leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                }`}>
-
-              </h2>
-            </div>
+                          </div>
 
             <div className="max-w-[560px] space-y-7">
-              <h3 className={`text-[32px] sm:text-[46px] font-sans font-medium leading-[1.15] tracking-[-0.5px] ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-                }`}>
+              <h3 className="t-h2 font-sans c-primary">
                 Have a project in mind? Let's talk.
               </h3>
 
               <div>
                 <a
                   href="mailto:kellasandrei00@gmail.com"
-                  className={`inline-block text-[20px] sm:text-[22px] font-sans font-normal transition-colors border-b pb-2 ${theme === 'light'
+                  className={`inline-block t-lead font-sans transition-colors border-b pb-2 ${theme === 'light'
                     ? 'text-[#1a1a1a] hover:text-black border-[#e0e0e0]'
                     : 'text-[#e5e5e5] hover:text-white border-[#2a2a2a]'
                     }`}
@@ -4124,7 +4026,7 @@ export default function App() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-3">
                 <button
                   onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <Calendar weight="light" size={16} className={
@@ -4141,7 +4043,7 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <GithubLogo weight="light" size={16} className={
@@ -4158,7 +4060,7 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 text-[13px] font-mono lowercase tracking-[0.5px] group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
                     }`}
                 >
                   <LinkedinLogo weight="light" size={16} className={
@@ -4174,7 +4076,7 @@ export default function App() {
           </section>
         </main>
 
-        <footer className={`py-12 px-12 border-t max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-mono font-bold uppercase tracking-[0.3em] ${theme === 'light' ? 'border-[#ececec] text-[#8a8a8a]' : 'border-zinc-900 text-zinc-600'
+        <footer className={`section !py-12 border-t flex flex-col md:flex-row justify-between items-center gap-6 t-label font-mono uppercase ${theme === 'light' ? 'border-[#ececec] text-[#8a8a8a]' : 'border-zinc-900 text-zinc-600'
           }`}>
           <div className="flex gap-8">
             <span></span>
