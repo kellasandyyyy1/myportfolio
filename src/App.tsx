@@ -14,6 +14,7 @@ import { InteractiveProfile } from './components/InteractiveProfile';
 import { WalkingCat } from './components/WalkingCat';
 import { VisorOrbMascot } from './components/VisorOrbMascot';
 import { NavIcon3D } from './components/NavIcon3D';
+import { Hero } from './components/Hero';
 import {
   GithubLogo,
   GithubLogo as Github,
@@ -3109,164 +3110,6 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
   );
 };
 
-// Headline split into word tokens so each can sit in its own reveal mask.
-// `tone` is purely visual; the sentence reads the same without colour.
-const HERO_HEADLINE: { text: string; tone?: 'accent' | 'faint'; tail?: string }[] = [
-  { text: 'I' }, { text: 'like' }, { text: 'software' }, { text: "that's" },
-  { text: 'fast', tone: 'accent', tail: ',' }, { text: 'honest', tone: 'accent', tail: ',' },
-  { text: 'and' }, { text: "doesn't" }, { text: 'waste' }, { text: "anyone's" }, { text: 'time' },
-  { text: 'including', tone: 'faint' }, { text: 'mine.', tone: 'faint' },
-];
-
-const HERO_STATS = [
-  { value: '1+ YRS', label: 'SHIPPING' },
-  { value: '15+', label: 'PROJECTS BUILT' },
-  { value: '12+', label: 'TECHNOLOGIES' },
-];
-
-/** Groups the headline's words by rendered line (offsetTop) and hands each a
- *  --line index, so the CSS stagger runs per line rather than per word. Runs
- *  once before first paint; the animation is load-in only. */
-function HeroHeadline() {
-  const ref = React.useRef<HTMLParagraphElement>(null);
-
-  React.useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let line = -1;
-    let lastTop = -Infinity;
-    el.querySelectorAll<HTMLElement>('.mh-word').forEach((word) => {
-      if (word.offsetTop > lastTop + 2) {
-        line += 1;
-        lastTop = word.offsetTop;
-      }
-      (word.firstElementChild as HTMLElement).style.setProperty('--line', String(line));
-    });
-  }, []);
-
-  return (
-    <p ref={ref} className="mh-headline">
-      {HERO_HEADLINE.map((w, i) => (
-        <React.Fragment key={i}>
-          <span className="mh-word">
-            <span className="mh-word-inner">
-              {w.tone ? <span className={w.tone === 'accent' ? 'mh-accent' : 'mh-faint'}>{w.text}</span> : w.text}
-              {w.tail}
-            </span>
-          </span>
-          {i < HERO_HEADLINE.length - 1 && ' '}
-        </React.Fragment>
-      ))}
-    </p>
-  );
-}
-
-function ManifestoHero({ onBookCall }: { onBookCall: () => void }) {
-  return (
-    <section className="section mh">
-      <div className="mh-byline mh-in-byline">
-        <img
-          src="/img/drei.jpg"
-          alt="Kellas Andrei"
-          className="mh-photo"
-          onError={(e) => {
-            (e.target as HTMLElement).style.display = 'none';
-          }}
-        />
-        <div className="mh-byline-text">
-          <h1 className="mh-name">Kellas Andrei</h1>
-          <p className="mh-role">Fullstack Web developer</p>
-          <p className="mh-location">Manila, PH</p>
-        </div>
-      </div>
-
-      <div className="mh-body">
-        <HeroHeadline />
-        <p className="mh-copy mh-in-copy">
-          I care more about whether something works under real load than whether it looks good in a demo.
-          Currently obsessed with agentic dev workflows and what they change about how software gets built.
-        </p>
-
-        <div className="mh-actions mh-in-actions">
-          {/* Blog lives on its own route and is intentionally absent from the nav. */}
-          <Link to="/blog" onClick={playNavTick} className="mh-primary">
-            <span>see my blogs</span>
-            <ArrowRight weight="regular" size={15} className="mh-primary-arrow" />
-          </Link>
-          <div className="mh-links">
-            <a
-              href="https://github.com/kellasandyyyy1"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={playExternalLink}
-              className="mh-link"
-            >
-              <GithubLogo weight="light" size={16} />
-              <span className="mh-link-label">github</span>
-              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
-            </a>
-            <a
-              href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={playExternalLink}
-              className="mh-link"
-            >
-              <LinkedinLogo weight="light" size={16} />
-              <span className="mh-link-label">linkedin</span>
-              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
-            </a>
-            <button
-              type="button"
-              onClick={() => { playExternalLink(); onBookCall(); }}
-              className="mh-link"
-            >
-              <Calendar weight="light" size={16} />
-              <span className="mh-link-label">book call</span>
-              <ArrowUpRight weight="light" size={13} className="mh-link-arrow" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <ol className="mh-stats mh-in-stats">
-        {HERO_STATS.map((s, i) => (
-          <li key={s.label} className="mh-stat">
-            <span className="mh-stat-value">
-              {s.value}
-              <sup aria-hidden="true">{i + 1}</sup>
-            </span>
-            <span className="mh-stat-label">{s.label}</span>
-          </li>
-        ))}
-      </ol>
-  </section>
-  );
-}
-
-const heroButtonContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 1.4,
-    }
-  }
-};
-
-const heroButtonVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.16, 1, 0.3, 1]
-    }
-  }
-};
-
 function useSectionInView() {
   const ref = React.useRef<HTMLElement | null>(null);
   const [isInView, setIsInView] = useState(false);
@@ -3443,7 +3286,7 @@ export default function App() {
       <div className="flex-1 min-w-0">
         <main>
           {/* --- Hero Section --- */}
-          <ManifestoHero onBookCall={() => setShowBookCall(true)} />
+          <Hero onBookCall={() => setShowBookCall(true)} />
 
           {/* --- 01 / Overview Section --- */}
           <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
