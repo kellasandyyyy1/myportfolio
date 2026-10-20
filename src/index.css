@@ -1348,7 +1348,6 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
   --sk-accent-soft: rgba(124, 140, 224, 0.38);
   --sk-rule: #232326;
   --sk-paper: #f4f4f5;
-  --sk-ink: #3a3f6b;
   --sk-edge: #f4f4f5;
   --sk-note-bg: #23263d;
   --sk-note-ink: #c9cff5;
@@ -1377,7 +1376,6 @@ html[data-mode="light"] .sk {
   --sk-accent-soft: rgba(76, 91, 196, 0.24);
   --sk-rule: #e4e4e7;
   --sk-paper: #ffffff;
-  --sk-ink: #2c3591;
   --sk-edge: #ffffff;
   --sk-note-bg: #e4e7fb;
   --sk-note-ink: #2c3591;
@@ -1566,7 +1564,8 @@ html[data-mode="light"] .sk {
   z-index: 2;
   width: min(100%, 240px);
   margin: 0;
-  padding: 12px 12px 0;
+  /* Thick bottom border: the classic instant-film frame. */
+  padding: 12px 12px 48px;
   background: var(--sk-noise), var(--sk-paper);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 20px 32px -14px var(--sk-shadow);
   transform: rotate(4deg);
@@ -1595,15 +1594,6 @@ html[data-mode="light"] .sk {
   object-fit: cover;
   background: #d4d4d8;
   filter: grayscale(1) contrast(1.12);
-}
-
-.sk-polaroid figcaption {
-  padding: 10px 0 14px;
-  font-family: var(--sk-hand);
-  font-size: 22px;
-  line-height: 1.1;
-  text-align: center;
-  color: var(--sk-ink);
 }
 
 /* Masking tape with torn ends. */

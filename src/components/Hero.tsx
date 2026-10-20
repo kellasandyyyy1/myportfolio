@@ -132,7 +132,6 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               (e.target as HTMLElement).style.visibility = 'hidden';
             }}
           />
-          <figcaption>that's me — Manila, PH</figcaption>
         </figure>
 
         <aside className="sk-note">
