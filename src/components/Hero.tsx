@@ -1,211 +1,144 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { FaGithub, FaLinkedinIn } from 'react-icons/fa6';
+import { CalendarBlank, GithubLogo, LinkedinLogo, NotePencil } from '@phosphor-icons/react';
 import { playExternalLink, playNavTick } from '../lib/sound';
 
-const TZ = 'Asia/Manila';
-const menuTime = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' });
-const clockParts = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-const calDay = new Intl.DateTimeFormat('en-US', { timeZone: TZ, day: 'numeric' });
-const calWeekday = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'long' });
-
-/** One shared ticking clock for the menu bar and the clock sticker. */
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
-/** Mac OS X–style menu bar. Menu items are real section links. */
-function MenuBar({ now }: { now: Date }) {
+/** Small monochrome keycap: soft top light, darker lip underneath. */
+function Key({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sk-menubar">
-      <div className="sk-menubar-left">
-        <span className="sk-menubar-mark" aria-hidden="true">✦</span>
-        <nav className="sk-menubar-menus" aria-label="Sections">
-          <a href="#about">About</a>
-          <a href="#projects">Work</a>
-          <a href="#services">Services</a>
-          <a href="#contact">Contact</a>
-        </nav>
-      </div>
-      <div className="sk-menubar-right">
-        <span>Manila, PH</span>
-        <time dateTime={now.toISOString()}>{menuTime.format(now)}</time>
-      </div>
-    </div>
-  );
-}
-
-/** Analog clock sticker showing Manila time. */
-function ClockSticker({ now }: { now: Date }) {
-  const [h, m, s] = clockParts.format(now).split(':').map(Number);
-  const hourDeg = (h % 12) * 30 + m * 0.5;
-  const minDeg = m * 6 + s * 0.1;
-  const secDeg = s * 6;
-  return (
-    <div className="sk-sticker sk-clock" role="img" aria-label={`Local time in Manila ${clockParts.format(now)}`}>
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r="46" className="sk-clock-face" />
-        {Array.from({ length: 12 }, (_, i) => (
-          <line
-            key={i}
-            x1="50" y1="9" x2="50" y2={i % 3 === 0 ? 17 : 14}
-            className="sk-clock-tick"
-            transform={`rotate(${i * 30} 50 50)`}
-          />
-        ))}
-        <line x1="50" y1="50" x2="50" y2="28" className="sk-clock-hour" transform={`rotate(${hourDeg} 50 50)`} />
-        <line x1="50" y1="54" x2="50" y2="17" className="sk-clock-min" transform={`rotate(${minDeg} 50 50)`} />
-        <line x1="50" y1="58" x2="50" y2="14" className="sk-clock-sec" transform={`rotate(${secDeg} 50 50)`} />
-        <circle cx="50" cy="50" r="3" className="sk-clock-pin" />
-      </svg>
-      <span className="sk-clock-label">GMT+8</span>
-    </div>
-  );
-}
-
-/* --- Early-iPhone-era app icons: base gradient, glossy dome, letterpress glyph --- */
-
-function NotesIcon() {
-  return (
-    <span className="sk-icon sk-icon-notes" aria-hidden="true">
-      <span className="sk-notes-binding" />
-      <span className="sk-notes-text">blog</span>
+    <span className="hx-key" aria-hidden="true">
+      <span className="hx-key-cap">{children}</span>
     </span>
   );
 }
 
-function CalendarIcon({ now }: { now: Date }) {
+/**
+ * Hand-sketched outline of the Philippines with a pin on Manila. Points are
+ * plotted from rough lon/lat (x = (lon − 116.5) × 6, y = (19 − lat) × 6), so
+ * the islands sit where they should without pretending to be survey-accurate.
+ */
+const PH_ISLANDS = [
+  // Luzon, with the Bicol tail running southeast
+  'M24.6 3 L34 3 L34.8 12 L30.6 19 L30.6 28.8 L36 30 L42 31 L46 36 L45 38.4 L40.8 36 L36.6 33.6 L32.4 31 L27 32.4 L24.6 28.8 L24 26.4 L19.8 18 L22.8 14.4 L23.4 9 Z',
+  // Mindoro
+  'M22.8 33 L28.2 33.6 L29.4 39.6 L27 40.8 L24 37.2 Z',
+  // Palawan
+  'M18.6 46.2 L14.4 54 L6.6 62.4 L4.2 64.2 L5.4 61.8 L12.6 55.2 L16.8 47.4 Z',
+  // Panay, Negros, Cebu
+  'M33 42.6 L39.6 45 L36.6 49.8 L33 50.4 L32.4 45.6 Z',
+  'M39 48.6 L42 50.4 L40.2 58.8 L38.4 57.6 L36 54 Z',
+  'M45 46.8 L45.6 51 L41.4 57 L43.2 52.2 Z',
+  // Samar, Leyte
+  'M47.4 39 L54.6 40.2 L55.2 47.4 L51 48 L46.8 44.4 Z',
+  'M47.4 45 L51 46.8 L52.2 54 L49.8 53.4 L47.4 49.2 Z',
+  // Mindanao
+  'M40.8 62.4 L46.2 64.8 L52.2 60 L54 55.2 L58.2 58.8 L59.4 69 L58.2 76.2 L54.6 71.4 L53.4 78 L46.2 76.8 L45 70.8 L41.4 68.4 L33.6 72.6 L35.4 68.4 L39 66 Z',
+];
+
+function PhMap() {
   return (
-    <span className="sk-icon sk-icon-cal" aria-hidden="true">
-      <span className="sk-cal-weekday">{calWeekday.format(now)}</span>
-      <span className="sk-cal-day">{calDay.format(now)}</span>
-    </span>
+    <svg className="hx-map" viewBox="0 0 64 82" aria-hidden="true">
+      {PH_ISLANDS.map((d) => (
+        <path key={d} className="hx-map-land" d={d} />
+      ))}
+      <ellipse className="hx-map-land" cx="46.2" cy="55.2" rx="2.6" ry="1.6" />
+      <circle className="hx-map-ring" cx="27" cy="26.4" r="5" />
+      <circle className="hx-map-pin" cx="27" cy="26.4" r="1.9" />
+    </svg>
   );
 }
 
-/** Editorial scrapbook hero: pieces pinned to a page under a Mac menu bar. */
 export function Hero({ onBookCall }: { onBookCall: () => void }) {
-  const now = useNow();
 
   return (
-    <section className="section sk">
-      <MenuBar now={now} />
-
-      <div className="sk-board">
-        {/* The name is already in the site nav; keep it as the page's h1 for
-            screen readers and search without repeating it visually. */}
-        <h1 className="sr-only">Kellas Andrei</h1>
-        <div className="sk-labels">
-          <p className="sk-dymo sk-dymo-accent">Fullstack web developer</p>
-        </div>
-
-        <div className="sk-window">
-          <div className="sk-titlebar">
-            <span className="sk-lights" aria-hidden="true">
-              <i className="sk-light-close" />
-              <i className="sk-light-min" />
-              <i className="sk-light-max" />
-            </span>
-            <span className="sk-title">manifesto.txt</span>
+    <section className="section hx">
+      <div className="hx-top">
+        <figure className="hx-window hx-in" style={{ '--d': '50ms' } as React.CSSProperties}>
+          <div className="hx-titlebar" aria-hidden="true">
+            <span className="hx-closebox" />
+            <span className="hx-stripes" />
           </div>
-          <div className="sk-window-body">
-            <p className="sk-headline">
-              i just do it for the <mark className="sk-hl">love of the game</mark>
-            </p>
-            <p className="sk-copy">
-              I care more about whether something works under real load than whether it looks good in a demo.
-            </p>
+          <div className="hx-photo">
+            {/* Soft black-and-white solarize: tones stay natural through the midtones
+                (the face) and only the brightest highlights (the wall) fold back to gray. */}
+            <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
+              <filter id="hx-solarize" colorInterpolationFilters="sRGB">
+                <feColorMatrix type="saturate" values="0" />
+                <feComponentTransfer>
+                  <feFuncR type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
+                  <feFuncG type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
+                  <feFuncB type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
+                </feComponentTransfer>
+              </filter>
+            </svg>
+            <img
+              src="/img/drei.png"
+              alt="Kellas Andrei"
+              onError={(e) => {
+                (e.target as HTMLElement).style.visibility = 'hidden';
+              }}
+            />
           </div>
-        </div>
-
-        <figure className="sk-polaroid">
-          <span className="sk-tape sk-tape-top" aria-hidden="true" />
-          <img
-            src="/img/drei.jpg"
-            alt="Kellas Andrei"
-            onError={(e) => {
-              (e.target as HTMLElement).style.visibility = 'hidden';
-            }}
-          />
         </figure>
 
-        <aside className="sk-note">
-          <span className="sk-tape sk-tape-note" aria-hidden="true" />
-          <span className="sk-note-kicker">currently obsessed with</span>
-          <span className="sk-note-main">agentic dev workflows</span>
-          <span className="sk-note-sub">&amp; what they change about how software gets built</span>
-        </aside>
-
-        <ul className="sk-stickers" aria-label="At a glance">
-          <li className="sk-sticker sk-sticker-round">
-            <b>1+</b>
-            <span>yrs shipping</span>
-          </li>
-          <li className="sk-sticker sk-sticker-burst">
-            <b>15+</b>
-            <span>projects built</span>
-          </li>
-          <li className="sk-sticker sk-sticker-ticket">
-            <b>12+</b>
-            <span>technologies</span>
-          </li>
-          <li className="sk-sticker-slot">
-            <ClockSticker now={now} />
-          </li>
-        </ul>
-
-        <div className="sk-dock-wrap">
-          <p className="sk-scribble" aria-hidden="true">
-            find me here
-            <svg viewBox="0 0 80 40" className="sk-scribble-arrow">
-              <path d="M4 6 C 30 4, 52 12, 70 32" />
-              <path d="M58 30 L 71 33 L 68 20" />
-            </svg>
+        <div className="hx-intro">
+          <h1 className="hx-name hx-in" style={{ '--d': '120ms' } as React.CSSProperties}>Kellas Andrei</h1>
+          <p className="hx-copy hx-in" style={{ '--d': '190ms' } as React.CSSProperties}>
+            I'm a fullstack web developer. I care more about whether something works under real load
+            than whether it looks good in a demo.
           </p>
-
-          <nav className="sk-dock" aria-label="Links">
-            {/* Blog lives on its own route and is intentionally absent from the nav. */}
-            <Link to="/blog" onClick={playNavTick} className="sk-app">
-              <NotesIcon />
-              <span className="sk-app-label">Blog</span>
-            </Link>
-            <a
-              href="https://github.com/kellasandyyyy1"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={playExternalLink}
-              className="sk-app"
-            >
-              <span className="sk-icon sk-icon-github" aria-hidden="true"><FaGithub /></span>
-              <span className="sk-app-label">GitHub</span>
+          <p className="hx-copy hx-in" style={{ '--d': '260ms' } as React.CSSProperties}>
+            These days I'm obsessed with agentic dev workflows, and what they change about how
+            software gets built.
+          </p>
+          <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
+            <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" onClick={playExternalLink}>
+              <Key><GithubLogo weight="fill" /></Key>
+              github <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             <a
               href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
               target="_blank"
               rel="noopener noreferrer"
               onClick={playExternalLink}
-              className="sk-app"
             >
-              <span className="sk-icon sk-icon-linkedin" aria-hidden="true"><FaLinkedinIn /></span>
-              <span className="sk-app-label">LinkedIn</span>
+              <Key><LinkedinLogo weight="fill" /></Key>
+              linkedin <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
-            <button
-              type="button"
-              onClick={() => { playExternalLink(); onBookCall(); }}
-              className="sk-app"
-            >
-              <CalendarIcon now={now} />
-              <span className="sk-app-label">Book a call</span>
+            {/* Blog lives on its own route and is intentionally absent from the nav. */}
+            <Link to="/blog" onClick={playNavTick}>
+              <Key><NotePencil weight="bold" /></Key>
+              blog <span className="hx-arrow" aria-hidden="true">↗</span>
+            </Link>
+            <button type="button" onClick={() => { playExternalLink(); onBookCall(); }}>
+              <Key><CalendarBlank weight="bold" /></Key>
+              book a call <span className="hx-arrow" aria-hidden="true">↗</span>
             </button>
-            <span className="sk-dock-shelf" aria-hidden="true" />
           </nav>
         </div>
       </div>
+
+      <dl className="hx-stats hx-in" style={{ '--d': '400ms' } as React.CSSProperties}>
+        <div className="hx-stat">
+          <dt>yrs shipping</dt>
+          <dd>1+</dd>
+        </div>
+        <div className="hx-stat">
+          <dt>projects built</dt>
+          <dd>15+</dd>
+        </div>
+        <div className="hx-stat">
+          <dt>technologies</dt>
+          <dd>12+</dd>
+        </div>
+        <div className="hx-stat hx-stat-place">
+          <dt>based in</dt>
+          <dd>
+            Manila, PH
+            <PhMap />
+          </dd>
+        </div>
+      </dl>
     </section>
   );
 }

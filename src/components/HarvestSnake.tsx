@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PALETTE_HEX, PALETTE_HEX_DARK } from '../lib/palette';
 import { Sprout, X, Volume2, VolumeX, Trophy, Play, RotateCcw, ShieldAlert, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 
 // --- Types ---
@@ -461,14 +462,15 @@ export function HarvestSnakeModal({
       }
 
       const isDark = theme === 'dark';
+      const C = isDark ? PALETTE_HEX_DARK : PALETTE_HEX;
       const cellSize = canvas.width / GRID_SIZE;
 
       // 1. Clear background
-      ctx.fillStyle = isDark ? '#0c0c0e' : '#fafafc';
+      ctx.fillStyle = C.cream;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // 2. Draw organic soil pasture grid lines
-      ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)';
+      ctx.strokeStyle = isDark ? 'rgba(232,225,207,0.04)' : 'rgba(63,93,58,0.05)';
       ctx.lineWidth = 1;
       for (let i = 0; i <= GRID_SIZE; i++) {
         ctx.beginPath();
@@ -483,7 +485,7 @@ export function HarvestSnakeModal({
       }
 
       // 3. Draw border fences
-      ctx.strokeStyle = isDark ? '#27272a' : '#e4e4e7';
+      ctx.strokeStyle = C.sandDeep;
       ctx.lineWidth = 4;
       ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
 
@@ -611,8 +613,8 @@ export function HarvestSnakeModal({
         const segY = seg.y * cellSize + cellSize / 2;
 
         // Base tilled earth grid cell
-        ctx.fillStyle = isDark ? '#1a1a1e' : '#e4e4e7';
-        ctx.strokeStyle = isDark ? '#27272a' : '#d4d4d8';
+        ctx.fillStyle = C.sand;
+        ctx.strokeStyle = C.sandDeep;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.rect(seg.x * cellSize + 2, seg.y * cellSize + 2, cellSize - 4, cellSize - 4);
@@ -620,7 +622,7 @@ export function HarvestSnakeModal({
         ctx.stroke();
 
         // Shading lines (woodcut texture)
-        ctx.strokeStyle = isDark ? '#0c0c0e' : '#a1a1aa';
+        ctx.strokeStyle = C.sage;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(seg.x * cellSize + 4, seg.y * cellSize + cellSize * 0.4);
@@ -634,7 +636,7 @@ export function HarvestSnakeModal({
         const progress = (snake.length - i) / snake.length; // 0 (tail) to 1 (near head)
         const sproutSize = cellSize * 0.08 + progress * cellSize * 0.22;
 
-        ctx.fillStyle = '#10b981'; // Fresh green
+        ctx.fillStyle = C.sage; // Fresh green
         ctx.beginPath();
         // Leaves curving out
         ctx.ellipse(segX - sproutSize * 0.38, segY - cellSize * 0.1, sproutSize * 0.55, sproutSize * 0.28, -Math.PI / 6, 0, Math.PI * 2);
@@ -642,7 +644,7 @@ export function HarvestSnakeModal({
         ctx.fill();
 
         // Stem
-        ctx.strokeStyle = '#047857';
+        ctx.strokeStyle = C.moss;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(segX, segY + cellSize * 0.12);
@@ -763,8 +765,7 @@ export function HarvestSnakeModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 15 }}
             transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-            className={`w-full max-w-lg rounded-2xl border flex flex-col overflow-hidden shadow-2xl relative z-10 p-6 md:p-8 select-none ${theme === 'light' ? 'bg-zinc-50 border-zinc-200 text-zinc-900' : 'bg-zinc-950 border-zinc-900 text-zinc-100'
-              }`}
+            className={`w-full max-w-lg rounded-2xl border flex flex-col overflow-hidden shadow-2xl relative z-10 p-6 md:p-8 select-none bg-[var(--sand)] border-[var(--sand-deep)] text-[var(--ink)]`}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-zinc-200 dark:border-zinc-800/40">
@@ -961,32 +962,28 @@ export function HarvestSnakeModal({
             <div className="flex flex-col items-center justify-center gap-1.5 md:hidden mb-2">
               <button
                 onClick={() => changeDirection('UP')}
-                className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all ${theme === 'light' ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-900 border-zinc-800'
-                  }`}
+                className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all bg-[var(--sand)] border-[var(--sand-deep)]`}
               >
                 <ArrowUp size={16} />
               </button>
               <div className="flex gap-4">
                 <button
                   onClick={() => changeDirection('LEFT')}
-                  className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all ${theme === 'light' ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-900 border-zinc-800'
-                    }`}
+                  className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all bg-[var(--sand)] border-[var(--sand-deep)]`}
                 >
                   <ArrowLeft size={16} />
                 </button>
                 <div className="w-12 h-12" /> {/* Spacer */}
                 <button
                   onClick={() => changeDirection('RIGHT')}
-                  className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all ${theme === 'light' ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-900 border-zinc-800'
-                    }`}
+                  className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all bg-[var(--sand)] border-[var(--sand-deep)]`}
                 >
                   <ArrowRight size={16} />
                 </button>
               </div>
               <button
                 onClick={() => changeDirection('DOWN')}
-                className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all ${theme === 'light' ? 'bg-zinc-100 border-zinc-200' : 'bg-zinc-900 border-zinc-800'
-                  }`}
+                className={`w-12 h-12 flex items-center justify-center rounded-lg border text-zinc-400 active:bg-zinc-800 active:text-white active:scale-95 transition-all bg-[var(--sand)] border-[var(--sand-deep)]`}
               >
                 <ArrowDown size={16} />
               </button>

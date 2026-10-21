@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { PALETTE_HEX as P, PALETTE_HEX_DARK as D } from '../lib/palette';
 import { useEffect, useRef, useState } from 'react';
 
 /**
@@ -170,41 +171,54 @@ const BODY_PATH =
   'M150 120 C118 120 104 140 99 168 C90 212 80 250 93 279 C105 302 130 308 150 308 C170 308 195 302 207 279 C220 250 210 212 201 168 C196 140 182 120 150 120 Z';
 
 const PALETTE = {
+  // Lamp-lit: cream vinyl, neutral line, a dark visor; green only on one confetti.
   dark: {
-    ring: '#f2f2f2',
-    satBack: '#8a8a90',
-    satFront: '#f2f2f2',
-    shadowOpacity: 0.6,
-    thoughtSmall: '#2a2a2e',
-    thoughtFill: '#161618',
-    thoughtStroke: '#303034',
-    thoughtDot: '#f2f2f2',
-    sparkles: ['#ffffff', '#9a9aa0', '#d4d4d8'],
-    zzz: '#6b6b70',
-    particles: ['#ffffff', '#bdbdc2', '#7a7a80'],
-    hint: '#44444a',
-    // Cartoon line: soft gray so overlaps read without a harsh ink outline.
-    outline: '#8a8a90',
-    // Arms overlap the pale belly, so they need an edge in both themes.
-    armOutline: '#8a8a90',
+    ring: D.ink,
+    satBack: D.sandDeep,
+    satFront: D.ink,
+    shadowOpacity: 0.35,
+    thoughtSmall: D.sandDeep,
+    thoughtFill: D.sand,
+    thoughtStroke: D.sandDeep,
+    thoughtDot: D.ink,
+    sparkles: [D.ink, D.ink, D.sage],
+    zzz: D.ink,
+    particles: [D.ink, D.sandDeep, D.limeSoft],
+    hint: 'var(--ink-muted)',
+    outline: D.sandDeep,
+    armOutline: D.sandDeep,
+    bodyStops: [D.ink, D.ink, D.ink],
+    shade: '#000000',
+    highlight: D.ink,
+    visor: D.cream,
+    eye: D.ink,
+    scan: D.sandDeep,
+    sleepLabel: 'var(--ink-muted)',
   },
-  // Same grayscale family, flipped so the ring and effects stay visible on white.
+  // Courtyard palette: cream vinyl, sage line, moss visor, one lime confetti.
   light: {
-    ring: '#1a1a1a',
-    satBack: '#8a8a90',
-    satFront: '#3a3a3e',
-    shadowOpacity: 0.22,
-    thoughtSmall: '#d4d4d8',
-    thoughtFill: '#f0f0f2',
-    thoughtStroke: '#d4d4d8',
-    thoughtDot: '#3a3a3e',
-    sparkles: ['#3a3a3e', '#9a9aa0', '#6b6b70'],
-    zzz: '#8a8a85',
-    particles: ['#3a3a3e', '#7a7a80', '#bdbdc2'],
-    hint: '#a0a0a0',
-    // The pale body would dissolve into a white page without a hairline edge.
-    outline: '#a0a0a6',
-    armOutline: '#a0a0a6',
+    ring: P.moss,
+    satBack: P.sage,
+    satFront: P.moss,
+    shadowOpacity: 0.16,
+    thoughtSmall: P.sandDeep,
+    thoughtFill: P.sand,
+    thoughtStroke: P.sandDeep,
+    thoughtDot: P.moss,
+    sparkles: [P.moss, P.sage, P.sage],
+    zzz: P.sage,
+    particles: [P.moss, P.sage, P.limeSoft],
+    hint: 'var(--ink-muted)',
+    // The pale body would dissolve into a cream page without a hairline edge.
+    outline: P.sage,
+    armOutline: P.sage,
+    bodyStops: [P.cream, P.sand, P.sandDeep],
+    shade: P.moss,
+    highlight: P.cream,
+    visor: P.moss,
+    eye: P.cream,
+    scan: P.sage,
+    sleepLabel: 'var(--ink-muted)',
   },
 };
 
@@ -664,9 +678,9 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
   // Shared by every part's gradient: white body, one light gray shade at the edge.
   const cartoonStops = (
     <>
-      <stop offset="0" stopColor="#ffffff" />
-      <stop offset=".6" stopColor="#f4f4f6" />
-      <stop offset="1" stopColor="#d6d6db" />
+      <stop offset="0" stopColor={palette.bodyStops[0]} />
+      <stop offset=".6" stopColor={palette.bodyStops[1]} />
+      <stop offset="1" stopColor={palette.bodyStops[2]} />
     </>
   );
 
@@ -680,7 +694,7 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
     return (
       <>
         <path ref={(el) => { parts.path = el; }} d={initial.d} fill={`url(#${grad})`} stroke={palette.armOutline} strokeWidth="1.3" />
-        <path ref={(el) => { parts.seam = el; }} d={initial.seam} fill="none" stroke="#000" strokeOpacity=".2" strokeWidth="1" />
+        <path ref={(el) => { parts.seam = el; }} d={initial.seam} fill="none" stroke={palette.shade} strokeOpacity=".2" strokeWidth="1" />
         {/* Mitten hand: +y runs along the wrist, +x faces the body */}
         <g ref={(el) => { parts.hand = el; }} transform={initial.hand}>
           <ellipse cx="10" cy="8" rx="4.5" ry="8" transform="rotate(-28 10 8)" fill={`url(#${ids.armGrad})`} stroke={palette.armOutline} strokeWidth="1.3" />
@@ -691,15 +705,15 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
             strokeWidth="1.3"
           />
           {/* Curled fingers */}
-          <path d="M-7 19 Q-4 23 -0.5 20.5" fill="none" stroke="#000" strokeOpacity=".25" strokeWidth="1" />
-          <path d="M-0.5 21 Q3 25 6 20.5" fill="none" stroke="#000" strokeOpacity=".25" strokeWidth="1" />
+          <path d="M-7 19 Q-4 23 -0.5 20.5" fill="none" stroke={palette.shade} strokeOpacity=".25" strokeWidth="1" />
+          <path d="M-0.5 21 Q3 25 6 20.5" fill="none" stroke={palette.shade} strokeOpacity=".25" strokeWidth="1" />
         </g>
       </>
     );
   };
 
   const label = override ?? (sleeping ? 'zz…' : VERBS[step]);
-  const labelColor = !override && sleeping ? '#6b6b70' : accent;
+  const labelColor = !override && sleeping ? palette.sleepLabel : accent;
 
   return (
     <div ref={containerRef} className="flex flex-col items-center w-full">
@@ -739,8 +753,8 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
               {cartoonStops}
             </radialGradient>
             <radialGradient id={ids.softShade}>
-              <stop offset="0" stopColor="#000000" stopOpacity=".16" />
-              <stop offset="1" stopColor="#000000" stopOpacity="0" />
+              <stop offset="0" stopColor={palette.shade} stopOpacity=".16" />
+              <stop offset="1" stopColor={palette.shade} stopOpacity="0" />
             </radialGradient>
             <clipPath id={ids.bodyClip}>
               <path d={BODY_PATH} />
@@ -753,7 +767,7 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
             </clipPath>
           </defs>
 
-          <ellipse ref={shadowRef} cx="150" cy={FEET_Y + 4} rx="66" ry="8" fill="#000" opacity={palette.shadowOpacity} />
+          <ellipse ref={shadowRef} cx="150" cy={FEET_Y + 4} rx="66" ry="8" fill={palette.shade} opacity={palette.shadowOpacity} />
 
           {/* Whole figure; the poke squash scales it from the feet. */}
           <g ref={figureRef} style={{ transformBox: 'fill-box', transformOrigin: '50% 100%' }}>
@@ -797,22 +811,22 @@ export const VisorOrbMascot: React.FC<VisorOrbMascotProps> = ({ step, accent, ac
 
                 <g ref={bodyRef}>
                   <circle cx="150" cy="130" r="60" fill={`url(#${ids.grad})`} stroke={palette.outline} strokeWidth="2" />
-                  <ellipse ref={highlightRef} cx="128" cy="104" rx="16" ry="9" fill="#fff" opacity=".55" transform="rotate(-30 128 104)" />
-                  <rect x="116" y="116" width="68" height="30" rx="15" fill="#0a0a0b" opacity=".92" />
+                  <ellipse ref={highlightRef} cx="128" cy="104" rx="16" ry="9" fill={palette.highlight} opacity=".55" transform="rotate(-30 128 104)" />
+                  <rect x="116" y="116" width="68" height="30" rx="15" fill={palette.visor} opacity=".92" />
                   <g ref={eyesRef}>
-                    <rect ref={eyeLRef} x="131" y="123" width="9" height="16" rx="4.5" fill="#f2f2f2" />
-                    <rect ref={eyeRRef} x="160" y="123" width="9" height="16" rx="4.5" fill="#f2f2f2" />
+                    <rect ref={eyeLRef} x="131" y="123" width="9" height="16" rx="4.5" fill={palette.eye} />
+                    <rect ref={eyeRRef} x="160" y="123" width="9" height="16" rx="4.5" fill={palette.eye} />
                   </g>
-                  <g ref={happyRef} opacity="0" fill="none" stroke="#f2f2f2" strokeWidth="3" strokeLinecap="round">
+                  <g ref={happyRef} opacity="0" fill="none" stroke={palette.eye} strokeWidth="3" strokeLinecap="round">
                     <path d="M130 134 q5.5 -8 11 0" />
                     <path d="M159 134 q5.5 -8 11 0" />
                   </g>
-                  <g ref={pokeRef} opacity="0" fill="none" stroke="#f2f2f2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <g ref={pokeRef} opacity="0" fill="none" stroke={palette.eye} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M131 125 l8 6 l-8 6" />
                     <path d="M169 125 l-8 6 l8 6" />
                   </g>
                   <g clipPath={`url(#${ids.sphere})`}>
-                    <rect ref={scanRef} x="85" y="80" width="130" height="2" fill="#6b6b70" opacity="0" />
+                    <rect ref={scanRef} x="85" y="80" width="130" height="2" fill={palette.scan} opacity="0" />
                   </g>
                 </g>
 

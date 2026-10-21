@@ -5,23 +5,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Kellas Andrei - AI Fullstack Web Developer </title>
-  <link rel="icon" type="image/jpeg" href="/img/drei.jpg">
+  <link rel="icon" type="image/png" href="/img/drei.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
+  <meta name="color-scheme" content="light dark" />
   <script>
-    // Runs before first paint so the correct theme is already applied when the
-    // page renders — otherwise the dark default flashes before React hydrates.
-    // Must mirror App.tsx's initial useState logic exactly.
+    // Runs before first paint so a saved choice is applied before anything
+    // renders. With no saved choice, data-theme stays unset and the CSS follows
+    // prefers-color-scheme, so there is nothing to flash.
     (function () {
       try {
         var saved = localStorage.getItem('theme');
-        var theme = (saved === 'dark' || saved === 'light')
-          ? saved
-          : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        var root = document.documentElement;
-        root.setAttribute('data-mode', theme);
-        if (theme === 'light') root.classList.add('light-mode');
+        if (saved === 'dark' || saved === 'light') {
+          document.documentElement.setAttribute('data-theme', saved);
+        }
       } catch (e) {
-        // Storage blocked (private mode) — fall through to the CSS default.
+        // Storage blocked (private mode) — the system setting applies.
       }
     })();
   </script>

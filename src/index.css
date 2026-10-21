@@ -21,10 +21,9 @@
   --fs-mono: 0.8125rem;
   --fs-label: 0.75rem;
 
-  --text-primary: #f4f4f5;
-  --text-secondary: #8e8e93;
-  /* Spec'd ~#55555b, nudged to #636369 so it clears 3:1 on #0b0b0d. */
-  --text-tertiary: #636369;
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-body);
+  --text-tertiary: var(--ink-muted);
 
   --section-pad: clamp(72px, 10vw, 128px);
   --title-gap: 16px;
@@ -34,11 +33,364 @@
   --gutter: 20px;
 }
 
-html[data-mode="light"] {
-  --text-primary: #1a1a1a;
-  --text-secondary: #5a5a5a;
-  --text-tertiary: #8a8a90;
+/* ===== PALETTE =====
+   Light — a sunlit courtyard — is the default. Dark — the same courtyard at
+   dusk — applies when <html data-theme="dark">, or when the system prefers dark
+   and nothing overrides it. Same token names in both, so components never
+   branch on the theme for colour. */
+:root {
+  --cream: #FAF6EC;
+  --sand: #F1EBDC;
+  /* Brief: #CFC5AB; darkened 4/channel so borders clear 1.5:1 on sand. */
+  --sand-deep: #CBC1A7;
+  --sage-soft: #DCE6CF;
+  --sage: #6F8A5F;
+  --moss: #2F4A2B;
+  --lime-soft: #D9E589;
+  --ink: #26301F;
+  /* Text on moss fills and on lime chips. */
+  --on-moss: var(--cream);
+  --on-lime: var(--moss);
+
+  /* Ink at the strengths the roles call for: body, meta, disabled. */
+  --ink-body: color-mix(in srgb, var(--ink) 92%, transparent);
+  --ink-muted: color-mix(in srgb, var(--ink) 75%, transparent);
+  --ink-disabled: color-mix(in srgb, var(--ink) 55%, transparent);
+  --sage-40: color-mix(in srgb, var(--sage) 40%, transparent);
+  /* Primary button hover shifts to sage. */
+  --moss-hover: var(--sage);
+  /* Shadow tint as channels, so one-off shadows can set their own alpha. */
+  --shadow-rgb: 47 74 43;
+  /* One tight shadow; no wide hazy blur. */
+  --shadow-warm: 0 2px 8px rgba(47, 74, 43, 0.10);
+  --shadow-warm-soft: 0 2px 8px rgba(47, 74, 43, 0.10);
+  --footer-bg: var(--moss);
+  --footer-ink: var(--cream);
+  /* Semantic colours, muted and warm. */
+  --success: var(--moss);
+  --error: #9A4F3A;
+  /* Photos are left as they are in light; dimmed a touch at dusk. */
+  --img-dim: brightness(1);
+  color-scheme: light;
+  /* Paper grain overlay strength and blend. */
+  --paper-opacity: 0.07;
+  --paper-blend: multiply;
+
+  /* Readability roles (light). Each is re-declared in the dark blocks. */
+  --ink-label: color-mix(in srgb, var(--ink) 80%, transparent);
+  --shadow-card: 0 2px 8px rgba(47, 74, 43, 0.10);
+  --shadow-card-hover: 0 2px 8px rgba(47, 74, 43, 0.10);
+  --hx-dot-opacity: 0.14;
+  --hx-link-ink: var(--ink);
+  --key-edge-hover: var(--sage);
+  --tag-bg: transparent;
+  --tag-border: var(--sage);
+  --tag-ink: var(--ink);
+  --tag-dot: var(--lime-soft);
+  --iconbtn-bg: var(--sand);
+  --iconbtn-border: var(--sand-deep);
+  --iconbtn-hover-border: var(--sage);
+  --iconbtn-ink: var(--moss);
+  --toggle-bg: var(--sand);
+  --toggle-border: var(--sand-deep);
+  --toggle-bw: 1px;
+  --toggle-hover-border: var(--sage);
+  --selected-border: var(--sage);
+  --selected-ring-w: 1px;
+  --chipon-bg: var(--sage-soft);
+  --chipon-ink: var(--moss);
+  --chipon-border: var(--sage);
+  --btn2-border-color: var(--accent-ink);
+  --btn2-ink: var(--moss);
+  --btn2-ring-w: 0.5px;
+  /* Accent roles: green in light; in dark they resolve to cream or neutrals. */
+  --accent-ink: var(--moss);
+  --accent-line: var(--moss);
+  --icon-ink: var(--moss);
+  --arrow-ink: var(--sage);
+  --hover-fill: var(--sage-soft);
+  --hover-border: var(--sage);
+  --cta-hover-bg: var(--sage-soft);
+  --btn2-hover-border: var(--moss);
+  --btn2-hover-bg: transparent;
+  --card-hover-border: var(--moss);
+  --taghover-bg: var(--moss);
+  --taghover-ink: var(--on-moss);
+  --taghover-border: var(--moss);
+  --sidebar-bg: var(--cream);
+  --sb-accent: var(--moss);
+  --sb-pill: var(--sage-soft);
+  --sb-pill-border: var(--selected-border);
+  --sb-hover: color-mix(in srgb, var(--sage-soft) 55%, transparent);
+  --sb-ink: var(--ink);
+  --sb-active-ink: var(--moss);
+  --dot-color: var(--sage);
+  --map-fill: var(--sage-soft);
+  --map-stroke: var(--sage);
+  --map-pin: var(--moss);
+  --art-line: var(--moss);
+  --art-strong: var(--moss);
+  --art-soft: var(--sage);
+  --art-wire: var(--sage);
+  --rule-accent: var(--sage);
+  --step-a: var(--sage);
+  --step-b: var(--moss);
+  --segon-bg: var(--moss);
+  --segon-ink: var(--on-moss);
+  --segon-ring: transparent;
+  /* Sidebar 3D icons: resting and active tones. */
+  --ni-light: var(--sage-soft);
+  --ni-base: var(--sage);
+  --ni-side: var(--moss);
+  --ni-shade: var(--moss);
+  --ni-pin: var(--sage);
+  --ni-accent: var(--moss);
+  --ni-tone: var(--sage);
+  --ni-tone-soft: var(--sage-soft);
+  --ni-spark: var(--lime-soft);
+  --ni-hi: var(--cream);
+  --ni-opacity: 1;
+  --ni-on-light: var(--sage-soft);
+  --ni-on-base: var(--sage);
+  --ni-on-side: var(--moss);
 }
+
+:root[data-theme="dark"] {
+  --cream: #1C1A16;
+  --sand: #25221C;
+  --sand-deep: #3A352B;
+  --sage-soft: #2C3226;
+  --sage: #8FA67E;
+  --moss: #A9BF96;
+  --lime-soft: #D9E589;
+  --ink: #F0E9D9;
+  --on-moss: #1C1A16;
+  --on-lime: #1C1A16;
+
+  --ink-muted: color-mix(in srgb, var(--ink) 70%, transparent);
+  --ink-disabled: color-mix(in srgb, var(--ink) 50%, transparent);
+  /* Primary button hover: moss settles slightly toward sage. */
+  --moss-hover: var(--sage);
+  --shadow-rgb: 0 0 0;
+  --shadow-warm: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-warm-soft: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --footer-bg: var(--sand);
+  --footer-ink: var(--ink);
+  --success: #9DB58A;
+  --error: #C98A6E;
+  --img-dim: brightness(0.92);
+  --paper-opacity: 0.1;
+  --paper-blend: soft-light;
+  --ink-body: color-mix(in srgb, var(--ink) 88%, transparent);
+  --ink-label: var(--ink-muted);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --hx-dot-opacity: 0.14;
+  --hx-link-ink: var(--ink);
+  --key-edge-hover: var(--sand-deep);
+  --tag-bg: transparent;
+  --tag-border: var(--sand-deep);
+  --tag-ink: var(--ink);
+  --tag-dot: var(--lime-soft);
+  --iconbtn-bg: var(--sand);
+  --iconbtn-border: var(--sand-deep);
+  --iconbtn-hover-border: var(--sand-deep);
+  --iconbtn-ink: var(--ink);
+  --toggle-bg: var(--sand);
+  --toggle-border: var(--sand-deep);
+  --toggle-bw: 1px;
+  --toggle-hover-border: var(--sand-deep);
+  --selected-border: color-mix(in srgb, var(--sage) 60%, transparent);
+  --selected-ring-w: 0px;
+  --chipon-bg: var(--sage-soft);
+  --chipon-ink: var(--ink);
+  --chipon-border: var(--selected-border);
+  --btn2-border-color: var(--sand-deep);
+  --btn2-ink: var(--ink);
+  --btn2-ring-w: 0.5px;
+  --accent-ink: var(--ink);
+  --accent-line: color-mix(in srgb, var(--ink) 30%, transparent);
+  --icon-ink: color-mix(in srgb, var(--ink) 70%, transparent);
+  --arrow-ink: color-mix(in srgb, var(--ink) 70%, transparent);
+  --hover-fill: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+  --hover-border: var(--sand-deep);
+  --cta-hover-bg: var(--sand-deep);
+  --btn2-hover-border: var(--sand-deep);
+  --btn2-hover-bg: var(--sand-deep);
+  --card-hover-border: color-mix(in srgb, var(--ink) 30%, transparent);
+  --taghover-bg: var(--sand-deep);
+  --taghover-ink: var(--ink);
+  --taghover-border: var(--sand-deep);
+  --sidebar-bg: var(--sand);
+  --sb-accent: var(--sage);
+  --sb-pill: var(--sand-deep);
+  --sb-pill-border: transparent;
+  --sb-hover: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+  --sb-ink: color-mix(in srgb, var(--ink) 75%, transparent);
+  --sb-active-ink: var(--ink);
+  --dot-color: var(--ink);
+  --map-fill: transparent;
+  --map-stroke: color-mix(in srgb, var(--sage) 70%, transparent);
+  --map-pin: var(--sage);
+  --art-line: var(--ink-muted);
+  --art-strong: var(--ink);
+  --art-soft: color-mix(in srgb, var(--ink) 35%, transparent);
+  --art-wire: color-mix(in srgb, var(--ink) 45%, transparent);
+  --rule-accent: var(--sand-deep);
+  --step-a: var(--ink-muted);
+  --step-b: var(--ink);
+  --segon-bg: var(--sage-soft);
+  --segon-ink: var(--ink);
+  --segon-ring: var(--selected-border);
+  --ni-light: var(--ink);
+  --ni-base: color-mix(in srgb, var(--ink) 78%, var(--cream));
+  --ni-side: color-mix(in srgb, var(--ink) 45%, var(--cream));
+  --ni-shade: var(--cream);
+  --ni-pin: color-mix(in srgb, var(--ink) 70%, var(--cream));
+  --ni-accent: color-mix(in srgb, var(--ink) 45%, var(--cream));
+  --ni-tone: color-mix(in srgb, var(--ink) 78%, var(--cream));
+  --ni-tone-soft: var(--ink);
+  --ni-spark: var(--ink);
+  --ni-hi: var(--sand);
+  --ni-opacity: 0.7;
+  --ni-on-light: color-mix(in srgb, var(--sage) 55%, var(--ink));
+  --ni-on-base: var(--sage);
+  --ni-on-side: color-mix(in srgb, var(--sage) 55%, var(--cream));
+  --cursor-color: var(--ink);
+  --gh-0: var(--sand-deep);
+  --gh-1: color-mix(in srgb, var(--ink) 25%, var(--cream));
+  --gh-2: color-mix(in srgb, var(--ink) 45%, var(--cream));
+  --gh-3: color-mix(in srgb, var(--ink) 70%, var(--cream));
+  --gh-4: var(--ink);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cream: #1C1A16;
+    --sand: #25221C;
+    --sand-deep: #3A352B;
+    --sage-soft: #2C3226;
+    --sage: #8FA67E;
+    --moss: #A9BF96;
+    --lime-soft: #D9E589;
+    --ink: #F0E9D9;
+    --on-moss: #1C1A16;
+    --on-lime: #1C1A16;
+
+    --ink-muted: color-mix(in srgb, var(--ink) 70%, transparent);
+    --ink-disabled: color-mix(in srgb, var(--ink) 50%, transparent);
+    /* Primary button hover: moss settles slightly toward sage. */
+    --moss-hover: var(--sage);
+    --shadow-rgb: 0 0 0;
+    --shadow-warm: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-warm-soft: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --footer-bg: var(--sand);
+    --footer-ink: var(--ink);
+    --success: #9DB58A;
+    --error: #C98A6E;
+    --img-dim: brightness(0.92);
+    --paper-opacity: 0.1;
+    --paper-blend: soft-light;
+    --ink-body: color-mix(in srgb, var(--ink) 88%, transparent);
+    --ink-label: var(--ink-muted);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --hx-dot-opacity: 0.14;
+    --hx-link-ink: var(--ink);
+    --key-edge-hover: var(--sand-deep);
+    --tag-bg: transparent;
+    --tag-border: var(--sand-deep);
+    --tag-ink: var(--ink);
+    --tag-dot: var(--lime-soft);
+    --iconbtn-bg: var(--sand);
+    --iconbtn-border: var(--sand-deep);
+    --iconbtn-hover-border: var(--sand-deep);
+    --iconbtn-ink: var(--ink);
+    --toggle-bg: var(--sand);
+    --toggle-border: var(--sand-deep);
+    --toggle-bw: 1px;
+    --toggle-hover-border: var(--sand-deep);
+    --selected-border: color-mix(in srgb, var(--sage) 60%, transparent);
+    --selected-ring-w: 0px;
+    --chipon-bg: var(--sage-soft);
+    --chipon-ink: var(--ink);
+    --chipon-border: var(--selected-border);
+    --btn2-border-color: var(--sand-deep);
+    --btn2-ink: var(--ink);
+    --btn2-ring-w: 0.5px;
+    --accent-ink: var(--ink);
+    --accent-line: color-mix(in srgb, var(--ink) 30%, transparent);
+    --icon-ink: color-mix(in srgb, var(--ink) 70%, transparent);
+    --arrow-ink: color-mix(in srgb, var(--ink) 70%, transparent);
+    --hover-fill: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+    --hover-border: var(--sand-deep);
+    --cta-hover-bg: var(--sand-deep);
+    --btn2-hover-border: var(--sand-deep);
+    --btn2-hover-bg: var(--sand-deep);
+    --card-hover-border: color-mix(in srgb, var(--ink) 30%, transparent);
+    --taghover-bg: var(--sand-deep);
+    --taghover-ink: var(--ink);
+    --taghover-border: var(--sand-deep);
+    --sidebar-bg: var(--sand);
+    --sb-accent: var(--sage);
+    --sb-pill: var(--sand-deep);
+    --sb-pill-border: transparent;
+    --sb-hover: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+    --sb-ink: color-mix(in srgb, var(--ink) 75%, transparent);
+    --sb-active-ink: var(--ink);
+    --dot-color: var(--ink);
+    --map-fill: transparent;
+    --map-stroke: color-mix(in srgb, var(--sage) 70%, transparent);
+    --map-pin: var(--sage);
+    --art-line: var(--ink-muted);
+    --art-strong: var(--ink);
+    --art-soft: color-mix(in srgb, var(--ink) 35%, transparent);
+    --art-wire: color-mix(in srgb, var(--ink) 45%, transparent);
+    --rule-accent: var(--sand-deep);
+    --step-a: var(--ink-muted);
+    --step-b: var(--ink);
+    --segon-bg: var(--sage-soft);
+    --segon-ink: var(--ink);
+    --segon-ring: var(--selected-border);
+    --ni-light: var(--ink);
+    --ni-base: color-mix(in srgb, var(--ink) 78%, var(--cream));
+    --ni-side: color-mix(in srgb, var(--ink) 45%, var(--cream));
+    --ni-shade: var(--cream);
+    --ni-pin: color-mix(in srgb, var(--ink) 70%, var(--cream));
+    --ni-accent: color-mix(in srgb, var(--ink) 45%, var(--cream));
+    --ni-tone: color-mix(in srgb, var(--ink) 78%, var(--cream));
+    --ni-tone-soft: var(--ink);
+    --ni-spark: var(--ink);
+    --ni-hi: var(--sand);
+    --ni-opacity: 0.7;
+    --ni-on-light: color-mix(in srgb, var(--sage) 55%, var(--ink));
+    --ni-on-base: var(--sage);
+    --ni-on-side: color-mix(in srgb, var(--sage) 55%, var(--cream));
+    --cursor-color: var(--ink);
+    --gh-0: var(--sand-deep);
+    --gh-1: color-mix(in srgb, var(--ink) 25%, var(--cream));
+    --gh-2: color-mix(in srgb, var(--ink) 45%, var(--cream));
+    --gh-3: color-mix(in srgb, var(--ink) 70%, var(--cream));
+    --gh-4: var(--ink);
+    color-scheme: dark;
+  }
+}
+
+/* Theme switch: colours ease over 200ms, only while the switch is happening,
+   so no other transition on the page is ever overridden at rest. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease !important;
+}
+
+/* Headings carry the moss. */
+:root :is(h1, h2, h3, h4, h5, h6) { color: var(--accent-ink); }
+
+/* Photos sit a touch dimmer at dusk; classes that set their own filter append var(--img-dim). */
+img { filter: var(--img-dim); }
 
 @media (min-width: 640px) {
   :root { --gutter: 48px; }
@@ -101,56 +453,33 @@ body {
 
 /* ===== CREATIVE HALFTONE & CALM STYLING ===== */
 
+/* Contributions grid buckets are variables so a theme flip is a pure CSS
+   repaint instead of re-rendering 371 <circle> nodes through React. */
 :root {
-  --bg-page: #0b0b0d;
-  --bg-surface: #0a0a0a;
-  --bg-surface-alt: #171717;
-  --text-primary: #e5e5e5;
-  --text-secondary: #9a9a9a;
-  --text-muted: #777777;
-  --text-micro: #666666;
-  --border: #2a2a2a;
-  --border-subtle: #1e1e1e;
-  --accent: #7c8ce0;
-  --fill-primary: #ffffff;
-  --fill-primary-text: #0a0a0a;
+  --bg-page: var(--cream);
+  --bg-surface: var(--sand);
+  --bg-surface-alt: var(--sand);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-body);
+  --text-muted: var(--ink-muted);
+  --text-micro: var(--ink-muted);
+  --border: var(--sand-deep);
+  --border-subtle: var(--sand-deep);
+  --border-primary: var(--sand-deep);
+  --accent: var(--moss);
+  --fill-primary: var(--moss);
+  --fill-primary-text: var(--on-moss);
 
-  --bg-primary: #0b0b0d;
-  --cursor-color: #ffffff;
+  --bg-primary: var(--cream);
+  --cursor-color: var(--accent-ink);
 
-  /* Contributions grid buckets. Held as variables so a theme flip is a pure
-     CSS repaint instead of re-rendering 371 <circle> nodes through React. */
-  --gh-0: #1a1a18;
-  --gh-1: #2a2a27;
-  --gh-2: #3a3a37;
-  --gh-3: #6b6b68;
-  --gh-4: #f2f2ef;
-  --glass-bg: rgba(11, 11, 13, 0.85);
-}
-
-.light-mode, html[data-mode="light"] {
-  --bg-page: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-surface-alt: #f0f0f0;
-  --text-primary: #1a1a1a;
-  --text-secondary: #5a5a5a;
-  --text-muted: #8a8a8a;
-  --text-micro: #9a9a9a;
-  --border: #e0e0e0;
-  --border-subtle: #ececec;
-  --accent: #4c5bc4;
-  --fill-primary: #1a1a1a;
-  --fill-primary-text: #ffffff;
-
-  --bg-primary: #fafafa;
-  --cursor-color: #1a1a1a;
-
-  --gh-0: #e8e8e5;
-  --gh-1: #d2d2ce;
-  --gh-2: #b0b0ab;
-  --gh-3: #6b6b68;
-  --gh-4: #1a1a18;
-  --glass-bg: rgba(250, 250, 250, 0.85);
+  /* Contribution grid: sand-deep → moss, no lime. */
+  --gh-0: var(--sand-deep);
+  --gh-1: var(--sage-soft);
+  --gh-2: var(--sage);
+  --gh-3: color-mix(in srgb, var(--sage) 45%, var(--moss));
+  --gh-4: var(--moss);
+  --glass-bg: color-mix(in srgb, var(--cream) 85%, transparent);
 }
 
 @theme {
@@ -239,7 +568,7 @@ body {
     transition: border-color 0.3s ease;
   }
   
-  .light-mode .glass {
+  :root .glass {
     @apply border-b border-zinc-200/50;
   }
 
@@ -258,27 +587,13 @@ body {
   position: fixed;
   pointer-events: none;
   z-index: 9999;
-  transition: transform 0.08s ease, width 0.25s ease, height 0.25s ease, background-color 0.25s ease;
+  transition: transform 0.08s ease, background-color 0.25s ease;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
 }
 
-.light-mode .custom-cursor {
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Hover state is a beautiful creative dashed drafting ring */
-.custom-cursor.hovering {
-  width: 34px;
-  height: 34px;
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px dashed var(--cursor-color);
-  mix-blend-mode: normal;
-  box-shadow: none;
-}
-
-.light-mode .custom-cursor.hovering {
-  background-color: rgba(0, 0, 0, 0.02);
+:root .custom-cursor {
+  box-shadow: 0 0 8px rgb(var(--shadow-rgb) / 0.12);
 }
 
 /* ===== HERO ENTRANCE ANIMATION ===== */
@@ -341,90 +656,38 @@ body {
   }
 }
 
-/* ===== THEME SWITCH — VIEW TRANSITIONS API =====
- *
- * Replaces the old `.theme-transition` crossfade, which animated
- * background-color/color/border-color on every element individually. The
- * browser now snapshots the page before and after the swap and animates two
- * static images on the compositor, so cost is independent of DOM size.
- *
- * Circular reveal wiping out from the toggle that was clicked. JS sets --vt-x,
- * --vt-y and --vt-r on :root immediately before startViewTransition(); the
- * fallbacks below mean a centred reveal still works if they are ever unset.
- */
-::view-transition-old(root),
-::view-transition-new(root) {
-  /* Suppress the default crossfade so the clip-path is the only effect —
-     otherwise the two animations fight and the result looks washed out. */
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-/* The outgoing snapshot stays put underneath; the incoming one is clipped
-   open over the top of it. */
-::view-transition-old(root) {
-  z-index: 0;
-}
-
-::view-transition-new(root) {
-  z-index: 1;
-  animation: theme-reveal 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes theme-reveal {
-  from {
-    clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%));
-  }
-  to {
-    clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%));
-  }
-}
-
-/* Sun/moon toggle: two glyphs stacked in one grid cell, cross-dissolving with
- * a counter-rotation. Unrelated to the page-wide swap and not a lag source —
- * it animates transform/opacity on two elements, which is compositor-friendly.
- * Kept as-is. */
+/* ===== THEME SWITCH =====
+ * Sun and moon share one grid cell; only the current one shows. No motion —
+ * the page-wide colour ease is the whole transition. */
 .theme-icon {
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
-  transition:
-    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.theme-icon[data-state='visible'] {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
+.theme-icon[data-state='hidden'] { visibility: hidden; }
+
+/* Outlined sun/moon button in the nav. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: var(--toggle-bw) solid var(--toggle-border);
+  border-radius: 8px;
+  background: var(--toggle-bg);
+  color: var(--accent-ink);
+  cursor: pointer;
 }
 
-/* Opposite exit directions give the swap its rotational hand-off. */
-.theme-icon-sun[data-state='hidden'] {
-  opacity: 0;
-  transform: rotate(90deg) scale(0.5);
+@media (hover: hover) {
+  .theme-toggle:hover { background: var(--hover-fill); border-color: var(--toggle-hover-border); }
 }
 
-.theme-icon-moon[data-state='hidden'] {
-  opacity: 0;
-  transform: rotate(-90deg) scale(0.5);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Skip the reveal entirely — the swap still happens, just instantly. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none !important;
-  }
-
-  /* Opacity-only crossfade on the icon, no rotate or scale. */
-  .theme-icon {
-    transition: opacity 100ms linear;
-  }
-
-  .theme-icon-sun[data-state='hidden'],
-  .theme-icon-moon[data-state='hidden'] {
-    transform: none;
-  }
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
 }
 
 /* Works grid/list switch — opacity only, deliberately lightweight given this
@@ -442,142 +705,104 @@ body {
   .works-fade { animation: none; }
 }
 
-/* ===== APPROACH — EXPLODING ISOMETRIC LAYER STACK =====
- *
- * Decorative only; the stage names and their order also exist as real text in
- * the left column, so the whole stack is aria-hidden.
- *
- * Every layer shares one base transform and differs only in translateZ, so the
- * explode is a pure transform animation — no layout properties touched.
+/* ===== APPROACH — SYSTEM DIAGRAM =====
+ * Monochrome line art of one product: interface → client → server. Hovering a
+ * row in the list lifts its band and dims the others. Decorative only.
  */
-.iso-stage {
-  perspective: 900px;
-  width: 280px;
-  height: 220px;
-}
-
-.iso-stack {
-  position: relative;
+.ad {
   width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
+  max-width: 360px;
+  height: auto;
+  overflow: visible;
 }
 
-.iso-layer {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 150px;
-  height: 150px;
-  border-radius: 14px;
-  border: 1px solid var(--c-edge);
-  /* Shading: light lands on the near corner and falls away across the panel,
-     so each pane reads as a lit surface rather than a flat swatch. Panels stay
-     translucent so the layers below show through, which is what sells the
-     projection. */
-  background:
-    linear-gradient(
-      135deg,
-      var(--c-lit) 0%,
-      var(--c-mid) 34%,
-      rgba(11, 11, 13, 0.58) 78%,
-      rgba(11, 11, 13, 0.66) 100%
-    );
-  box-shadow:
-    /* emissive bleed, the panel casting its own colour */
-    0 0 20px -4px var(--c-glow),
-    /* top edge catching the light */
-    inset 0 1px 0 var(--c-edge),
-    /* bounce along the lower edge */
-    inset 0 -18px 26px -20px var(--c-glow);
-  /* Collapsed: the deck reads as one solid object. */
-  transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest));
-  transform-style: preserve-3d;
+.ad-zone { transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1); }
+.ad-zone.is-dim { opacity: 0.32; }
+
+.ad-frame {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  transition: stroke 300ms ease;
+}
+.ad-zone.is-on .ad-frame { stroke: var(--text-muted); stroke-dasharray: none; }
+
+.ad-shape {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 300ms ease;
+}
+.ad-fill { fill: var(--bg-page); }
+.ad-zone.is-on .ad-shape { stroke: var(--text-primary); }
+
+.ad-solid { fill: var(--text-primary); opacity: 0.85; }
+.ad-soft { fill: var(--text-muted); opacity: 0.45; }
+.ad-dot { fill: none; stroke: var(--text-muted); stroke-width: 1; }
+.ad-cursor { fill: var(--text-primary); stroke: var(--bg-page); stroke-width: 1; stroke-linejoin: round; }
+.ad-led { fill: var(--text-primary); }
+
+.ad-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  fill: var(--text-muted);
 }
 
-/* Scanlines. Kept very faint and on a pseudo-element so they ride the same 3D
-   transform as the panel instead of sitting flat over it. */
-.iso-layer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.055) 0 1px,
-    transparent 1px 4px
-  );
+.ad-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-anchor: middle;
+  fill: var(--text-primary);
+}
+.ad-code-start { text-anchor: start; fill: var(--text-muted); }
+
+.ad-note {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text-muted);
 }
 
-/* A soft darkening in the lower-left corner, so the label always has a floor
-   to sit on no matter which stage colour the panel is tinted with. */
-.iso-layer .iso-label::before {
-  content: '';
-  position: absolute;
-  inset: -6px -10px -5px -8px;
-  z-index: -1;
-  border-radius: 8px;
-  background: radial-gradient(
-    ellipse at 30% 60%,
-    rgba(6, 6, 8, 0.72) 0%,
-    rgba(6, 6, 8, 0) 72%
-  );
+.ad-wire {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.ad-wire-solid { stroke-dasharray: none; }
+
+.ad-packet { fill: var(--text-primary); }
+
+/* List: hairline rows instead of bullets, a mono tag naming each layer. */
+.ad-list { border-top: 1px solid var(--border-subtle); }
+
+.ad-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-/* A brighter seam along the leading edges, like a projected wireframe. */
-.iso-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  border-top: 1px solid var(--c-seam);
-  border-left: 1px solid var(--c-seam);
+.ad-row-tag {
+  padding-top: 5px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color 250ms ease;
 }
-
-.iso-stack.is-playing .iso-layer {
-  animation: iso-explode 1.8s cubic-bezier(0.45, 0, 0.35, 1) var(--delay, 0ms) both;
-}
-
-@keyframes iso-explode {
-  0%   { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest)); }
-  32%  { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-out)); }
-  62%  { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-out)); }
-  100% { transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-rest)); }
-}
-
-.iso-label {
-  position: absolute;
-  left: 13px;
-  bottom: 11px;
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  /* Near-white instead of the stage hue: the panel is already tinted with that
-     colour, so coloured text on it was fighting its own background. The hue
-     stays present in the glow. */
-  color: #f4f4f1;
-  /* rotateX(58deg) squashes everything vertically to ~0.53. Scaling Y back up
-     partly compensates; the text still reads as lying on the panel because it
-     is left foreshortened, just legibly so. */
-  transform: scaleY(1.4);
-  transform-origin: left bottom;
-  text-shadow:
-    0 0 10px var(--c-glow),
-    0 0 2px rgba(0, 0, 0, 0.95),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-}
+.ad-row.is-on .ad-row-tag { color: var(--text-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  /* No motion, but hold a separated pose so the depth still reads. */
-  .iso-layer {
-    transform: rotateX(58deg) rotateZ(-42deg) translateZ(var(--z-static));
-  }
-  .iso-stack.is-playing .iso-layer {
-    animation: none;
-  }
+  .ad-zone,
+  .ad-frame,
+  .ad-shape,
+  .ad-row-tag { transition: none; }
 }
 
 /* Utility class for pixel font */
@@ -622,8 +847,9 @@ span.bg-green-500 {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-.light-mode .group:hover>div:first-child {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+:root .group:hover>div:first-child {
+  border-color: var(--card-hover-border);
+  box-shadow: var(--shadow-warm);
 }
 
 /* Skill tags - clean stable contrast shift */
@@ -638,8 +864,11 @@ span.cursor-crosshair:hover {
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
 }
 
-.light-mode span.cursor-crosshair:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+:root span.cursor-crosshair:hover {
+  background-color: var(--taghover-bg) !important;
+  color: var(--taghover-ink) !important;
+  border-color: var(--taghover-border) !important;
+  box-shadow: var(--shadow-warm-soft);
 }
 
 /* CTA buttons - Clean hover styles */
@@ -657,9 +886,12 @@ a[href^="mailto:"]:hover {
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.05);
 }
 
-.light-mode a[href="#projects"]:hover,
-.light-mode a[href^="mailto:"]:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+:root a[href="#projects"]:hover,
+:root a[href^="mailto:"]:hover {
+  border-color: var(--btn2-hover-border);
+  background-color: var(--cta-hover-bg);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-warm-soft);
 }
 
 /* Social icon buttons - clean hover */
@@ -694,15 +926,30 @@ footer {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
-.light-mode .rounded-3xl {
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+:root .rounded-3xl {
+  border-color: var(--sand-deep);
+  box-shadow: var(--shadow-warm);
 }
 
-/* ===== PROGRESS BAR ===== */
-div.fixed.top-0.left-0.right-0.h-\[2px\] {
-  height: 2px !important;
-  background: var(--text-primary) !important;
-  opacity: 0.8;
+/* ===== PAPER GRAIN =====
+ * A fixed sheet of printed-paper texture over the whole page: fine fibre
+ * grain, soft mottling and a few faint scratches. Blended into the colours at
+ * low strength so it reads as stock, not as a pattern; it never takes clicks.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9996;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27240%27%20height%3D%27240%27%3E%3Cfilter%20id%3D%27g%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.9%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27saturate%27%20values%3D%270%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23g)%27%2F%3E%3C%2Fsvg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27600%27%20height%3D%27600%27%3E%3Cfilter%20id%3D%27m%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.012%27%20numOctaves%3D%272%27%20seed%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27saturate%27%20values%3D%270%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23m)%27%20opacity%3D%270.55%27%2F%3E%3C%2Fsvg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27700%27%20height%3D%27700%27%3E%3Cfilter%20id%3D%27s%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.003%200.35%27%20numOctaves%3D%271%27%20seed%3D%2711%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%200.25%200%200%200%200%200.25%200%200%200%200%200.25%200%200%200%209%20-5.6%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23s)%27%2F%3E%3C%2Fsvg%3E");
+  background-size: 240px 240px, 600px 600px, 700px 700px;
+  mix-blend-mode: var(--paper-blend);
+  opacity: var(--paper-opacity);
+}
+
+@media print {
+  body::before { display: none; }
 }
 
 /* ===== RETRO VIGNETTE CORNERS ===== */
@@ -719,14 +966,16 @@ body::after {
 }
 
 /* ===== LIGHT MODE ADJUSTMENTS ===== */
-.light-mode body::after {
-  background: radial-gradient(ellipse at center, transparent 75%, rgba(0, 0, 0, 0.08) 100%);
+/* No vignette on cream: it read as a dark edge. */
+:root body::after { background: none; }
+
+:root ::selection {
+  background: var(--sage-soft);
+  color: var(--accent-ink);
 }
 
-.light-mode ::selection {
-  background: var(--text-primary);
-  color: var(--bg-primary);
-}
+/* Glass bar hairline. */
+:root .glass { border-bottom-color: var(--sand-deep); }
 
 /* ===== FONT ACCENTS ===== */
 span.uppercase.tracking-widest,
@@ -842,19 +1091,8 @@ span.tracking-\[0\.4em\] {
  * at a glance; the active row gets a shared pill (Motion layoutId) with an
  * accent bar that slides between rows as the scroll spy moves.
  */
-:root {
-  --sb-accent: #7c8ce0;
-  --sb-pill: #151519;
-  --sb-pill-border: #26262c;
-  --sb-hover: rgba(255, 255, 255, 0.035);
-}
-
-html[data-mode="light"] {
-  --sb-accent: #4c5bc4;
-  --sb-pill: #ffffff;
-  --sb-pill-border: #e4e4e7;
-  --sb-hover: rgba(0, 0, 0, 0.035);
-}
+:root .sb-link { color: var(--sb-ink); }
+:root .sb-link.is-active { color: var(--sb-active-ink); }
 
 .sb-identity {
   display: flex;
@@ -869,7 +1107,7 @@ html[data-mode="light"] {
   border-radius: 9999px;
   object-fit: cover;
   flex-shrink: 0;
-  filter: grayscale(1) contrast(1.2);
+  filter: grayscale(1) contrast(1.2) var(--img-dim);
   border: 0.5px solid var(--sb-pill-border);
 }
 
@@ -916,7 +1154,7 @@ html[data-mode="light"] {
   transition: transform 280ms cubic-bezier(.34, 1.56, .64, 1), opacity 220ms ease;
 }
 
-html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98); }
+:root .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98); }
 
 .sb-link.is-active .sb-icon .ni3d { filter: none; transform: translateY(-1px); }
 
@@ -957,7 +1195,8 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
   border: 0.5px solid var(--sb-pill-border);
 }
 
-.light-mode .sb-pill { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+:root .sb-pill { box-shadow: inset 0 0 0 var(--selected-ring-w) var(--sage); }
+:root .sb-pill-bar { box-shadow: none; }
 
 .sb-pill-bar {
   position: absolute;
@@ -1004,95 +1243,19 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
     box-shadow: none;
   }
 
-  .light-mode .sidebar-footer .sidebar-icon-btn:hover {
-    color: #1a1a1a;
-    background-color: #ececec;
+  :root .sidebar-footer .sidebar-icon-btn:hover {
+    color: var(--accent-ink);
+    background-color: var(--hover-fill);
+    border-color: var(--iconbtn-hover-border);
   }
 }
 
 .sidebar-footer .sidebar-icon-btn:focus-visible {
-  outline: 1px solid #8a8a8f;
+  outline: 1px solid var(--sage);
   outline-offset: 1px;
 }
 
-.theme-pill {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 3px;
-  border-radius: 999px;
-  border: 0.5px solid #232326;
-  background: #141417;
-}
-
-/* Exactly half the inner width, so translateX(100%) lands flush on the right. */
-.theme-pill-thumb {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  border-radius: 999px;
-  background: #ededed;
-  transform: translateX(0%);
-  transition: transform 300ms cubic-bezier(0.4, 0.2, 0.2, 1);
-}
-
-.theme-pill[data-theme='light'] .theme-pill-thumb {
-  transform: translateX(100%);
-}
-
-.theme-pill-option {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 5px 0;
-  border-radius: 999px;
-  font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6b6b70;
-  cursor: pointer;
-  transition: color 250ms ease;
-}
-
-.theme-pill-option[aria-checked='true'] {
-  color: #0b0b0d;
-  cursor: default;
-}
-
-.theme-pill-option:focus-visible {
-  outline: 1px solid #8a8a8f;
-  outline-offset: 1px;
-}
-
-.light-mode .theme-pill {
-  border-color: #e0e0e0;
-  background: #f0f0f0;
-}
-
-.light-mode .theme-pill-thumb {
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-.light-mode .theme-pill-option {
-  color: #8a8a85;
-}
-
-.light-mode .theme-pill-option[aria-checked='true'] {
-  color: #1a1a1a;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-pill-thumb,
-  .theme-pill-option {
-    transition: none;
-  }
-}
+:root .sidebar-footer .sidebar-icon-btn:focus-visible { outline-color: var(--sage); }
 
 /* ===== MOBILE MENU (full-screen, <768px) ===== */
 .mobile-menu {
@@ -1257,27 +1420,27 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
   }
 }
 
-.light-mode .mobile-menu { background: #fafafa; }
-.light-mode .mobile-menu-name,
-.light-mode .mobile-menu-item[aria-current='true'],
-.light-mode .mobile-menu-item[aria-current='true'] .mobile-menu-arrow,
-.light-mode .mobile-menu-item:active,
-.light-mode .mobile-menu-item:active .mobile-menu-arrow { color: #1a1a1a; }
-.light-mode .mobile-menu-item { color: #8a8a85; }
-.light-mode .mobile-menu-arrow { color: #c4c4c0; }
-.light-mode .mobile-menu-footer { border-top-color: #ececec; }
-.light-mode .mobile-menu-book { background: #1a1a1a; color: #fafafa; }
-.light-mode .mobile-menu-sound { border-color: #e0e0e0; }
-.light-mode .mobile-menu-status { color: #1f9e80; }
-.light-mode .mobile-menu-status-dot { background: #1f9e80; box-shadow: 0 0 6px rgba(31, 158, 128, 0.45); }
+:root .mobile-menu { background: var(--cream); }
+:root .mobile-menu-name,
+:root .mobile-menu-item[aria-current='true'],
+:root .mobile-menu-item[aria-current='true'] .mobile-menu-arrow,
+:root .mobile-menu-item:active,
+:root .mobile-menu-item:active .mobile-menu-arrow { color: var(--accent-ink); }
+:root .mobile-menu-item { color: var(--ink); }
+:root .mobile-menu-arrow { color: var(--arrow-ink); }
+:root .mobile-menu-footer { border-top-color: var(--sand-deep); }
+:root .mobile-menu-book { background: var(--moss); color: var(--on-moss); }
+:root .mobile-menu-sound { border-color: var(--sand-deep); }
+:root .mobile-menu-status { color: var(--accent-ink); }
+:root .mobile-menu-status-dot { background: var(--sage); box-shadow: 0 0 6px var(--sage-40); }
 
 @media (hover: hover) {
-  .light-mode .mobile-menu-icon-btn:hover,
-  .light-mode .mobile-menu-sound:hover,
-  .light-mode .mobile-menu .mobile-menu-email:hover,
-  .light-mode .mobile-menu-item:hover,
-  .light-mode .mobile-menu-item:hover .mobile-menu-arrow { color: #1a1a1a; }
-  .light-mode .mobile-menu-book:hover { background: #000000; }
+  :root .mobile-menu-icon-btn:hover,
+  :root .mobile-menu-sound:hover,
+  :root .mobile-menu .mobile-menu-email:hover,
+  :root .mobile-menu-item:hover,
+  :root .mobile-menu-item:hover .mobile-menu-arrow { color: var(--accent-ink); }
+  :root .mobile-menu-book:hover { background: color-mix(in srgb, var(--moss) 85%, var(--sage)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1289,7 +1452,7 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
 
 /* AWS wordmark text: white on dark, official navy on light. */
 .aws-logo-text { fill: #ffffff; }
-.light-mode .aws-logo-text { fill: #252f3e; }
+:root .aws-logo-text { fill: var(--accent-ink); }
 
 /* ===== VISOR ORB MASCOT ("how i think") ===== */
 @keyframes orb-twinkle {
@@ -1339,675 +1502,727 @@ html[data-mode="light"] .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98);
   }
 }
 
-/* ===== HERO: SCRAPBOOK DESKTOP =====
-   A scrapbook page under a Mac OS X menu bar: label-tape name, an Aqua window
-   for the manifesto, a taped polaroid, a sticky note, die-cut stickers and a
-   glossy early-iPhone dock. Same monochrome + indigo palette as the site. */
-.sk {
-  --sk-accent: #7c8ce0;
-  --sk-accent-soft: rgba(124, 140, 224, 0.38);
-  --sk-rule: #232326;
-  --sk-paper: #f4f4f5;
-  --sk-edge: #f4f4f5;
-  --sk-note-bg: #23263d;
-  --sk-note-ink: #c9cff5;
-  --sk-win-body: #121215;
-  --sk-titlebar: linear-gradient(#34343a, #1f1f23);
-  --sk-menubar: linear-gradient(rgba(44, 44, 50, 0.96), rgba(26, 26, 30, 0.96));
-  --sk-tape: rgba(255, 255, 255, 0.2);
-  --sk-shelf: linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
-  --sk-shelf-edge: rgba(255, 255, 255, 0.22);
-  --sk-ticket: #1d1d22;
-  --sk-burst: #f4f4f5;
-  --sk-burst-ink: #0b0b0d;
-  --sk-shadow: rgba(0, 0, 0, 0.6);
-  --sk-hand: "Caveat", "Comic Sans MS", cursive;
-  --sk-ui: "Lucida Grande", "Helvetica Neue", Geist, system-ui, sans-serif;
-  --sk-spring: cubic-bezier(.34, 1.56, .64, 1);
-  /* Paper grain: desaturated fractal noise with both light and dark specks at
-     a fixed low alpha, so it reads on white paper and dark stickers alike. */
-  --sk-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-0.7'/%3E%3CfeFuncA type='linear' slope='0' intercept='0.22'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  padding-top: 24px;
-  overflow-x: clip;
-}
-
-html[data-mode="light"] .sk {
-  --sk-accent: #4c5bc4;
-  --sk-accent-soft: rgba(76, 91, 196, 0.24);
-  --sk-rule: #e4e4e7;
-  --sk-paper: #ffffff;
-  --sk-edge: #ffffff;
-  --sk-note-bg: #e4e7fb;
-  --sk-note-ink: #2c3591;
-  --sk-win-body: #ffffff;
-  --sk-titlebar: linear-gradient(#f4f4f5, #d8d8dc);
-  --sk-menubar: linear-gradient(rgba(252, 252, 253, 0.96), rgba(233, 233, 236, 0.96));
-  --sk-tape: rgba(190, 192, 205, 0.5);
-  --sk-shelf: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.07));
-  --sk-shelf-edge: rgba(255, 255, 255, 0.95);
-  --sk-ticket: #f4f4f5;
-  --sk-burst: #1a1a1a;
-  --sk-burst-ink: #fafafa;
-  --sk-shadow: rgba(20, 20, 40, 0.22);
-}
-
-/* --- Menu bar --- */
-.sk-menubar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid var(--sk-rule);
-  border-radius: 10px;
-  background: var(--sk-menubar);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  font-family: var(--sk-ui);
-  font-size: 13px;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.sk-menubar-left,
-.sk-menubar-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.sk-menubar-mark { color: var(--sk-accent); font-size: 14px; }
-.sk-menubar-menus { display: none; gap: 2px; }
-
-.sk-menubar-menus a {
-  padding: 2px 9px;
-  border-radius: 4px;
-  color: var(--text-secondary);
-}
-
-.sk-menubar-menus a:hover {
-  background: var(--sk-accent);
-  color: #fff;
-}
-
-.sk-menubar-right { color: var(--text-secondary); font-size: 12px; }
-
-/* --- The page --- */
-.sk-board {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  padding: 36px 18px 28px;
-}
-
-/* --- Label tape --- */
-.sk-labels {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  align-self: flex-start;
-  position: relative;
-  z-index: 3;
-}
-
-.sk-dymo {
-  display: inline-block;
-  margin: 0;
-  padding: 8px 16px 7px;
-  border-radius: 2px;
-  background: linear-gradient(#2c2c31, #121214);
-  color: #f4f4f5;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  font-size: clamp(1.1rem, 0.9rem + 0.9vw, 1.65rem);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  /* Embossed: dark under-edge, light top-edge. */
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 255, 255, 0.28);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25), 0 6px 12px -4px var(--sk-shadow);
-  clip-path: polygon(0 6%, 100% 0, 99% 94%, 1% 100%);
-  transform: rotate(-2deg);
-}
-
-.sk-dymo-accent {
-  background: linear-gradient(#7f8ee3, #4c5bc4);
-  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.9rem);
-  transform: rotate(1.5deg);
-}
-
-/* --- Aqua window --- */
-.sk-window {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--sk-win-body);
-  box-shadow:
-    0 0 0 1px var(--sk-rule),
-    0 24px 48px -18px var(--sk-shadow);
-}
-
-.sk-titlebar {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  border-bottom: 1px solid var(--sk-rule);
-  background: var(--sk-titlebar);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.sk-lights {
-  position: absolute;
-  left: 11px;
-  display: flex;
-  gap: 7px;
-}
-
-/* Jelly buttons: a lit dome over a saturated base. */
-.sk-lights i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.55);
-}
-
-.sk-light-close { background: radial-gradient(circle at 50% 30%, #ffb3ad, #ff5f57 55%, #c9372f); }
-.sk-light-min { background: radial-gradient(circle at 50% 30%, #ffe6a8, #febc2e 55%, #c48a0e); }
-.sk-light-max { background: radial-gradient(circle at 50% 30%, #b6f2bd, #28c840 55%, #12902a); }
-
-.sk-title {
-  font-family: var(--sk-ui);
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.sk-window-body { padding: 28px 22px 32px; }
-
-.sk-headline {
-  margin: 0;
-  font-family: Geist, system-ui, sans-serif;
-  font-size: clamp(1.9rem, 0.9rem + 2.7vw, 3.6rem);
-  font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.045em;
-  color: var(--text-primary);
-}
-
-/* Marker swipe across the lower half of the word. */
-.sk-hl {
-  padding: 0 0.06em;
-  background: linear-gradient(transparent 55%, var(--sk-accent-soft) 55%, var(--sk-accent-soft) 92%, transparent 92%);
-  color: inherit;
-}
-
-
-.sk-copy {
-  margin: 20px 0 0;
-  max-width: 46ch;
-  font-size: var(--fs-lead);
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-/* --- Polaroid --- */
-.sk-polaroid {
-  position: relative;
-  z-index: 2;
-  width: min(100%, 240px);
-  margin: 0;
-  /* Thick bottom border: the classic instant-film frame. */
-  padding: 12px 12px 48px;
-  background: var(--sk-noise), var(--sk-paper);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 20px 32px -14px var(--sk-shadow);
-  transform: rotate(4deg);
-  transition: transform 500ms var(--sk-spring);
-}
-
-.sk-polaroid:hover { transform: rotate(1deg) scale(1.03); }
-
-/* Film grain over the photo too, so print and paper read as one object. */
-.sk-polaroid::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--sk-noise);
-  mix-blend-mode: overlay;
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-.sk-polaroid .sk-tape { z-index: 1; }
-
-.sk-polaroid img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  background: #d4d4d8;
-  filter: grayscale(1) contrast(1.12);
-}
-
-/* Masking tape with torn ends. */
-.sk-tape {
-  position: absolute;
-  width: 96px;
-  height: 26px;
-  background: var(--sk-tape);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(1px);
-  clip-path: polygon(3% 0, 97% 4%, 100% 30%, 96% 55%, 100% 82%, 97% 100%, 2% 96%, 0 70%, 4% 45%, 0 18%);
-  pointer-events: none;
-}
-
-.sk-tape-top { top: -13px; left: 50%; transform: translateX(-50%) rotate(-5deg); }
-.sk-tape-note { top: -10px; left: -18px; width: 70px; transform: rotate(-38deg); }
-
-/* --- Sticky note --- */
-.sk-note {
-  position: relative;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  width: min(100%, 270px);
-  padding: 26px 22px 24px;
-  background: var(--sk-note-bg);
-  color: var(--sk-note-ink);
-  font-family: var(--sk-hand);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.12), 0 16px 26px -14px var(--sk-shadow);
-  transform: rotate(-3deg);
-}
-
-.sk-note-kicker { font-size: 20px; opacity: 0.75; }
-.sk-note-main { margin-top: 2px; font-size: 32px; font-weight: 700; line-height: 1; }
-.sk-note-sub { margin-top: 8px; font-size: 19px; line-height: 1.15; opacity: 0.85; }
-
-/* --- Stickers --- */
-.sk-stickers {
-  position: relative;
-  z-index: 4;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 22px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sk-sticker {
-  position: relative;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 2px;
-  width: 100px;
-  height: 100px;
-  text-align: center;
-  transition: transform 450ms var(--sk-spring);
-}
-
-.sk-sticker b {
-  position: relative;
-  font-family: Geist, system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.sk-sticker span {
-  position: relative;
-  max-width: 9ch;
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 9.5px;
-  line-height: 1.25;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.sk-sticker:hover { transform: rotate(0deg) scale(1.08) !important; }
-
-/* Die-cut white edge + lift. */
-.sk-sticker-round {
-  border-radius: 50%;
-  background: var(--sk-noise), radial-gradient(circle at 35% 30%, #9aa6ec, var(--sk-accent) 60%);
-  color: #fff;
-  box-shadow: 0 0 0 4px var(--sk-edge), 0 10px 18px -8px var(--sk-shadow);
-  transform: rotate(-8deg);
-}
-
-/* Shaped stickers clip a pseudo layer; the li carries the drop shadow. */
-.sk-sticker-burst,
-.sk-sticker-ticket { filter: drop-shadow(0 8px 10px var(--sk-shadow)); }
-
-.sk-sticker-burst::before,
-.sk-sticker-burst::after {
-  content: '';
-  position: absolute;
-  clip-path: polygon(50% 0, 61% 12%, 77% 6%, 80% 22%, 96% 25%, 90% 40%, 100% 52%, 88% 62%, 93% 78%, 77% 80%, 72% 96%, 58% 88%, 45% 100%, 36% 86%, 20% 92%, 18% 76%, 3% 70%, 11% 56%, 0 44%, 12% 34%, 7% 18%, 23% 17%, 28% 2%, 41% 10%);
-}
-
-.sk-sticker-burst::before { inset: -7px; background: var(--sk-noise), var(--sk-edge); }
-.sk-sticker-burst::after { inset: 0; background: var(--sk-noise), var(--sk-burst); }
-.sk-sticker-burst { color: var(--sk-burst-ink); transform: rotate(7deg); }
-.sk-sticker-burst b,
-.sk-sticker-burst span { z-index: 1; }
-
-.sk-sticker-ticket {
-  width: 138px;
-  height: 74px;
-  color: var(--text-primary);
-  transform: rotate(-3deg);
-}
-
-.sk-sticker-ticket::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  background: var(--sk-noise), var(--sk-ticket);
-  border: 1.5px dashed var(--sk-rule);
-  -webkit-mask: radial-gradient(circle 9px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat,
-    radial-gradient(circle 9px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
-  mask: radial-gradient(circle 9px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat,
-    radial-gradient(circle 9px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
-}
-
-.sk-sticker-slot { display: contents; }
-
-.sk-clock {
-  border-radius: 50%;
-  background: var(--sk-noise), var(--sk-paper);
-  box-shadow: 0 0 0 4px var(--sk-edge), inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 10px 18px -8px var(--sk-shadow);
-  transform: rotate(5deg);
-}
-
-.sk-clock svg { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); }
-.sk-clock-face { fill: none; }
-.sk-clock-tick { stroke: #3f3f46; stroke-width: 2; stroke-linecap: round; }
-.sk-clock-hour { stroke: #18181b; stroke-width: 4.5; stroke-linecap: round; }
-.sk-clock-min { stroke: #18181b; stroke-width: 3; stroke-linecap: round; }
-.sk-clock-sec { stroke: var(--sk-accent); stroke-width: 1.4; stroke-linecap: round; }
-.sk-clock-pin { fill: var(--sk-accent); }
-
-.sk-clock .sk-clock-label {
-  position: absolute;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #71717a;
-  font-size: 7.5px;
-}
-
-/* --- Dock --- */
-.sk-dock-wrap {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.sk-scribble {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  margin: 0;
-  font-family: var(--sk-hand);
-  font-size: 24px;
-  line-height: 1;
-  color: var(--sk-accent);
-  white-space: nowrap;
-  transform: rotate(-4deg);
-}
-
-.sk-scribble-arrow {
-  width: 56px;
-  height: 28px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sk-dock {
+/* ===== HERO: MINIMAL DESKTOP =====
+   Monochrome intro: a halftone photo in a tiny platinum Mac window, the name in
+   the pixel face, two lines of copy, mono text links, and a hairline row of
+   still 1-bit desktop icons. No accent color — emphasis comes from inversion. */
+.hx {
+  --hx-ink: var(--text-primary);
+  --hx-muted: var(--text-secondary);
+  --hx-faint: var(--text-muted);
+  --hx-rule: var(--border-subtle);
+  --hx-bg: var(--bg-page);
+  --hx-dot: rgba(244, 244, 245, 0.42);
+  --hx-chrome: #1c1c20;
+  --hx-chrome-line: rgba(255, 255, 255, 0.09);
+  --hx-ease: cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   isolation: isolate;
-  display: flex;
-  align-items: flex-end;
-  gap: 18px;
-  padding: 0 22px 12px;
 }
 
-/* Glass shelf seen in perspective, Leopard style. */
-.sk-dock-shelf {
+:root .hx {
+  --hx-dot: var(--dot-color);
+  --hx-chrome: var(--sand);
+  --hx-chrome-line: var(--sand-deep);
+}
+
+
+/* One faint halftone field, dissolving out of the top-right corner. */
+.hx::before {
+  content: "";
   position: absolute;
-  inset: auto 0 0;
+  inset: 0;
   z-index: -1;
-  height: 52px;
-  border: 1px solid var(--sk-shelf-edge);
-  border-radius: 6px;
-  background: var(--sk-shelf);
-  box-shadow: inset 0 1px 0 var(--sk-shelf-edge), 0 14px 24px -14px var(--sk-shadow);
-  transform: perspective(260px) rotateX(48deg);
-  transform-origin: bottom;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--hx-dot) 1px, transparent 1.2px) 0 0 / 9px 9px;
+  opacity: var(--hx-dot-opacity);
+  -webkit-mask-image: radial-gradient(ellipse 45% 55% at 100% 0%, #000, transparent 70%);
+  mask-image: radial-gradient(ellipse 45% 55% at 100% 0%, #000, transparent 70%);
 }
 
-.sk-app {
+.hx-top {
+  display: grid;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* --- Platinum window --- */
+.hx-window {
+  margin: 0;
+  width: 100%;
+  max-width: 240px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--hx-chrome);
+}
+
+.hx-titlebar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  height: 22px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hx-closebox {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--hx-faint);
+  border-radius: 1px;
+}
+
+.hx-stripes {
+  flex: 1;
+  height: 9px;
+  background: repeating-linear-gradient(to bottom, var(--hx-chrome-line) 0 1px, transparent 1px 2px);
+}
+
+.hx-photo { aspect-ratio: 1 / 1; }
+
+.hx-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  filter: url(#hx-solarize) var(--img-dim);
+}
+
+/* --- Intro copy --- */
+.hx-name {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-geist);
+  font-weight: 500;
+  font-size: clamp(2.25rem, 6vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--hx-ink);
+}
+
+.hx-copy {
+  margin: 0 0 1.1rem;
+  max-width: 38ch;
+  font-family: var(--font-geist);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--hx-muted);
+}
+
+.hx-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  margin-top: 1.75rem;
+}
+
+.hx-links a,
+.hx-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   padding: 0;
   border: 0;
   background: none;
   cursor: pointer;
-  transform-origin: bottom center;
-  transition: transform 350ms var(--sk-spring);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--hx-muted);
+  text-decoration: none;
+  transition: color 250ms ease;
 }
 
-.sk-app:hover { transform: translateY(-10px) scale(1.14); }
-
-.sk-app:focus-visible {
-  outline: 2px solid var(--sk-accent);
-  outline-offset: 4px;
-  border-radius: 14px;
-}
-
-.sk-app-label {
-  font-family: "Helvetica Neue", Arial, sans-serif;
+.hx-arrow {
+  display: inline-block;
+  margin-left: -4px;
   font-size: 11px;
+  color: var(--hx-faint);
+  transition: transform 400ms var(--hx-ease), color 250ms ease;
+}
+
+/* --- 3D keycap icons: the lip is a stacked hard shadow, the cap rides on it --- */
+.hx-key {
+  --key-top: linear-gradient(180deg, #3a3a41 0%, #24242a 100%);
+  --key-lip: #0d0d10;
+  --key-edge: rgba(255, 255, 255, 0.09);
+  --key-shine: rgba(255, 255, 255, 0.22);
+  --key-ink: #f4f4f5;
+  --key-drop: rgba(0, 0, 0, 0.55);
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  perspective: 120px;
+}
+
+:root .hx-key {
+  --key-top: var(--sand);
+  --key-lip: var(--sand-deep);
+  --key-edge: var(--sand-deep);
+  --key-shine: var(--cream);
+  --key-ink: var(--icon-ink);
+  --key-drop: rgb(var(--shadow-rgb) / 0.14);
+}
+
+:root .hx-key-cap {
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    0 2px 0 var(--key-lip),
+    0 5px 10px -3px var(--key-drop);
+}
+
+:root .hx-links a:hover .hx-key-cap,
+:root .hx-links button:hover .hx-key-cap,
+:root .hx-links a:focus-visible .hx-key-cap,
+:root .hx-links button:focus-visible .hx-key-cap {
+  background: var(--hover-fill);
+  border-color: var(--key-edge-hover);
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    0 4px 0 var(--key-lip),
+    0 12px 16px -6px var(--key-drop);
+}
+
+/* Links in the hero: moss, sage arrow turning moss. */
+:root .hx-links a,
+:root .hx-links button { color: var(--hx-link-ink); }
+:root .hx-arrow { color: var(--arrow-ink); }
+:root .hx-links a:hover .hx-arrow,
+:root .hx-links button:hover .hx-arrow { color: var(--accent-ink); }
+:root .hx-map-pin { fill: var(--map-pin); }
+:root .hx-map-ring { stroke: var(--map-stroke); }
+:root .hx-map-land { fill: var(--map-fill); stroke: var(--map-stroke); }
+
+.hx-key-cap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--key-edge);
+  border-radius: 8px;
+  background: var(--key-top);
+  color: var(--key-ink);
+  font-size: 14px;
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 2px 0 var(--key-lip),
+    0 5px 10px -3px var(--key-drop);
+  transform-origin: 50% 100%;
+  transition:
+    transform 450ms var(--hx-ease),
+    box-shadow 450ms var(--hx-ease);
+}
+
+.hx-key-cap svg {
+  transition: transform 450ms var(--hx-ease);
+}
+
+.hx-links a:hover,
+.hx-links button:hover,
+.hx-links a:focus-visible,
+.hx-links button:focus-visible { color: var(--hx-ink); }
+
+.hx-links a:hover .hx-arrow,
+.hx-links button:hover .hx-arrow,
+.hx-links a:focus-visible .hx-arrow,
+.hx-links button:focus-visible .hx-arrow {
+  color: var(--hx-ink);
+  transform: translate(2px, -2px);
+}
+
+/* Hover: the cap lifts and tips back, the lip grows, the glyph floats a touch. */
+.hx-links a:hover .hx-key-cap,
+.hx-links button:hover .hx-key-cap,
+.hx-links a:focus-visible .hx-key-cap,
+.hx-links button:focus-visible .hx-key-cap {
+  transform: translateY(-3px) rotateX(14deg);
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 4px 0 var(--key-lip),
+    0 12px 16px -6px var(--key-drop);
+}
+
+.hx-links a:hover .hx-key-cap svg,
+.hx-links button:hover .hx-key-cap svg {
+  transform: scale(1.1);
+}
+
+/* Press: the cap sinks onto its lip. */
+.hx-links a:active .hx-key-cap,
+.hx-links button:active .hx-key-cap {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 1px 0 var(--key-lip),
+    0 2px 4px -2px var(--key-drop);
+  transition-duration: 120ms;
+}
+
+.hx-links a:focus-visible,
+.hx-links button:focus-visible { outline: none; }
+
+/* --- Stats: hairline cells, the dividers are the design --- */
+.hx-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 3.5rem 0 0;
+  border-top: 1px solid var(--hx-rule);
+}
+
+.hx-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  min-width: 0;
+  padding: 1.4rem 1rem 1.4rem 0;
+}
+
+.hx-stat:nth-child(even) {
+  padding-left: 1rem;
+  border-left: 1px solid var(--hx-rule);
+}
+
+.hx-stat:nth-child(n+3) { border-top: 1px solid var(--hx-rule); }
+
+/* Location cell: the sketch map sits at the cell's right edge. */
+.hx-stat-place { position: relative; padding-right: 44px; }
+.hx-stat-place dd { white-space: nowrap; }
+
+.hx-map {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 38px;
+  height: 49px;
+  transform: translateY(-50%);
+  overflow: visible;
+}
+
+.hx-map-land {
+  fill: var(--bg-surface-alt);
+  stroke: var(--hx-muted);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.hx-map-pin { fill: var(--hx-ink); }
+
+.hx-map-ring {
+  fill: none;
+  stroke: var(--hx-ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hx-ping 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes hx-ping {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  70%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+.hx-stat dd {
+  margin: 0;
+  font-family: var(--font-geist);
   font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--hx-ink);
+}
+
+.hx-stat dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--hx-faint);
+}
+
+@media (min-width: 768px) {
+  .hx-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hx-stat + .hx-stat { padding-left: 1.25rem; border-left: 1px solid var(--hx-rule); }
+  .hx-stat:nth-child(n+3) { border-top: 0; }
+  .hx-stat-place { padding-right: 76px; }
+  .hx-map { width: 58px; height: 74px; }
+
+  .hx-top {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 3rem;
+    align-items: center;
+  }
+}
+
+/* --- Entrance: fade up 12px, staggered via --d --- */
+.hx-in {
+  opacity: 0;
+  animation: hx-rise 700ms var(--hx-ease) var(--d, 0ms) forwards;
+}
+
+@keyframes hx-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-in { opacity: 1; animation: none; }
+  .hx-map-ring { animation: none; opacity: 0.5; }
+  .hx-arrow,
+  .hx-key-cap,
+  .hx-key-cap svg { transition: none; }
+}
+
+/* ===== EXPERIENCE TIMELINE =====
+ * Each role reads in the order people scan a CV: what (role), where (company,
+ * type, place), when (dates + tenure, right-aligned), then the detail.
+ */
+.xp-list { position: relative; }
+
+.xp-item {
+  display: flex;
+  gap: 16px;
+}
+
+.xp-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+
+.xp-logo {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.xp-line {
+  flex: 1;
+  width: 1px;
+  min-height: 40px;
+  margin: 8px 0;
+  background: var(--border);
+}
+
+/* The current role's tile gets a stronger edge. */
+.xp-item.is-current .xp-logo { border-color: var(--text-muted); }
+
+.xp-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 2.75rem;
+}
+
+.xp-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 24px;
+  min-height: 44px;
+}
+
+.xp-role {
+  font-family: var(--font-geist);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.xp-company {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.xp-company-name { color: var(--text-secondary); font-weight: 500; }
+
+.xp-when {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
-/* Early iPhone icon: base gradient, glossy dome over the top half, a hairline
-   rim and a letterpressed glyph. */
-.sk-icon {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  overflow: hidden;
-  border-radius: 13px;
-  color: #fff;
-  font-size: 31px;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    0 10px 16px -8px var(--sk-shadow);
+.xp-tenure {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-.sk-icon::after {
-  content: '';
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  top: -64%;
-  height: 112%;
+.xp-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--fill-primary);
+  color: var(--fill-primary-text);
+  letter-spacing: 0.5px;
+}
+
+.xp-now i {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: linear-gradient(rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.14));
-  pointer-events: none;
+  background: currentColor;
+  animation: xp-pulse 1.8s ease-in-out infinite;
 }
 
-.sk-icon svg {
-  position: relative;
-  filter: drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.45));
+@keyframes xp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
 }
 
-.sk-icon-github { background: linear-gradient(#5d636c, #262a2f 58%, #15181b); }
-.sk-icon-linkedin { background: linear-gradient(#55a6f0, #0a66c2 58%, #07509b); font-size: 29px; }
-
-.sk-icon-cal {
-  grid-template-rows: 17px 1fr;
-  place-items: stretch;
-  background: linear-gradient(#ffffff, #e2e2e6);
-}
-
-.sk-icon-cal::after { opacity: 0.45; }
-
-.sk-cal-weekday {
-  background: linear-gradient(#f26a63, #c92f29);
-  color: #fff;
-  font: 700 8.5px/17px "Helvetica Neue", Arial, sans-serif;
-  text-align: center;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
-}
-
-.sk-cal-day {
-  display: grid;
-  place-items: center;
-  color: #1f1f22;
-  font: 700 30px/1 "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: -0.04em;
-}
-
-.sk-icon-notes {
-  background:
-    linear-gradient(90deg, transparent 12px, #e3a3a3 12px, #e3a3a3 13px, transparent 13px),
-    repeating-linear-gradient(#f5f5f2 0 8px, #c8d2e2 8px 9px),
-    #f5f5f2;
-  background-position: 0 0, 0 18px, 0 0;
-}
-
-.sk-icon-notes::after { opacity: 0.4; }
-
-.sk-notes-binding {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 15px;
-  background: linear-gradient(#a8763f, #6b4420);
-  border-bottom: 1px solid #452a12;
-}
-
-.sk-notes-binding::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 3px;
-  border-top: 1px dashed rgba(255, 228, 196, 0.65);
-}
-
-.sk-notes-text {
-  position: relative;
+.xp-summary {
   margin-top: 12px;
-  font-family: var(--sk-hand);
-  font-size: 21px;
-  font-weight: 700;
-  color: #34343a;
-  transform: rotate(-5deg);
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  opacity: 0.88;
 }
 
-/* --- Below desktop: stacked, but staggered so pieces still overlap --- */
-@media (max-width: 1023px) {
-  .sk-polaroid {
-    align-self: flex-start;
-    width: min(64%, 230px);
-    margin-left: 6%;
-  }
-  .sk-note {
-    align-self: flex-end;
-    width: min(78%, 270px);
-    margin-top: -20px;
-  }
+/* Highlights: a quiet left rule groups them, no bullet glyphs. */
+.xp-highlights {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-left: 14px;
+  max-width: 62ch;
+  border-left: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
-/* --- Tablet --- */
-@media (min-width: 768px) {
-  .sk-menubar-menus { display: flex; }
-  .sk-board { padding: 44px 32px 32px; }
-  .sk-window-body { padding: 36px 36px 40px; }
+.xp-stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
 }
 
-/* --- Desktop: pieces overlap like a composed page --- */
-@media (min-width: 1024px) {
-  .sk { padding-top: clamp(28px, 4vh, 48px); }
+.xp-stack-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
 
-  .sk-board {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 24px;
-    align-items: start;
-    padding: 48px 44px 30px;
-  }
+.xp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
-  .sk-labels { grid-column: 1 / 9; grid-row: 1; margin: 0 0 -20px 26px; }
-  .sk-window { grid-column: 1 / 9; grid-row: 2; }
+.xp-tags li {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface-alt);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
 
-  .sk-polaroid {
-    grid-column: 9 / 13;
-    grid-row: 1 / 3;
-    justify-self: center;
-    margin-top: 6px;
-  }
-
-  .sk-note {
-    grid-column: 9 / 13;
-    grid-row: 3 / 5;
-    justify-self: start;
-    margin: -70px 0 0 -54px;
-  }
-
-  .sk-stickers {
-    grid-column: 1 / 9;
-    grid-row: 3;
-    justify-content: flex-start;
-    margin: -46px 0 0 34px;
-  }
-
-  .sk-dock-wrap {
-    grid-column: 1 / -1;
-    grid-row: 5;
-    justify-self: center;
-    margin-top: 40px;
-  }
-
-  /* Annotation sits off the dock's left shoulder. */
-  .sk-scribble {
-    position: absolute;
-    right: 100%;
-    top: -18px;
-    margin-right: -6px;
-  }
+@media (min-width: 640px) {
+  .xp-item { gap: 24px; }
+  .xp-when { align-items: flex-end; text-align: right; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sk-polaroid,
-  .sk-sticker,
-  .sk-app { transition: none; }
+  .xp-now i { animation: none; }
+}
+
+/* ===== LIGHT THEME: roles for components styled through shared tokens ===== */
+/* Approach diagram: moss line art on sand, sage connectors. */
+:root .ad-frame { stroke: var(--sand-deep); }
+:root .ad-zone.is-on .ad-frame { stroke: var(--sage); }
+:root .ad-shape { stroke: var(--art-line); }
+:root .ad-fill { fill: var(--sand); }
+:root .ad-solid,
+:root .ad-led,
+:root .ad-packet,
+:root .ad-cursor { fill: var(--art-strong); }
+:root .ad-cursor { stroke: var(--cream); }
+:root .ad-soft { fill: var(--art-soft); }
+:root .ad-dot,
+:root .ad-wire { stroke: var(--art-wire); }
+:root .ad-code { fill: var(--art-strong); }
+:root .ad-tag,
+:root .ad-note,
+:root .ad-code-start { fill: var(--ink-muted); }
+:root .ad-row.is-on .ad-row-tag { color: var(--accent-ink); }
+
+/* Experience: sand tiles, sage rail, lime tags, moss "current" pill. */
+:root .xp-logo { background: var(--sand); border-color: var(--sand-deep); box-shadow: var(--shadow-warm-soft); }
+:root .xp-item.is-current .xp-logo { border-color: var(--sage); }
+:root .xp-line { background: var(--sand-deep); }
+:root .xp-company-name { color: var(--accent-ink); }
+:root .xp-summary { color: var(--ink-body); opacity: 1; }
+:root .xp-highlights { border-left-color: var(--rule-accent); }
+:root .xp-now { background: var(--tag-bg); color: var(--tag-ink); box-shadow: inset 0 0 0 1px var(--tag-border); }
+:root .xp-now i { background: var(--tag-dot); }
+:root .xp-tags li { background: var(--tag-bg); border-color: var(--tag-border); color: var(--tag-ink); }
+
+/* Footer is the one full-moss surface. */
+:root footer { background: var(--footer-bg); color: var(--footer-ink); border-top-color: var(--footer-bg); }
+
+/* Sidebar 3D icons: one moss/sage object family, cream gloss, a single lime spark. */
+:root .ni3d .ni-light { stop-color: var(--ni-light); }
+:root .ni3d .ni-base { stop-color: var(--ni-base); }
+:root .ni3d .ni-gloss { stop-color: var(--cream); }
+:root .ni3d .ni-shade { stop-color: var(--ni-shade); }
+:root .ni3d .ni-side { fill: var(--ni-side); }
+:root .ni3d .ni-side-line { stroke: var(--ni-side); }
+:root .ni3d .ni-hi-line { stroke: var(--cream); }
+:root .ni3d .ni-hi { fill: var(--ni-hi); }
+:root .ni3d .ni-pin { fill: var(--ni-pin); }
+:root .ni3d .ni-accent { fill: var(--ni-accent); }
+:root .ni3d .ni-tone { fill: var(--ni-tone); }
+:root .ni3d .ni-tone-soft { fill: var(--ni-tone-soft); }
+:root .ni3d .ni-spark { fill: var(--ni-spark); }
+:root .sb-icon .ni3d { filter: none; opacity: var(--ni-opacity); }
+/* Active nav icon: full strength, in the active tones (identical to resting in light). */
+:root .sb-link.is-active .ni3d {
+  opacity: 1;
+  --ni-light: var(--ni-on-light);
+  --ni-base: var(--ni-on-base);
+  --ni-side: var(--ni-on-side);
+  --ni-accent: var(--ni-on-side);
+  --ni-tone: var(--ni-on-base);
+  --ni-tone-soft: var(--ni-on-light);
+  --ni-pin: var(--ni-on-base);
+}
+
+/* Modal backdrops: a soft sand veil instead of a black wash. */
+:root .scrim { background-color: color-mix(in srgb, var(--sand-deep) 70%, transparent); }
+
+/* Book-a-call modal: a sand card with cream fields and moss actions. */
+:root .bc-panel {
+  background: var(--sand);
+  border-color: var(--sand-deep);
+  color: var(--ink);
+  border-radius: 16px;
+  box-shadow: var(--shadow-warm);
+}
+:root .bc-rule { border-color: var(--sand-deep); }
+:root .bc-title,
+:root .bc-heading { color: var(--accent-ink); }
+:root .bc-close { color: var(--ink-muted); }
+:root .bc-close:hover { color: var(--accent-ink); }
+:root .bc-label,
+:root .bc-muted { color: var(--ink-muted); }
+:root .bc-strong { color: var(--ink); }
+:root .bc-input {
+  background: var(--cream);
+  color: var(--ink);
+  border-color: var(--sand-deep);
+  color-scheme: light;
+}
+:root .bc-underline { background: transparent; }
+:root .bc-input::placeholder { color: var(--ink-disabled); }
+:root .bc-input:focus {
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 2px var(--sage);
+}
+:root .bc-underline:focus { box-shadow: 0 2px 0 0 var(--sage); }
+:root .bc-slot {
+  background: var(--cream);
+  color: var(--ink-body);
+  border-color: var(--sand-deep);
+}
+:root .bc-slot:hover { color: var(--accent-ink); border-color: var(--hover-border); }
+:root .bc-slot.is-on {
+  background: var(--sage-soft);
+  color: var(--accent-ink);
+  border-color: var(--selected-border);
+  box-shadow: inset 0 0 0 calc(var(--selected-ring-w) * 0.5) var(--sage);
+}
+:root .bc-primary { background: var(--moss); color: var(--on-moss); }
+:root .bc-primary:hover { background: var(--moss-hover); }
+:root .bc-done {
+  background: var(--sage-soft);
+  border-color: var(--sage-40);
+  color: var(--accent-ink);
+}
+
+/* Project modal: sand media well, lime chip, moss arrows, quiet disabled state. */
+:root .pm-media { background: var(--sand); border-color: var(--sand-deep); }
+:root .pm-chip { background: var(--tag-bg); color: var(--tag-ink); border-color: var(--tag-border); }
+:root .pm-arrow { background: var(--moss); color: var(--on-moss); border-color: transparent; }
+:root .pm-arrow:hover { background: var(--moss-hover); }
+:root .pm-disabled { background: var(--sand-deep); color: var(--ink-disabled); border-color: var(--sand-deep); }
+:root .pm-focus:focus-visible { --tw-ring-color: var(--sage); }
+
+/* ===== READABILITY ROLES =====
+   Values come from tokens; in dark each resolves to what it was before. */
+
+/* Small mono labels at 80% ink in light (= the caption strength in dark). */
+:root .font-mono.c-tertiary,
+:root .hx-stat dt,
+:root .xp-stack-label,
+:root .xp-tenure,
+:root .ad-row-tag,
+:root .bc-label { color: var(--ink-label); }
+:root .ad-tag,
+:root .ad-note,
+:root .ad-code-start { fill: var(--ink-label); }
+
+/* Sidebar footer icon buttons: a sand tile with a hairline in light. */
+:root .sidebar-footer .sidebar-icon-btn {
+  background-color: var(--iconbtn-bg);
+  border: 1px solid var(--iconbtn-border);
+  color: var(--iconbtn-ink);
+}
+
+/* Secondary button: moss outline, 1.5px in light via an inset ring. */
+:root .btn2 {
+  border-color: var(--btn2-border-color);
+  color: var(--btn2-ink);
+  box-shadow: inset 0 0 0 var(--btn2-ring-w) var(--btn2-border-color);
+}
+:root .btn2:hover { color: var(--accent-ink); border-color: var(--btn2-hover-border); background-color: var(--btn2-hover-bg); }
+
+/* Selected filter chip. */
+:root .chip-on {
+  background: var(--chipon-bg);
+  color: var(--chipon-ink);
+  border-color: var(--chipon-border);
+  box-shadow: inset 0 0 0 var(--selected-ring-w) var(--sage);
+}
+
+/* Works view toggle, selected segment. */
+:root .seg-on {
+  background-color: var(--segon-bg);
+  color: var(--segon-ink);
+  box-shadow: inset 0 0 0 1px var(--segon-ring);
 }

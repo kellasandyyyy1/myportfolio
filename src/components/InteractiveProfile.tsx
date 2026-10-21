@@ -70,9 +70,7 @@ export const InteractiveProfile: React.FC<InteractiveProfileProps> = ({ theme })
     >
       {/* Dynamic shadows that shift based on tilt */}
       <motion.div
-        className={`absolute inset-2 rounded-xl filter blur-xl opacity-40 transition-colors duration-500 pointer-events-none -z-10 ${
-          theme === 'light' ? 'bg-black/10' : 'bg-black/80'
-        }`}
+        className={`absolute inset-2 rounded-xl filter blur-xl opacity-40 transition-colors duration-500 pointer-events-none -z-10 bg-[var(--sage-40)]`}
         style={{
           x: shadowX,
           y: shadowY,
@@ -93,7 +91,7 @@ export const InteractiveProfile: React.FC<InteractiveProfileProps> = ({ theme })
         <div className="absolute inset-0 w-full h-full [transform:translateZ(0px)] overflow-hidden">
           {/* Halftone image */}
           <img
-            src="/img/drei.jpg"
+            src="/img/drei.png"
             alt="Kellas Andrei"
             className="w-full h-full object-cover filter grayscale contrast-[1.5] brightness-[1.15]"
             onError={(e) => {

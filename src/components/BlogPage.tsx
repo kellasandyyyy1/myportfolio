@@ -83,15 +83,12 @@ const BlogPage = ({
   const isLight = theme === 'light';
 
   return (
-    <div className={`min-h-screen font-sans text-[15px] ${isLight ? 'bg-[#fafafa] text-[#5a5a5a]' : 'bg-[#0b0b0d] text-[#a1a1aa]'
-      }`}>
+    <div className={`min-h-screen font-sans text-[15px] bg-[var(--cream)] text-[var(--ink-body)]`}>
       {/* Standalone chrome: this route deliberately has no sidebar nav. */}
-      <header className={`sticky top-0 z-50 border-b px-5 md:px-12 py-3.5 flex items-center justify-between gap-4 ${isLight ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
-        }`}>
+      <header className={`sticky top-0 z-50 border-b px-5 md:px-12 py-3.5 flex items-center justify-between gap-4 bg-[var(--cream)] border-[var(--sand-deep)]`}>
         <Link
           to="/"
-          className={`inline-flex items-center gap-2 text-[12px] font-geist transition-colors ${isLight ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a85] hover:text-[#e5e5e5]'
-            }`}
+          className={`inline-flex items-center gap-2 text-[12px] font-geist transition-colors text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
         >
           <ArrowLeft weight="light" size={14} className="shrink-0" />
           <span>back to portfolio</span>
@@ -101,22 +98,17 @@ const BlogPage = ({
           type="button"
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className={`w-[32px] h-[32px] rounded-[8px] border-[0.5px] flex items-center justify-center shrink-0 transition-colors cursor-pointer ${isLight
-            ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a]'
-            : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4]'
-            }`}
+          className="theme-toggle shrink-0"
         >
           {theme === 'dark' ? <Sun weight="light" size={14} /> : <Moon weight="light" size={14} />}
         </button>
       </header>
 
       <main className="px-5 md:px-12 py-14 md:py-20 max-w-[720px] mx-auto">
-        <h1 className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none lowercase ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-          }`}>
+        <h1 className={`text-[26px] sm:text-[32px] font-geist font-medium leading-none lowercase text-[var(--ink)]`}>
           notes
         </h1>
-        <p className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mt-3 ${isLight ? 'text-[#5a5a5a]' : 'text-[#888888]'
-          }`}>
+        <p className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mt-3 text-[var(--ink-body)]`}>
           short pieces on building things end to end, and on what actually changed once agents got good.
         </p>
 
@@ -124,10 +116,9 @@ const BlogPage = ({
           {POSTS.map((post, i) => (
             <article
               key={post.slug}
-              className={i > 0 ? `pt-14 md:pt-20 border-t-[0.5px] ${isLight ? 'border-[#ececec]' : 'border-[#1e1e1e]'}` : ''}
+              className={i > 0 ? `pt-14 md:pt-20 border-t-[0.5px] border-[var(--sand-deep)]` : ''}
             >
-              <div className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[1.5px] ${isLight ? 'text-[#a0a0a0]' : 'text-[#666666]'
-                }`}>
+              <div className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[1.5px] text-[var(--ink-muted)]`}>
                 <span>{post.date}</span>
                 <span aria-hidden="true">·</span>
                 <span>{post.readTime}</span>
@@ -135,8 +126,7 @@ const BlogPage = ({
                 <span>{post.tag}</span>
               </div>
 
-              <h2 className={`text-[22px] md:text-[26px] font-geist font-medium leading-tight lowercase mt-2 ${isLight ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                }`}>
+              <h2 className={`text-[22px] md:text-[26px] font-geist font-medium leading-tight lowercase mt-2 text-[var(--ink)]`}>
                 {post.title}
               </h2>
 
@@ -144,8 +134,7 @@ const BlogPage = ({
                 {post.body.map((para, k) => (
                   <p
                     key={k}
-                    className={`text-[14px] md:text-[15px] font-sans leading-[1.75] ${isLight ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
-                      }`}
+                    className={`text-[14px] md:text-[15px] font-sans leading-[1.75] text-[var(--ink-body)]`}
                   >
                     {para}
                   </p>
@@ -156,12 +145,10 @@ const BlogPage = ({
         </div>
       </main>
 
-      <footer className={`px-5 md:px-12 py-10 border-t max-w-[720px] mx-auto ${isLight ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-        }`}>
+      <footer className={`px-5 md:px-12 py-10 border-t max-w-[720px] mx-auto border-[var(--sand-deep)]`}>
         <Link
           to="/"
-          className={`inline-flex items-center gap-2 text-[12px] font-geist transition-colors ${isLight ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a85] hover:text-[#e5e5e5]'
-            }`}
+          className={`inline-flex items-center gap-2 text-[12px] font-geist transition-colors text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
         >
           <ArrowLeft weight="light" size={14} className="shrink-0" />
           <span>back to portfolio</span>

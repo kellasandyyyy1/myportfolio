@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { motion, useScroll, useSpring, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { FaAws } from 'react-icons/fa6';
 import { SiPearson, SiCisco, SiUpwork, SiFiverr, SiRakuten } from 'react-icons/si';
@@ -614,10 +613,15 @@ interface ExperienceEntry {
   location: string;
   employmentType: string;
   role: string;
-  period: string;
-  description: string;
+  /** 'YYYY-MM'. Duration is derived from these, so it never goes stale. */
+  start: string;
+  /** 'YYYY-MM', or null while the role is ongoing. */
+  end: string | null;
+  /** One line: what the job was. */
+  summary: string;
+  /** What the work actually involved, a short line each. */
+  highlights: string[];
   skills: string[];
-  moreSkillsCount?: number;
 }
 
 const EXPERIENCES: ExperienceEntry[] = [
@@ -631,10 +635,14 @@ const EXPERIENCES: ExperienceEntry[] = [
     location: 'Remote',
     employmentType: 'Full-time',
     role: 'Fullstack Engineer Lead',
-    period: 'August 2026 — PRESENT · 2 MOS',
-    description: 'Leading engineering across the stack — setting architecture direction, running code review, and taking products from API design through to interface polish. Mentoring the team and keeping delivery predictable as the codebase grows.',
+    start: '2026-08',
+    end: null,
+    summary: 'Leading engineering across the stack, from API design through to interface polish.',
+    highlights: [
+      'Set architecture direction and run code review',
+      'Mentor the team and keep delivery predictable as the codebase grows',
+    ],
     skills: ['React', 'TypeScript', 'Node.js', 'Next.js'],
-    moreSkillsCount: 3,
   },
   {
     id: 'png',
@@ -645,11 +653,15 @@ const EXPERIENCES: ExperienceEntry[] = [
     company: 'P&G',
     location: 'BGC, Taguig',
     employmentType: 'Contract',
-    role: 'Fullstack web developer',
-    period: 'February 2026 — July 2026 · 6 MOS',
-    description: 'Developed SaaS and ecommerce website for clients with ai integrations , custom api and more.',
+    role: 'Fullstack Web Developer',
+    start: '2026-02',
+    end: '2026-07',
+    summary: 'Built SaaS and e-commerce websites for clients.',
+    highlights: [
+      'Integrated AI features into client products',
+      'Designed and built custom APIs behind the storefronts',
+    ],
     skills: ['React', 'Express', 'TypeScript', 'Shopify'],
-    moreSkillsCount: 4,
   },
   {
     id: 'rcbc',
@@ -657,10 +669,16 @@ const EXPERIENCES: ExperienceEntry[] = [
     logoSrc: '/img/rcbclogo.svg',
     company: 'RCBC',
     location: 'Makati, Metro Manila',
-    employmentType: 'Full-time',
+    employmentType: 'Internship',
     role: 'Frontend Developer Intern',
-    period: 'June 2025 — December 2025 · 6 MOS',
-    description: 'Built reusable React components and responsive Tailwind layouts, wired them to internal REST endpoints, and helped migrate legacy pages into a typed, accessible component library alongside the design team.',
+    start: '2025-06',
+    end: '2025-12',
+    summary: 'Built banking UI components alongside the design team.',
+    highlights: [
+      'Built reusable React components and responsive Tailwind layouts',
+      'Wired the interface to internal REST endpoints',
+      'Helped migrate legacy pages into a typed, accessible component library',
+    ],
     skills: ['React', 'TypeScript', 'Tailwind CSS', 'REST APIs'],
   },
   {
@@ -668,15 +686,44 @@ const EXPERIENCES: ExperienceEntry[] = [
     initials: 'RK',
     logo: 'rakuten',
     company: 'Rakuten',
-    location: 'London, United kingdom',
+    location: 'London, United Kingdom',
     employmentType: 'Full-time',
     role: 'Web Developer & UI Designer',
-    period: 'October 2024 — may 2025 · 7 MOS',
-    description: 'Crafted modern user interfaces, component libraries, and interactive media sites. Worked closely with design teams and backend engineers to deploy robust client sites.',
+    start: '2024-10',
+    end: '2025-05',
+    summary: 'Designed and built interfaces for client sites.',
+    highlights: [
+      'Crafted UIs, component libraries and interactive media sites',
+      'Worked with design and backend engineers to ship client sites',
+    ],
     skills: ['JavaScript', 'HTML/CSS', 'UI Design', 'Express', 'Figma'],
-    moreSkillsCount: 2,
   },
 ];
+
+const XP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const parseYm = (ym: string) => {
+  const [y, m] = ym.split('-').map(Number);
+  return { y, m };
+};
+
+const formatYm = (ym: string) => {
+  const { y, m } = parseYm(ym);
+  return `${XP_MONTHS[m - 1]} ${y}`;
+};
+
+/** Inclusive month count, the way LinkedIn reports tenure: Feb–Jul is 6 mos. */
+const formatTenure = (start: string, end: string | null) => {
+  const s = parseYm(start);
+  const now = new Date();
+  const e = end ? parseYm(end) : { y: now.getFullYear(), m: now.getMonth() + 1 };
+  const total = Math.max(1, (e.y - s.y) * 12 + (e.m - s.m) + 1);
+  const yrs = Math.floor(total / 12);
+  const mos = total % 12;
+  return [yrs && `${yrs} yr${yrs > 1 ? 's' : ''}`, mos && `${mos} mo${mos > 1 ? 's' : ''}`]
+    .filter(Boolean)
+    .join(' ');
+};
 
 // Official brand marks (Simple Icons paths) with their brand greens.
 const EXPERIENCE_LOGOS = {
@@ -716,33 +763,21 @@ const ExperienceLogo = ({ exp, theme }: { exp: ExperienceEntry; theme: 'dark' | 
 
 const CustomCursor = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       setPosition({ x: e.clientX, y: e.clientY });
     };
 
-    const onMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('a') || target.closest('button')) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
-      }
-    };
-
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseover', onMouseOver);
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseover', onMouseOver);
     };
   }, []);
 
   return (
     <div
-      className={`custom-cursor hidden md:block ${isHovering ? 'hovering' : ''}`}
+      className="custom-cursor hidden md:block"
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     />
   );
@@ -814,57 +849,15 @@ function scrollToSection(sectionId: string, behavior: ScrollBehavior) {
   requestAnimationFrame(attempt);
 }
 
-type ToggleTheme = (event?: React.MouseEvent<HTMLButtonElement>) => void;
+type ToggleTheme = () => void;
 
-/**
- * Two-way dark/light switch. The thumb only reflects `theme`; every change goes
- * through `toggleTheme`, so the view-transition reveal and persistence behave
- * exactly as they do for the other theme toggles.
- */
-const ThemePill = ({ theme, toggleTheme }: { theme: 'dark' | 'light'; toggleTheme: ToggleTheme }) => {
-  const optionRefs = React.useRef<Record<'dark' | 'light', HTMLButtonElement | null>>({ dark: null, light: null });
-  const options = [
-    { value: 'dark' as const, label: 'Dark', icon: <Moon weight="light" size={12} /> },
-    { value: 'light' as const, label: 'Light', icon: <Sun weight="light" size={12} /> },
-  ];
-
-  // Radio-group keyboard pattern: arrows move the selection, and focus follows it.
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
-    event.preventDefault();
-    const next = theme === 'dark' ? 'light' : 'dark';
-    toggleTheme();
-    optionRefs.current[next]?.focus();
-  };
-
+/** Outlined sun/moon button: shows the theme a click switches to. */
+const ThemeToggle = ({ theme, toggleTheme }: { theme: 'dark' | 'light'; toggleTheme: ToggleTheme }) => {
+  const label = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
   return (
-    <div
-      role="radiogroup"
-      aria-label="Colour theme"
-      data-theme={theme}
-      onKeyDown={handleKeyDown}
-      className="theme-pill font-geist"
-    >
-      <span aria-hidden="true" className="theme-pill-thumb" />
-      {options.map((option) => {
-        const checked = theme === option.value;
-        return (
-          <button
-            key={option.value}
-            ref={(el) => { optionRefs.current[option.value] = el; }}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            tabIndex={checked ? 0 : -1}
-            onClick={(event) => { if (!checked) toggleTheme(event); }}
-            className="theme-pill-option"
-          >
-            {option.icon}
-            <span>{option.label}</span>
-          </button>
-        );
-      })}
-    </div>
+    <button type="button" onClick={toggleTheme} aria-label={label} title={label} className="theme-toggle">
+      <ThemeToggleIcon theme={theme} size={16} />
+    </button>
   );
 };
 
@@ -965,15 +958,7 @@ const MobileMenu = ({
           <div className="mobile-menu-header">
             <span className="mobile-menu-name font-sans">Kellas Andrei</span>
             <div className="flex items-center">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-                title="Toggle theme"
-                className="mobile-menu-icon-btn"
-              >
-                <ThemeToggleIcon theme={theme} size={16} />
-              </button>
+              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
               <button
                 ref={closeRef}
                 type="button"
@@ -1221,11 +1206,10 @@ const SidebarNavigation = ({
   return (
     <>
       {/* Desktop Fixed Left Sidebar (≥1024px) */}
-      <aside className={`hidden lg:flex w-[210px] flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none transition-colors overflow-y-auto ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
-        }`}>
+      <aside className={`hidden lg:flex w-[210px] flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none transition-colors overflow-y-auto bg-[var(--sidebar-bg)] border-[var(--sand-deep)]`}>
         {/* Top: Identity Block */}
         <div className="sb-identity">
-          <img src="/img/drei.jpg" alt="" className="sb-avatar" />
+          <img src="/img/drei.png" alt="" className="sb-avatar" />
           <div className="min-w-0 t-small font-sans font-medium truncate c-primary">Kellas Andrei</div>
         </div>
 
@@ -1244,8 +1228,7 @@ const SidebarNavigation = ({
         </nav>
 
         {/* Bottom Area: borderless icon row + divider + theme pill */}
-        <div className={`sidebar-footer mt-auto space-y-3 pt-3 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-          }`}>
+        <div className={`sidebar-footer mt-auto space-y-3 pt-3 border-t border-[var(--sand-deep)]`}>
           <div className="flex items-center gap-2">
             <a
               href="https://github.com/kellasandyyyy1"
@@ -1297,15 +1280,14 @@ const SidebarNavigation = ({
             </button>
           </div>
 
-          <div className={`pt-3 border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1c1c1c]'}`}>
-            <ThemePill theme={theme} toggleTheme={toggleTheme} />
+          <div className={`pt-3 border-t border-[var(--sand-deep)]`}>
+            <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
           </div>
         </div>
       </aside>
 
       {/* Tablet Header (768px - 1023px) */}
-      <header className={`hidden md:flex lg:hidden w-full border-b px-6 py-3.5 items-center justify-between sticky top-0 z-50 transition-colors ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
-        }`}>
+      <header className={`hidden md:flex lg:hidden w-full border-b px-6 py-3.5 items-center justify-between sticky top-0 z-50 transition-colors bg-[var(--cream)] border-[var(--sand-deep)]`}>
         <div className="flex items-center gap-2.5">
           <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
         </div>
@@ -1319,8 +1301,8 @@ const SidebarNavigation = ({
               className={({ isActive }) => {
                 const active = isActive || (location.pathname === '/' && link.id === 'about');
                 return `t-label font-geist uppercase transition-colors ${active
-                  ? (theme === 'light' ? 'text-[#1a1a1a] font-medium' : 'text-white font-medium')
-                  : (theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white')
+                  ? ('text-[var(--ink)] font-medium')
+                  : ('text-[var(--ink-body)] hover:text-[var(--accent-ink)]')
                   }`;
               }}
             >
@@ -1335,46 +1317,30 @@ const SidebarNavigation = ({
             }}
             aria-pressed={soundMuted}
             aria-label={soundMuted ? 'Unmute interface sounds' : 'Mute interface sounds'}
-            className={`p-1.5 transition-colors cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
-              }`}
+            className={`p-1.5 transition-colors cursor-pointer text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
           >
             {soundMuted
               ? <SpeakerSlash weight="light" size={16} />
               : <SpeakerHigh weight="light" size={16} />}
           </button>
 
-          <button
-            onClick={toggleTheme}
-            className={`p-1.5 transition-colors cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
-              }`}
-          >
-            <ThemeToggleIcon theme={theme} size={16} />
-          </button>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
         </div>
       </header>
 
       {/* Mobile Top Bar (<768px) */}
-      <header className={`flex md:hidden w-full border-b px-4 py-3 items-center justify-between sticky top-0 z-50 transition-colors ${theme === 'light' ? 'bg-[#fafafa] border-[#ececec]' : 'bg-[#0b0b0d] border-[#1e1e1e]'
-        }`}>
+      <header className={`flex md:hidden w-full border-b px-4 py-3 items-center justify-between sticky top-0 z-50 transition-colors bg-[var(--cream)] border-[var(--sand-deep)]`}>
         <div className="flex items-center gap-2">
           <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleTheme}
-            className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#8a8a8a] hover:text-white'
-              }`}
-            aria-label="Toggle Theme"
-          >
-            <ThemeToggleIcon theme={theme} size={16} />
-          </button>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
           <button
             ref={menuButtonRef}
             onClick={() => setIsOpen(true)}
-            className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer ${theme === 'light' ? 'text-[#1a1a1a] hover:text-black' : 'text-white hover:text-zinc-300'
-              }`}
+            className={`p-2 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer text-[var(--ink)] hover:text-[var(--accent-ink)]`}
             aria-label="Open navigation menu"
             aria-expanded={isOpen}
             aria-controls="mobile-menu"
@@ -1452,7 +1418,7 @@ const ResourceCard = ({
   const hiddenItems = group.items.slice(2);
 
   const isLight = theme === 'light';
-  const dividerClass = isLight ? 'border-[#ececea]' : 'border-[#1c1c1a]';
+  const dividerClass = 'border-[var(--sand-deep)]';
   const itemsGridClass = wide
     ? 'grid grid-cols-1 md:grid-cols-2 gap-y-4 md:gap-x-8 md:gap-y-6'
     : 'flex flex-col gap-4';
@@ -1469,15 +1435,13 @@ const ResourceCard = ({
         href={resource.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`transition-colors inline-flex items-center gap-2 t-h3 font-sans w-fit max-w-full group cursor-pointer ${isLight ? 'text-[#1a1a1a] hover:text-black' : 'text-[#cccccc] hover:text-white'
-          }`}
+        className={`transition-colors inline-flex items-center gap-2 t-h3 font-sans w-fit max-w-full group cursor-pointer text-[var(--ink)] hover:text-[var(--accent-ink)]`}
       >
         <span className="truncate min-w-0">{resource.name}</span>
         <ArrowUpRight
           weight="light"
           size={14}
-          className={`shrink-0 transition-colors ${isLight ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
-            }`}
+          className={`shrink-0 transition-colors text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}
         />
       </a>
       <p className={`t-body font-sans break-words c-secondary`}>
@@ -1488,10 +1452,7 @@ const ResourceCard = ({
 
   return (
     <div
-      className={`group/card h-full flex flex-col rounded-[12px] p-4 md:p-5 transition-[box-shadow,background-color] duration-200 ${isLight
-        ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
-        : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
-        }`}
+      className={`group/card h-full flex flex-col rounded-[12px] p-4 md:p-5 transition-[box-shadow,background-color] duration-200 bg-[var(--sand)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]`}
     >
       <span className={`t-label font-mono uppercase block mb-4 md:mb-5 select-none c-tertiary`}>
         {group.category}
@@ -1517,8 +1478,7 @@ const ResourceCard = ({
             type="button"
             onClick={() => setIsExpanded((prev: boolean) => !prev)}
             aria-expanded={isExpanded}
-            className={`mt-auto pt-4 self-start t-mono font-mono px-0 bg-transparent border-none cursor-pointer transition-colors ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'
-              }`}
+            className={`mt-auto pt-4 self-start t-mono font-mono px-0 bg-transparent border-none cursor-pointer transition-colors text-[var(--ink-muted)] hover:text-[var(--accent-ink)]`}
           >
             {isExpanded ? '− show less' : `+ ${hiddenItems.length} more`}
           </button>
@@ -1549,12 +1509,8 @@ const ResourcesGrid = ({ theme }: { theme: 'dark' | 'light' }) => {
               onClick={() => setActiveFilter(filter)}
               aria-pressed={isActive}
               className={`rounded-full border-[0.5px] px-3 py-1.5 t-mono font-mono lowercase cursor-pointer transition-colors ${isActive
-                ? isLight
-                  ? 'border-[#1a1a1a] bg-[#1a1a1a] text-[#fafafa]'
-                  : 'border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]'
-                : isLight
-                  ? 'border-[#e6e6e3] bg-transparent text-[#8a8a8a] hover:border-[#c4c4c0] hover:text-[#1a1a1a]'
-                  : 'border-[#232320] bg-transparent text-[#777777] hover:border-[#3d3d38] hover:text-[#e0e0e0]'
+                ? 'chip-on border-[var(--accent-line)] bg-[var(--moss)] text-[var(--on-moss)]'
+                : 'border-[var(--sand-deep)] bg-transparent text-[var(--ink-muted)] hover:border-[var(--hover-border)] hover:text-[var(--accent-ink)]'
                 }`}
             >
               {filter}
@@ -1612,15 +1568,9 @@ const WorksViewToggle: React.FC<{
         aria-label={label}
         aria-pressed={active}
         className={`w-[26px] h-[26px] md:w-[32px] md:h-[32px] rounded-[5px] md:rounded-[6px] flex items-center justify-center transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-1 ${active
-          ? isLight
-            ? 'bg-[#1a1a1a] text-[#fafafa]'
-            : 'bg-[#f2f2ef] text-[#0b0b0d]'
-          : isLight
-            // Raised from the near-invisible original so the inactive state
-            // reads clearly against pure black / pure white.
-            ? 'bg-transparent text-[#8a8a8a] hover:text-[#1a1a1a]'
-            : 'bg-transparent text-[#8a8a86] hover:text-[#e5e5e5]'
-          } ${isLight ? 'focus-visible:ring-[#1a1a1a]' : 'focus-visible:ring-[#c9c9c4]'}`}
+          ? 'seg-on bg-[var(--moss)] text-[var(--on-moss)]'
+          : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--accent-ink)]'
+          } focus-visible:ring-[var(--sage)]`}
       >
         {icon}
       </button>
@@ -1640,8 +1590,7 @@ const WorksViewToggle: React.FC<{
       </span>
 
       <span
-        className={`inline-flex items-center gap-[2px] p-[3px] md:p-[4px] rounded-[8px] md:rounded-[9px] border-[0.5px] ${isLight ? 'border-[#e6e6e3]' : 'border-[#232320]'
-          }`}
+        className={`inline-flex items-center gap-[2px] p-[3px] md:p-[4px] rounded-[8px] md:rounded-[9px] border-[0.5px] border-[var(--sand-deep)]`}
       >
         {button('grid', 'Grid view', <LayoutGrid weight="light" size={16} className={iconClass} />)}
         {button('list', 'List view', <List weight="light" size={16} className={iconClass} />)}
@@ -1692,7 +1641,7 @@ const AllProjectsModal = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+        className="scrim fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
         onClick={onClose}
       >
         <motion.div
@@ -1701,23 +1650,17 @@ const AllProjectsModal = ({
           exit={{ opacity: 0, y: 8 }}
           // ease-out, no spring — the rest of the site never overshoots.
           transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          className={`w-full max-h-[85vh] max-w-4xl flex flex-col rounded-[10px] overflow-hidden border-[0.5px] ${theme === 'light'
-            ? 'bg-[#fafafa] border-[#e6e6e3] text-[#1a1a1a]'
-            : 'bg-[#0b0b0d] border-[#232320] text-[#e5e5e5]'
-            }`}
+          className={`w-full max-h-[85vh] max-w-4xl flex flex-col rounded-[10px] overflow-hidden border-[0.5px] bg-[var(--cream)] border-[var(--sand-deep)] text-[var(--ink)]`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* One header for every width, built like the site's section headers:
               muted mono eyebrow over a lowercase mono heading. */}
-          <div className={`px-4 md:px-6 py-3 md:py-4 flex items-start justify-between gap-3 shrink-0 border-b-[0.5px] ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <div className={`px-4 md:px-6 py-3 md:py-4 flex items-start justify-between gap-3 shrink-0 border-b-[0.5px] border-[var(--sand-deep)]`}>
             <div className="min-w-0">
-              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                }`}>
+              <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block text-[var(--ink-muted)]`}>
                 projects
               </span>
-              <h3 className={`text-[18px] md:text-[22px] font-geist font-normal leading-none tracking-normal mt-1 lowercase ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                }`}>
+              <h3 className={`text-[18px] md:text-[22px] font-geist font-normal leading-none tracking-normal mt-1 lowercase text-[var(--ink)]`}>
                 all projects
               </h3>
             </div>
@@ -1726,10 +1669,7 @@ const AllProjectsModal = ({
             <button
               onClick={onClose}
               aria-label="Close"
-              className={`w-[32px] h-[32px] rounded-[8px] border-[0.5px] flex items-center justify-center shrink-0 transition-colors duration-150 cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#8a8a85] hover:text-[#1a1a1a] hover:border-[#a0a0a0]'
-                : 'border-[#262626] text-[#8a8a85] hover:text-[#c9c9c4] hover:border-[#3a3a3a]'
-                }`}
+              className={`w-[32px] h-[32px] rounded-[8px] border-[0.5px] flex items-center justify-center shrink-0 transition-colors duration-150 cursor-pointer border-[var(--sand-deep)] text-[var(--ink-muted)] hover:text-[var(--accent-ink)] hover:border-[var(--hover-border)]`}
             >
               <X weight="light" size={14} />
             </button>
@@ -1745,31 +1685,25 @@ const AllProjectsModal = ({
                   onClose();
                 }}
                 className={`flex items-center justify-between gap-3 py-[10px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
-                  } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#181818]'}`}
+                  } border-[var(--sand-deep)]`}
               >
                 <span className="flex items-center gap-[10px] min-w-0">
-                  <span className={`w-[18px] shrink-0 text-[9px] font-mono ${theme === 'light' ? 'text-[#c4c4c0]' : 'text-[#333333]'
-                    }`}>
+                  <span className={`w-[18px] shrink-0 text-[9px] font-mono text-[var(--arrow-ink)]`}>
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className={`text-[12px] font-mono truncate transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#777777] group-hover:text-[#bbbbbb]'
-                    }`}>
+                  <span className={`text-[12px] font-mono truncate transition-colors text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}>
                     {project.title}
                   </span>
                 </span>
 
                 <span className="shrink-0 flex items-center gap-2">
-                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
-                    ? 'border-[#ececec] text-[#a0a0a0]'
-                    : 'border-[#1e1e1e] text-[#5a5a57]'
-                    }`}>
+                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
                     {project.tags?.[0]?.toLowerCase() || 'web'}
                   </span>
                   <ArrowUpRight
                     weight="light"
                     size={10}
-                    className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
-                      }`}
+                    className={`shrink-0 transition-colors text-[var(--arrow-ink)] group-hover:text-[var(--ink-body)]`}
                   />
                 </span>
               </div>
@@ -1788,13 +1722,9 @@ const AllProjectsModal = ({
                     onSelectProject(project);
                     onClose();
                   }}
-                  className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 ${theme === 'light'
-                    ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
-                    : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
-                    }`}
+                  className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 bg-[var(--sand)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]`}
                 >
-                  <div className={`aspect-[16/10] w-full overflow-hidden flex items-center justify-center ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'
-                    }`}>
+                  <div className={`aspect-[16/10] w-full overflow-hidden flex items-center justify-center bg-[var(--sand)]`}>
                     {project.image ? (
                       <img
                         src={project.image}
@@ -1804,20 +1734,15 @@ const AllProjectsModal = ({
                       />
                     ) : (
                       // Flat block, not a gradient — matches the works grid.
-                      <div className={`w-1/2 h-1/2 rounded-[4px] ${theme === 'light' ? 'bg-[#e8e8e8]' : 'bg-[#1c1c1c]'
-                        }`} />
+                      <div className={`w-1/2 h-1/2 rounded-[4px] bg-[var(--sand)]`} />
                     )}
                   </div>
 
                   <div className="px-[9px] py-[8px] flex flex-col gap-1.5 min-w-0">
-                    <div className={`text-[11px] font-mono truncate ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#e5e5e5]'
-                      }`}>
+                    <div className={`text-[11px] font-mono truncate text-[var(--ink-body)]`}>
                       {project.title}
                     </div>
-                    <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate ${theme === 'light'
-                      ? 'border-[#ececec] text-[#a0a0a0]'
-                      : 'border-[#1e1e1e] text-[#5a5a57]'
-                      }`}>
+                    <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
                       {project.tags?.[0]?.toLowerCase() || 'web'}
                     </span>
                   </div>
@@ -1923,7 +1848,7 @@ const ProjectModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={panelTransition}
-          className="absolute inset-0 bg-black/55 backdrop-blur-[2px] cursor-pointer"
+          className="scrim absolute inset-0 bg-black/55 backdrop-blur-[2px] cursor-pointer"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -1940,10 +1865,7 @@ const ProjectModal = ({
           className={`fixed z-[101] flex flex-col p-6 shadow-2xl transition-colors ${isMobile
             ? 'inset-x-0 bottom-0 top-auto w-full max-h-[85vh] rounded-t-xl rounded-b-none border-t border-[#262626]'
             : 'top-0 bottom-0 right-0 h-full rounded-none border-l border-[#262626] w-[clamp(320px,60vw,400px)] lg:w-[340px]'
-            } ${theme === 'light'
-              ? 'bg-[#ffffff] border-[#e0e0e0] text-[#1a1a1a]'
-              : 'bg-[#111113] border-[#262626] text-white'
-            }`}
+            } bg-[var(--cream)] border-[var(--sand-deep)] text-[var(--ink)]`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Mobile Drag Handle Bar */}
@@ -1955,19 +1877,13 @@ const ProjectModal = ({
 
           {/* 1. Header Row */}
           <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
-            <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] tracking-wider uppercase font-medium ${theme === 'light'
-              ? 'bg-[#f0f0f0] text-[#5a5a5a] border border-[#e0e0e0]'
-              : 'bg-[#1e1e1e] text-[#ccc] border border-[#2a2a2a]'
-              }`}>
+            <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] tracking-wider uppercase font-medium bg-[var(--sand)] text-[var(--ink-body)] border border-[var(--sand-deep)]`}>
               PREVIEW
             </span>
             <button
               ref={closeButtonRef}
               onClick={onClose}
-              className={`w-[26px] h-[26px] rounded-full border flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] text-[#5a5a5a] hover:text-[#1a1a1a] hover:border-[#1a1a1a]'
-                : 'border-[#2a2a2a] text-[#8a8a8a] hover:text-white hover:border-[#404040]'
-                }`}
+              className={`w-[26px] h-[26px] rounded-full border flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-white pm-focus focus-visible:outline-none cursor-pointer border-[var(--sand-deep)] text-[var(--ink-body)] hover:text-[var(--accent-ink)] hover:border-[var(--accent-line)]`}
               aria-label="Close preview"
             >
               <X size={14} />
@@ -1975,16 +1891,15 @@ const ProjectModal = ({
           </div>
 
           {/* 2. Project Title */}
-          <h3 className={`text-[19px] font-sans font-medium leading-tight mb-4 shrink-0 truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-white'
-            }`}>
+          <h3 className={`text-[19px] font-sans font-medium leading-tight mb-4 shrink-0 truncate text-[var(--ink)]`}>
             {project.title}
           </h3>
 
           {/* Middle Scrollable Content (Image, Description, Tags) */}
           <div className="flex-1 overflow-y-auto space-y-4 pr-0.5 min-h-0 custom-scrollbar">
             {/* 3. Image/Screenshot Area */}
-            <div className={`relative w-full rounded-lg overflow-hidden border flex items-center justify-center bg-black/40 shrink-0 ${isMobile ? 'h-[120px]' : 'h-[150px]'
-              } ${theme === 'light' ? 'border-[#e0e0e0]' : 'border-[#2a2a2a]'}`}>
+            <div className={`pm-media relative w-full rounded-lg overflow-hidden border flex items-center justify-center bg-black/40 shrink-0 ${isMobile ? 'h-[120px]' : 'h-[150px]'
+              } border-[var(--sand-deep)]`}>
               {currentScreenshot.url ? (
                 <img
                   src={currentScreenshot.url}
@@ -1992,13 +1907,12 @@ const ProjectModal = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className={`w-full h-full ${theme === 'light' ? 'bg-zinc-200' : 'bg-zinc-900'
-                  }`} />
+                <div className={`w-full h-full bg-[var(--sand-deep)]`} />
               )}
 
               {/* Counter Badge ("1 / 4") */}
               {screenshots.length > 0 && (
-                <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm border border-white/10 text-white font-mono text-[9px] tracking-wider uppercase font-medium select-none pointer-events-none">
+                <div className="pm-chip absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm border border-white/10 text-white font-mono text-[9px] tracking-wider uppercase font-medium select-none pointer-events-none">
                   {activeIndex + 1} / {screenshots.length}
                 </div>
               )}
@@ -2011,7 +1925,7 @@ const ProjectModal = ({
                       e.stopPropagation();
                       setActiveIndex((prev) => (prev - 1 + screenshots.length) % screenshots.length);
                     }}
-                    className="absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all opacity-80 hover:opacity-100 cursor-pointer"
+                    className="pm-arrow absolute left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all opacity-80 hover:opacity-100 cursor-pointer"
                     aria-label="Previous screenshot"
                   >
                     <ChevronLeft size={12} />
@@ -2021,7 +1935,7 @@ const ProjectModal = ({
                       e.stopPropagation();
                       setActiveIndex((prev) => (prev + 1) % screenshots.length);
                     }}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all opacity-80 hover:opacity-100 cursor-pointer"
+                    className="pm-arrow absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center border border-white/10 transition-all opacity-80 hover:opacity-100 cursor-pointer"
                     aria-label="Next screenshot"
                   >
                     <ChevronRight size={12} />
@@ -2031,8 +1945,7 @@ const ProjectModal = ({
             </div>
 
             {/* 4. Description */}
-            <p className={`text-[12px] font-sans leading-[1.6] ${theme === 'light' ? 'text-[#5a5a5a]' : 'text-[#9a9a9a]'
-              }`}>
+            <p className={`text-[12px] font-sans leading-[1.6] text-[var(--ink-body)]`}>
               {project.description || "An intuitive web application showcasing clean modular architecture, interactive interfaces, and modern design standards."}
             </p>
           </div>
@@ -2041,10 +1954,7 @@ const ProjectModal = ({
           <div className="mt-auto pt-4 shrink-0 flex items-center gap-2.5 w-full">
             <button
               onClick={onClose}
-              className={`flex-1 py-2.5 rounded-lg border text-[12px] font-mono uppercase tracking-[0.5px] font-medium transition-all text-center focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none cursor-pointer ${theme === 'light'
-                ? 'border-[#e0e0e0] bg-transparent text-[#5a5a5a] hover:text-[#1a1a1a] hover:border-[#1a1a1a]'
-                : 'border-[#2a2a2a] bg-transparent text-[#cccccc] hover:text-white hover:border-[#404040]'
-                }`}
+              className={`flex-1 py-2.5 rounded-lg border text-[12px] font-mono uppercase tracking-[0.5px] font-medium transition-all text-center focus-visible:ring-2 focus-visible:ring-white pm-focus focus-visible:outline-none cursor-pointer btn2 border-[var(--sand-deep)] bg-transparent text-[var(--ink-body)] hover:text-[var(--accent-ink)] hover:border-[var(--accent-line)]`}
             >
               back
             </button>
@@ -2054,10 +1964,7 @@ const ProjectModal = ({
                 href={formatUrl(project.link)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex-1 py-2.5 rounded-lg text-[12px] font-mono uppercase tracking-[0.5px] font-medium transition-all text-center flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none cursor-pointer ${theme === 'light'
-                  ? 'bg-[#1a1a1a] text-white hover:bg-black'
-                  : 'bg-[#ffffff] text-black hover:bg-zinc-200'
-                  }`}
+                className={`flex-1 py-2.5 rounded-lg text-[12px] font-mono uppercase tracking-[0.5px] font-medium transition-all text-center flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-white pm-focus focus-visible:outline-none cursor-pointer bg-[var(--moss)] text-[var(--on-moss)] hover:bg-[var(--moss-hover)]`}
               >
                 <span>launch</span>
                 <ArrowUpRight size={14} />
@@ -2065,7 +1972,7 @@ const ProjectModal = ({
             ) : (
               <button
                 disabled
-                className="flex-1 py-2.5 rounded-lg text-[12px] font-mono uppercase tracking-[0.5px] font-medium bg-[#222225] text-[#666666] border border-[#2a2a2a] cursor-not-allowed text-center"
+                className="flex-1 py-2.5 rounded-lg text-[12px] font-mono uppercase tracking-[0.5px] font-medium pm-disabled bg-[#222225] text-[#666666] border border-[#2a2a2a] cursor-not-allowed text-center"
               >
                 soon
               </button>
@@ -2112,7 +2019,7 @@ const ResumeModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-10 bg-black/90 backdrop-blur-md"
+        className="scrim fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-10 bg-black/90 backdrop-blur-md"
         onClick={onClose}
       >
         <motion.div
@@ -2120,15 +2027,11 @@ const ResumeModal = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className={`w-full h-full sm:h-auto sm:max-h-[90vh] max-w-3xl flex flex-col sm:rounded-3xl overflow-hidden border-0 sm:border shadow-2xl no-print-hide ${theme === 'light'
-            ? 'bg-white sm:border-zinc-200 text-black'
-            : 'bg-[#0a0a0c] sm:border-zinc-800 text-white'
-            }`}
+          className={`w-full h-full sm:h-auto sm:max-h-[90vh] max-w-3xl flex flex-col sm:rounded-3xl overflow-hidden border-0 sm:border shadow-2xl no-print-hide bg-[var(--sand)] sm:border-[var(--sand-deep)] text-[var(--ink)]`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className={`p-3 sm:p-5 md:p-6 flex items-center justify-between border-b shrink-0 print-hide ${theme === 'light' ? 'border-zinc-200 bg-zinc-50/50' : 'border-zinc-800/80 bg-zinc-900/40'
-            }`}>
+          <div className={`p-3 sm:p-5 md:p-6 flex items-center justify-between border-b shrink-0 print-hide border-[var(--sand-deep)] bg-[var(--sand)]`}>
             <div className="flex items-center gap-3">
               <FileText size={20} className="opacity-60" />
               <h3 className="text-lg sm:text-xl font-black tracking-tighter uppercase">Resume</h3>
@@ -2136,10 +2039,7 @@ const ResumeModal = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all border ${theme === 'light'
-                  ? 'border-zinc-300 hover:bg-zinc-100 text-zinc-700'
-                  : 'border-zinc-700 hover:bg-zinc-800 text-zinc-300'
-                  }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all border border-[var(--sand-deep)] hover:bg-[var(--hover-fill)] text-[var(--accent-ink)]`}
                 title="Print or save as PDF"
               >
                 <Printer size={14} />
@@ -2147,10 +2047,7 @@ const ResumeModal = ({
               </button>
               <button
                 onClick={onClose}
-                className={`p-2 rounded-full border transition-all shrink-0 print-hide ${theme === 'light'
-                  ? 'border-zinc-300 hover:bg-zinc-200 text-zinc-700'
-                  : 'border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white'
-                  }`}
+                className={`p-2 rounded-full border transition-all shrink-0 print-hide border-[var(--sand-deep)] hover:bg-[var(--hover-fill)] text-[var(--accent-ink)]`}
                 title="Close"
               >
                 <X size={18} />
@@ -2162,7 +2059,7 @@ const ResumeModal = ({
           <div id="resume-content" className="p-4 sm:p-8 md:p-10 overflow-y-auto flex-1 min-h-0">
             <div className="max-w-2xl mx-auto space-y-8 resume-printable">
               {/* Name & Title */}
-              <div className="text-center border-b pb-6" style={{ borderColor: theme === 'light' ? '#e4e4e7' : '#27272a' }}>
+              <div className="text-center border-b pb-6" style={{ borderColor: 'var(--sand-deep)' }}>
                 <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase mb-2">Kellas Andrei</h1>
                 <p className="text-sm uppercase tracking-[0.3em] font-bold opacity-60 mb-3">Frontend Developer</p>
                 <div className="flex flex-wrap justify-center gap-4 text-xs opacity-70">
@@ -2188,8 +2085,7 @@ const ResumeModal = ({
                   {SKILLS.map((skill) => (
                     <span
                       key={skill}
-                      className={`px-3 py-1.5 text-[11px] font-bold tracking-wide rounded-lg border ${theme === 'light' ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-800 bg-zinc-900/50'
-                        }`}
+                      className={`px-3 py-1.5 text-[11px] font-bold tracking-wide rounded-lg border border-[var(--sand-deep)] bg-[var(--sand)]`}
                     >
                       {skill}
                     </span>
@@ -2202,7 +2098,7 @@ const ResumeModal = ({
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-3 opacity-60">Selected Projects</h2>
                 <div className="space-y-4">
                   {PROJECTS.map((project) => (
-                    <div key={project.id} className={`p-4 rounded-xl border ${theme === 'light' ? 'border-zinc-200 bg-zinc-50/50' : 'border-zinc-800 bg-zinc-900/30'}`}>
+                    <div key={project.id} className={`p-4 rounded-xl border border-[var(--sand-deep)] bg-[var(--sand)]`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-bold text-sm uppercase tracking-tight mb-1">{project.title}</h3>
@@ -2229,7 +2125,7 @@ const ResumeModal = ({
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-3 opacity-60">Services</h2>
                 <div className="grid sm:grid-cols-3 gap-3">
                   {SERVICES.map((service) => (
-                    <div key={service.title} className={`p-4 rounded-xl border ${theme === 'light' ? 'border-zinc-200 bg-zinc-50/50' : 'border-zinc-800 bg-zinc-900/30'}`}>
+                    <div key={service.title} className={`p-4 rounded-xl border border-[var(--sand-deep)] bg-[var(--sand)]`}>
                       <h3 className="font-bold text-xs uppercase tracking-tight mb-1">{service.title}</h3>
                       <p className="text-[11px] opacity-60 leading-relaxed">{service.description}</p>
                     </div>
@@ -2240,7 +2136,7 @@ const ResumeModal = ({
               {/* Education / Info */}
               <div>
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-3 opacity-60">Education</h2>
-                <div className={`p-4 rounded-xl border ${theme === 'light' ? 'border-zinc-200 bg-zinc-50/50' : 'border-zinc-800 bg-zinc-900/30'}`}>
+                <div className={`p-4 rounded-xl border border-[var(--sand-deep)] bg-[var(--sand)]`}>
                   <h3 className="font-bold text-sm uppercase tracking-tight">Information Technology</h3>
                   <p className="text-xs opacity-60 mt-1">Specialization in Web Development & UI/UX Design</p>
                 </div>
@@ -2289,7 +2185,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        className="scrim fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
@@ -2298,16 +2194,16 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           exit={{ scale: 0.96, opacity: 0, y: 10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-[420px] bg-[#0a0a0a] border border-[#2a2a2a] rounded-[2px] overflow-hidden shadow-none font-sans text-white select-none"
+          className="bc-panel w-full max-w-[420px] bg-[#0a0a0a] border border-[#2a2a2a] rounded-[2px] overflow-hidden shadow-none font-sans text-white select-none"
         >
           {/* Header Row */}
-          <div className="px-5 py-4 flex items-center justify-between border-b border-[#2a2a2a]">
-            <div className="text-[11px] font-sans font-medium uppercase tracking-[1.5px] text-white">
+          <div className="bc-rule px-5 py-4 flex items-center justify-between border-b border-[#2a2a2a]">
+            <div className="bc-title text-[11px] font-sans font-medium uppercase tracking-[1.5px] text-white">
               &nbsp;BOOK A CALL WITH ME
             </div>
             <button
               onClick={onClose}
-              className="text-[#888888] hover:text-white transition-colors cursor-pointer p-1 -mr-1"
+              className="bc-close text-[#888888] hover:text-white transition-colors cursor-pointer p-1 -mr-1"
               title="Close"
             >
               <X size={16} />
@@ -2320,7 +2216,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
               <form onSubmit={handleBookWithGoogle} className="space-y-4">
                 {/* Date Field */}
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                     SELECT DATE
                   </label>
                   <input
@@ -2329,13 +2225,13 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                     min={getTodayString()}
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-[#0a0a0a] text-white border border-[#2a2a2a] rounded-[2px] px-3 py-2 text-[13px] font-sans outline-none focus:border-white transition-colors cursor-pointer [color-scheme:dark]"
+                    className="bc-input w-full bg-[#0a0a0a] text-white border border-[#2a2a2a] rounded-[2px] px-3 py-2 text-[13px] font-sans outline-none focus:border-white transition-colors cursor-pointer [color-scheme:dark]"
                   />
                 </div>
 
                 {/* Time Slot Row */}
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                     TIME SLOT (EST)
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -2346,7 +2242,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                           key={time}
                           type="button"
                           onClick={() => setSelectedTime(time)}
-                          className={`px-3 py-1.5 text-[12px] font-sans tracking-[0.5px] rounded-[2px] transition-colors border cursor-pointer ${isSelected
+                          className={`bc-slot ${isSelected ? 'is-on' : ''} px-3 py-1.5 text-[12px] font-sans tracking-[0.5px] rounded-[2px] transition-colors border cursor-pointer ${isSelected
                             ? 'bg-white text-black border-white font-medium'
                             : 'bg-[#0a0a0a] text-[#888888] border-[#2a2a2a] hover:text-white hover:border-[#404040]'
                             }`}
@@ -2361,7 +2257,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 {/* Name & Email Fields (Two-Column Layout, Underline Style) */}
                 <div className="grid grid-cols-2 gap-3.5 pt-1">
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                    <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                       NAME
                     </label>
                     <input
@@ -2370,11 +2266,11 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                       placeholder="alex rivera"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
+                      className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                    <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                       EMAIL
                     </label>
                     <input
@@ -2383,21 +2279,21 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                       placeholder="alex@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
+                      className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
                     />
                   </div>
                 </div>
 
                 {/* Topic Field */}
                 <div className="space-y-1 pt-1">
-                  <label className="block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                     TOPIC
                   </label>
                   <input
                     type="text"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    className="w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
+                    className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
                   />
                 </div>
 
@@ -2405,7 +2301,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 <div className="pt-3">
                   <button
                     type="submit"
-                    className="w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2.5 px-4 font-sans text-[13px] font-medium lowercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    className="bc-primary w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2.5 px-4 font-sans text-[13px] font-medium lowercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>confirm booking</span>
                     <ArrowRight size={14} />
@@ -2414,18 +2310,18 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
               </form>
             ) : (
               <div className="py-4 text-center space-y-4 font-sans">
-                <div className="w-10 h-10 rounded-[2px] border border-[#2a2a2a] bg-[#0a0a0a] text-white flex items-center justify-center mx-auto">
+                <div className="bc-done w-10 h-10 rounded-[2px] border border-[#2a2a2a] bg-[#0a0a0a] text-white flex items-center justify-center mx-auto">
                   <CheckCircle2 size={18} />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
+                  <div className="bc-label text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
                     INVITE READY
                   </div>
-                  <h4 className="text-[14px] font-sans font-medium text-white">
+                  <h4 className="bc-heading text-[14px] font-sans font-medium text-white">
                     call scheduled
                   </h4>
-                  <p className="text-[12px] text-[#888888] leading-relaxed max-w-xs mx-auto">
-                    Google Calendar invite created for <span className="text-white">{selectedDate}</span> at <span className="text-white">{selectedTime}</span>.
+                  <p className="bc-muted text-[12px] text-[#888888] leading-relaxed max-w-xs mx-auto">
+                    Google Calendar invite created for <span className="bc-strong text-white">{selectedDate}</span> at <span className="bc-strong text-white">{selectedTime}</span>.
                   </p>
                 </div>
                 <div className="pt-2">
@@ -2434,7 +2330,7 @@ const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                       setIsScheduled(false);
                       onClose();
                     }}
-                    className="w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2 px-4 font-sans text-[12px] font-medium lowercase tracking-[0.05em] transition-colors cursor-pointer"
+                    className="bc-primary w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2 px-4 font-sans text-[12px] font-medium lowercase tracking-[0.05em] transition-colors cursor-pointer"
                   >
                     close
                   </button>
@@ -2479,14 +2375,10 @@ const TypewriterIntro = ({ theme }: { theme: 'dark' | 'light' }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.9 }}
       onClick={handleBoxClick}
-      className={`border backdrop-blur-md rounded-xl p-3 sm:p-4 relative overflow-hidden group transition-all shadow-xl cursor-pointer ${theme === 'light'
-        ? 'bg-white/90 border-zinc-200 hover:border-zinc-300 shadow-zinc-200/50'
-        : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 shadow-black/40'
-        }`}
+      className={`border backdrop-blur-md rounded-xl p-3 sm:p-4 relative overflow-hidden group transition-all shadow-xl cursor-pointer bg-[var(--sand)] border-[var(--sand-deep)] hover:border-[var(--hover-border)] shadow-[var(--shadow-warm)]`}
     >
       {/* Typing Effect Content */}
-      <div className={`font-mono text-[11px] sm:text-xs md:text-[13px] leading-relaxed min-h-[85px] sm:min-h-[75px] ${theme === 'light' ? 'text-zinc-700' : 'text-zinc-300'
-        }`}>
+      <div className={`font-mono text-[11px] sm:text-xs md:text-[13px] leading-relaxed min-h-[85px] sm:min-h-[75px] text-[var(--ink-body)]`}>
         <span className="text-cyan-400 font-bold select-none mr-1.5">&gt;</span>
         <span>{displayedText}</span>
         <span className="inline-block w-1.5 sm:w-2 h-3.5 sm:h-4 bg-cyan-400 ml-1 align-middle animate-pulse shadow-[0_0_8px_#00f0ff]" />
@@ -2505,20 +2397,16 @@ interface ProcessNode {
 }
 
 const PROCESS_NODES: ProcessNode[] = [
-  { hash: "9f2c1ab", name: "understand", desc: "read the problem first", color: "#c084fc", verb: "understanding" },
-  { hash: "4d7e05f", name: "plan", desc: "sketch the approach", color: "#2dd4bf", verb: "planning" },
-  { hash: "b18a3c6", name: "build", desc: "write the code", color: "#60a5fa", verb: "building" },
-  { hash: "6c0f92d", name: "test", desc: "check it actually works", color: "#fbbf24", verb: "testing" },
-  { hash: "e35b7a4", name: "refine", desc: "clean it up", color: "#f472b6", verb: "refining" },
-  { hash: "a07d4e1", name: "done", desc: "five steps, no shortcuts", color: "#22c55e", verb: "done" },
+  { hash: "9f2c1ab", name: "understand", desc: "read the problem first", color: "var(--step-a)", verb: "understanding" },
+  { hash: "4d7e05f", name: "plan", desc: "sketch the approach", color: "var(--step-a)", verb: "planning" },
+  { hash: "b18a3c6", name: "build", desc: "write the code", color: "var(--step-b)", verb: "building" },
+  { hash: "6c0f92d", name: "test", desc: "check it actually works", color: "var(--step-a)", verb: "testing" },
+  { hash: "e35b7a4", name: "refine", desc: "clean it up", color: "var(--step-a)", verb: "refining" },
+  { hash: "a07d4e1", name: "done", desc: "five steps, no shortcuts", color: "var(--step-b)", verb: "done" },
 ];
 
-/**
- * Accent the mascot adopts per step. The final step uses the brighter green that
- * matches the checkmark, rather than the node ring's own #22c55e.
- */
-const mascotAccent = (index: number) =>
-  index === PROCESS_NODES.length - 1 ? '#4ade80' : PROCESS_NODES[index].color;
+/** The mascot's label stays moss on every step so it always reads. */
+const MASCOT_ACCENT = 'var(--accent-ink)';
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -2577,8 +2465,9 @@ const GitLogNode: React.FC<{
   // not scroll position, so the default "plan" step holds until someone engages.
   const activate = () => onActivate(index);
 
-  const railColor = isLight ? '#dcdcd8' : '#2a2a26';
-  const restingBorder = isLight ? '#e6e6e3' : '#232320';
+  const railColor = 'var(--sand-deep)';
+  const nodeColor = node.color;
+  const restingBorder = 'var(--sand-deep)';
 
   // line (0ms) -> circle (150ms) -> text (650ms, i.e. 200ms after the circle settles)
   const lineTransition = reduced ? 'none' : 'transform 400ms ease-out';
@@ -2598,7 +2487,7 @@ const GitLogNode: React.FC<{
       onMouseEnter={activate}
       onFocus={activate}
       onClick={activate}
-      className={`relative flex cursor-pointer rounded-sm outline-none focus-visible:outline-1 focus-visible:outline-dashed focus-visible:outline-offset-4 ${isLight ? 'focus-visible:outline-[#a0a0a0]' : 'focus-visible:outline-[#44444a]'} ${isLast ? '' : 'pb-[1.125rem] md:pb-[1.375rem]'}`}
+      className={`relative flex cursor-pointer rounded-sm outline-none focus-visible:outline-1 focus-visible:outline-dashed focus-visible:outline-offset-4 focus-visible:outline-[var(--sage)] ${isLast ? '' : 'pb-[1.125rem] md:pb-[1.375rem]'}`}
     >
       {/* Branch rail: line draws downward through the node */}
       <div className="relative shrink-0 flex justify-center" style={{ width: 'var(--rail)' }}>
@@ -2623,8 +2512,8 @@ const GitLogNode: React.FC<{
             transform: `translateY(-50%) scale(${isActive ? 1.15 : 1})`,
             borderWidth: '1.5px',
             borderStyle: 'solid',
-            borderColor: revealed ? node.color : restingBorder,
-            backgroundColor: isLast && revealed ? node.color : 'transparent',
+            borderColor: revealed ? nodeColor : restingBorder,
+            backgroundColor: isLast && revealed ? nodeColor : 'transparent',
             transition: circleTransition,
           }}
         >
@@ -2635,14 +2524,14 @@ const GitLogNode: React.FC<{
                 <span
                   aria-hidden="true"
                   className="git-node-pulse absolute inset-0 rounded-full"
-                  style={{ border: `1.5px solid ${node.color}` }}
+                  style={{ border: `1.5px solid ${nodeColor}` }}
                 />
               )}
               <Check
                 weight="bold"
                 size={9}
                 style={{
-                  color: isLight ? '#ffffff' : '#0b0b0d',
+                  color: 'var(--on-moss)',
                   opacity: revealed ? 1 : 0,
                   transition: reduced ? 'none' : 'opacity 300ms ease-out 150ms',
                 }}
@@ -2675,7 +2564,7 @@ const GitLogNode: React.FC<{
           {isLast && (
             <span
               className="t-label font-mono whitespace-nowrap"
-              style={{ color: node.color }}
+              style={{ color: nodeColor }}
             >
               HEAD → main
             </span>
@@ -2732,7 +2621,7 @@ const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
       <div className="w-full max-w-[240px] mx-auto mb-7 md:mb-0 md:order-2 md:flex-none md:mr-0 md:ml-auto md:w-[300px] md:max-w-[320px] md:self-center flex flex-col items-center">
         <VisorOrbMascot
           step={activeIndex}
-          accent={mascotAccent(activeIndex)}
+          accent={MASCOT_ACCENT}
           activity={logActivity}
           theme={theme}
         />
@@ -2765,110 +2654,131 @@ const HowIThinkSection = ({ theme }: { theme: 'dark' | 'light' }) => {
   );
 };
 
-// --- 01 / My Approach pipeline ---
+// --- My Approach: system diagram ---
+
+type LayerId = 'ui' | 'frontend' | 'api';
 
 interface ApproachStage {
-  id: string;
-  label: string;
-  sub: string;
-  color: string;
+  id: LayerId;
+  tag: string;
   detailLabel: string;
   detailDesc: string;
 }
 
+/** Top to bottom, the same order a request travels through the diagram. */
 const APPROACH_STAGES: ApproachStage[] = [
   {
     id: 'ui',
-    label: 'UI / interaction',
-    sub: 'design systems',
-    color: '#f472b6',
+    tag: 'interface',
     detailLabel: 'ui and interaction design',
     detailDesc: 'design systems, micro-interactions, intuitive interfaces',
   },
   {
-    id: 'api',
-    label: 'API / backend',
-    sub: 'node, rest, db',
-    color: '#2dd4bf',
-    detailLabel: 'api and backend design',
-    detailDesc: 'rest apis, node.js microservices, cloud db integrations',
-  },
-  {
     id: 'frontend',
-    label: 'Frontend',
-    sub: 'react, state',
-    color: '#60a5fa',
+    tag: 'client',
     detailLabel: 'frontend architecture',
     detailDesc: 'scalable react apps, state management, responsive performance',
+  },
+  {
+    id: 'api',
+    tag: 'server',
+    detailLabel: 'api and backend design',
+    detailDesc: 'rest apis, node.js microservices, cloud db integrations',
   },
 ];
 
 /**
- * Layer stack, bottom to top — the order mirrors the real dependency chain:
- * backend underpins everything, UI sits above it, frontend renders on top.
- * Colours are the section's existing stage colours so the left-column dots and
- * the layer borders stay in step.
+ * Line-art map of one product, interface → client → server. Each band is a
+ * real layer: the page someone touches, the component tree that renders it,
+ * and the API + database behind it. Dots travel the connectors to show requests
+ * going down and responses coming back. Decorative; the list carries the text.
  */
-const ISO_LAYERS = [
-  { id: 'api', label: 'api / backend', color: '#2dd4bf', zRest: 0, zOut: 0, zStatic: 0, delay: 0 },
-  { id: 'ui', label: 'ui / interaction', color: '#f472b6', zRest: 12, zOut: 54, zStatic: 24, delay: 100 },
-  { id: 'frontend', label: 'frontend', color: '#60a5fa', zRest: 24, zOut: 108, zStatic: 48, delay: 200 },
-];
-
-/** Left-column reading order, which is not the stack order. */
-const STAGE_LIST_ORDER = ['frontend', 'api', 'ui'] as const;
-
-/** Stage colour at an arbitrary alpha. currentColor can't carry one, and the
- *  hologram shading needs the same hue at several strengths. */
-const stageRgba = (hex: string, alpha: number) => {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-};
-
-const IsoLayerStack: React.FC<{ reduced: boolean; play: boolean }> = ({ reduced, play }) => {
-  // Bumping this remounts the stack, which is what restarts the CSS animation.
-  const [playToken, setPlayToken] = useState(0);
-
-  useEffect(() => {
-    if (play && !reduced) setPlayToken((n) => n + 1);
-  }, [play, reduced]);
+const SystemDiagram: React.FC<{ active: LayerId | null; reduced: boolean }> = ({ active, reduced }) => {
+  const zone = (id: LayerId) =>
+    `ad-zone${active && active !== id ? ' is-dim' : ''}${active === id ? ' is-on' : ''}`;
 
   return (
-    // Decorative: every stage name and its order is real text in the left column.
-    <div
-      className="iso-stage"
-      aria-hidden="true"
-      onMouseEnter={() => {
-        if (!reduced) setPlayToken((n) => n + 1);
-      }}
-    >
-      <div
-        key={playToken}
-        className={`iso-stack ${playToken > 0 && !reduced ? 'is-playing' : ''}`}
-      >
-        {ISO_LAYERS.map((layer, i) => (
-          <div
-            key={layer.id}
-            className="iso-layer"
-            style={{
-              color: layer.color,
-              '--c-lit': stageRgba(layer.color, 0.26),
-              '--c-mid': stageRgba(layer.color, 0.1),
-              '--c-edge': stageRgba(layer.color, 0.72),
-              '--c-seam': stageRgba(layer.color, 0.42),
-              '--c-glow': stageRgba(layer.color, 0.55),
-              zIndex: i,
-              '--z-rest': `${layer.zRest}px`,
-              '--z-out': `${layer.zOut}px`,
-              '--z-static': `${layer.zStatic}px`,
-              '--delay': `${layer.delay}ms`,
-            } as React.CSSProperties}
-          >
-            <span className="iso-label font-mono">{layer.label}</span>
-          </div>
+    <svg className="ad" viewBox="0 0 360 400" aria-hidden="true">
+      {/* Connectors sit beneath the bands so they read as passing between them. */}
+      <path id="ad-wire-1" className="ad-wire" d="M180 112 V156" />
+      <path id="ad-wire-2" className="ad-wire" d="M180 228 V292" />
+      <text className="ad-note" x="190" y="138">render · events</text>
+      <text className="ad-note" x="190" y="262">fetch · json</text>
+      {!reduced && (
+        <>
+          <circle className="ad-packet" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.45;1" calcMode="linear">
+              <mpath href="#ad-wire-1" />
+            </animateMotion>
+          </circle>
+          <circle className="ad-packet" r="2.5" visibility="hidden">
+            <set attributeName="visibility" to="visible" begin="0.9s" />
+            <animateMotion dur="2.6s" begin="0.9s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.4;0.8" calcMode="linear">
+              <mpath href="#ad-wire-2" />
+            </animateMotion>
+          </circle>
+        </>
+      )}
+
+      {/* Interface: the page itself */}
+      <g className={zone('ui')}>
+        <rect className="ad-frame" x="4" y="4" width="352" height="120" rx="12" />
+        <text className="ad-tag" x="18" y="22">interface</text>
+        <rect className="ad-shape ad-fill" x="90" y="28" width="180" height="84" rx="7" />
+        <path className="ad-shape" d="M90 42 H270" />
+        <circle className="ad-dot" cx="100" cy="35" r="2" />
+        <circle className="ad-dot" cx="107" cy="35" r="2" />
+        <circle className="ad-dot" cx="114" cy="35" r="2" />
+        <rect className="ad-solid" x="104" y="52" width="66" height="6" rx="3" />
+        <rect className="ad-soft" x="104" y="64" width="78" height="3.5" rx="1.75" />
+        <rect className="ad-soft" x="104" y="71" width="58" height="3.5" rx="1.75" />
+        <rect className="ad-shape" x="104" y="84" width="46" height="16" rx="4" />
+        <rect className="ad-soft" x="112" y="90.5" width="30" height="3" rx="1.5" />
+        <path className="ad-cursor" d="M140 93 l0 11 l3 -3 l2.4 4.6 l1.8 -0.9 l-2.4 -4.5 l4.2 0 z" />
+        <rect className="ad-shape" x="196" y="52" width="60" height="48" rx="4" />
+        <circle className="ad-shape" cx="242" cy="64" r="4" />
+        <path className="ad-shape" d="M200 94 L215 78 L226 89 L234 81 L252 96" />
+      </g>
+
+      {/* Client: the component tree that renders it */}
+      <g className={zone('frontend')}>
+        <rect className="ad-frame" x="4" y="144" width="352" height="104" rx="12" />
+        <text className="ad-tag" x="18" y="162">client</text>
+        <path className="ad-shape" d="M180 178 V194 M100 194 H260 M100 194 V206 M180 194 V206 M260 194 V206" />
+        <rect className="ad-shape ad-fill" x="146" y="156" width="68" height="22" rx="5" />
+        <text className="ad-code" x="180" y="170.5">{'<App />'}</text>
+        {[
+          { x: 66, label: '<Nav />' },
+          { x: 146, label: '<Feed />' },
+          { x: 226, label: '<Form />' },
+        ].map((n) => (
+          <g key={n.label}>
+            <rect className="ad-shape ad-fill" x={n.x} y="206" width="68" height="22" rx="5" />
+            <text className="ad-code" x={n.x + 34} y="220.5">{n.label}</text>
+          </g>
         ))}
-      </div>
-    </div>
+      </g>
+
+      {/* Server: API in front of the database */}
+      <g className={zone('api')}>
+        <rect className="ad-frame" x="4" y="268" width="352" height="124" rx="12" />
+        <text className="ad-tag" x="18" y="286">server</text>
+        <rect className="ad-shape ad-fill" x="120" y="292" width="110" height="78" rx="6" />
+        <path className="ad-shape" d="M120 318 H230 M120 344 H230" />
+        {[305, 331, 357].map((y) => (
+          <g key={y}>
+            <circle className="ad-led" cx="133" cy={y} r="2.2" />
+            <rect className="ad-soft" x="142" y={y - 2} width="40" height="4" rx="2" />
+          </g>
+        ))}
+        <text className="ad-code ad-code-start" x="194" y="308">/api</text>
+        <path className="ad-wire ad-wire-solid" d="M230 331 H262" />
+        <ellipse className="ad-shape ad-fill" cx="292" cy="302" rx="30" ry="8" />
+        <path className="ad-shape" d="M262 302 V358 A30 8 0 0 0 322 358 V302" />
+        <path className="ad-shape" d="M262 330 A30 8 0 0 0 322 330" />
+        <text className="ad-code" x="292" y="384">database</text>
+      </g>
+    </svg>
   );
 };
 
@@ -2876,17 +2786,12 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
   theme,
   isInView,
 }) => {
-  const { ref, revealed, reduced } = useRevealOnce();
-  const isLight = theme === 'light';
+  const { ref, reduced } = useRevealOnce();
+  const [active, setActive] = useState<LayerId | null>(null);
   const animClass = `scroll-animate-child ${isInView ? 'animated' : ''}`;
 
-  const stages = STAGE_LIST_ORDER.map(
-    (id) => APPROACH_STAGES.find((s) => s.id === id)!
-  );
-
   return (
-    <div ref={ref} className="grid md:grid-cols-2 gap-10 md:gap-14 items-start">
-      {/* Left column — the accessible source of truth for stages and order. */}
+    <div ref={ref} className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
       <div className="min-w-0">
         <div className="section-head">
         <SectionHeading theme={theme} isInView={isInView} baseDelay={0}>
@@ -2901,22 +2806,17 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
         </p>
         </div>
 
-        <ul className="space-y-[var(--item-gap)]">
-          {stages.map((stage, i) => (
+        <ul className="ad-list" onMouseLeave={() => setActive(null)}>
+          {APPROACH_STAGES.map((stage, i) => (
             <li
               key={stage.id}
-              className={`flex items-start gap-3 ${animClass}`}
+              className={`ad-row ${active === stage.id ? 'is-on' : ''} ${animClass}`}
               style={{ animationDelay: `${240 + i * 60}ms` }}
+              onMouseEnter={() => setActive(stage.id)}
             >
-              <span
-                aria-hidden="true"
-                className="shrink-0 w-[7px] h-[7px] rounded-full mt-[8px]"
-                style={{ backgroundColor: stage.color }}
-              />
+              <span className="ad-row-tag font-mono">{stage.tag}</span>
               <div className="min-w-0">
-                <h3 className="t-h3 font-sans c-primary">
-                  {stage.detailLabel}
-                </h3>
+                <h3 className="t-h3 font-sans c-primary">{stage.detailLabel}</h3>
                 <p className="t-body font-sans c-secondary mt-1 max-w-[420px] break-words">
                   {stage.detailDesc}
                 </p>
@@ -2933,9 +2833,8 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
         </p>
       </div>
 
-      {/* Right column — stack sits beside the text on desktop, below and centred on mobile. */}
-      <div className="flex justify-center md:justify-end">
-        <IsoLayerStack reduced={reduced} play={revealed} />
+      <div className={`flex justify-center md:justify-end ${animClass}`} style={{ animationDelay: '300ms' }}>
+        <SystemDiagram active={active} reduced={reduced} />
       </div>
     </div>
   );
@@ -3048,9 +2947,9 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
             <span
               aria-hidden="true"
               className="w-[5px] h-[5px] rounded-full"
-              style={{ backgroundColor: '#22c55e' }}
+              style={{ backgroundColor: 'var(--sage)' }}
             />
-            <span className="t-label font-mono text-[#22c55e]">
+            <span className={`t-label font-mono text-[var(--accent-ink)]`}>
               live
             </span>
           </span>
@@ -3061,8 +2960,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
           target="_blank"
           rel="noopener noreferrer"
           onClick={playExternalLink}
-          className={`inline-flex items-center gap-1 t-mono font-mono transition-colors min-w-0 ${isLight ? 'text-[#8a8a8a] hover:text-[#1a1a1a]' : 'text-[#666666] hover:text-[#e0e0e0]'
-            }`}
+          className={`inline-flex items-center gap-1 t-mono font-mono transition-colors min-w-0 text-[var(--ink-muted)] hover:text-[var(--accent-ink)]`}
         >
           <span className="truncate">github.com/kellasandyyyy1</span>
           <ArrowUpRight weight="light" size={11} className="shrink-0" />
@@ -3145,12 +3043,14 @@ function useSectionInView() {
 
 export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
-    if (saved === 'dark' || saved === 'light') return saved;
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
+    if (typeof window === 'undefined') return 'light';
+    try {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch {
+      // Storage blocked — fall back to the system setting.
     }
-    return 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showResume, setShowResume] = useState(false);
@@ -3175,13 +3075,6 @@ export default function App() {
       // Storage blocked — choice still applies for this session.
     }
   };
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-
   const [aboutRef, aboutInView] = useSectionInView();
   const [expRef, expInView] = useSectionInView();
   const [stackRef, stackInView] = useSectionInView();
@@ -3190,67 +3083,41 @@ export default function App() {
   const blogLocation = useLocation();
   const getAnimClass = (inView: boolean) => `scroll-animate-child ${inView ? 'animated' : ''}`;
 
-  /** Writes the theme to the DOM and storage. Must be synchronous so it can run
-   *  inside a view transition's update callback. */
-  const applyTheme = (next: 'dark' | 'light') => {
+  const switchTimer = React.useRef<number | undefined>(undefined);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
     const root = document.documentElement;
-    root.setAttribute('data-mode', next);
-    root.classList.toggle('light-mode', next === 'light');
-    document.body.classList.toggle('light-mode', next === 'light');
+    if (!prefersReducedMotion()) {
+      root.classList.add('theme-switching');
+      window.clearTimeout(switchTimer.current);
+      switchTimer.current = window.setTimeout(() => root.classList.remove('theme-switching'), 250);
+    }
+    root.setAttribute('data-theme', next);
     try {
       localStorage.setItem('theme', next);
     } catch {
-      // Storage blocked (private mode) — theme still applies for this session.
+      // Storage blocked — the choice still applies for this session.
     }
+    setTheme(next);
   };
 
-  const toggleTheme = (event?: React.MouseEvent<HTMLButtonElement>) => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-
-    // flushSync forces React to commit the 195 className ternaries *inside* the
-    // callback. Without it React would still be batching when the browser takes
-    // its "after" snapshot, and the transition would capture the old colours.
-    const commit = () => {
-      flushSync(() => setTheme(next));
-      applyTheme(next);
-    };
-
-    const startViewTransition = (
-      document as Document & { startViewTransition?: (cb: () => void) => unknown }
-    ).startViewTransition;
-
-    // Firefox and older browsers have no View Transitions — instant swap is the
-    // intended graceful degradation, not a bug.
-    if (!startViewTransition || prefersReducedMotion()) {
-      commit();
-      return;
-    }
-
-    // Origin for the circular reveal: the toggle that was actually clicked.
-    // Falls back to viewport centre for keyboard activation, where the event
-    // reports 0,0. The radius is the distance to the furthest corner.
-    const root = document.documentElement;
-    const x = event?.clientX || window.innerWidth / 2;
-    const y = event?.clientY || window.innerHeight / 2;
-    const radius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-    root.style.setProperty('--vt-x', `${x}px`);
-    root.style.setProperty('--vt-y', `${y}px`);
-    root.style.setProperty('--vt-r', `${radius}px`);
-
-    // No debounce needed: calling this again mid-transition makes the browser
-    // skip the in-flight one cleanly rather than stacking animations.
-    startViewTransition.call(document, commit);
-  };
-
-  // Keeps the DOM in step on mount and on any theme change that didn't come
-  // from the toggle. Idempotent, so re-running after applyTheme is a no-op.
+  // Until the visitor picks, follow the system setting live. data-theme stays
+  // unset in that case, so the CSS media query and this state agree.
   useEffect(() => {
-    applyTheme(theme);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme]);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e: MediaQueryListEvent) => {
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem('theme');
+      } catch {
+        // Storage blocked — treat as no saved choice.
+      }
+      if (saved !== 'dark' && saved !== 'light') setTheme(e.matches ? 'dark' : 'light');
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   // /blog is a standalone route: its own shell, no sidebar nav, and therefore
   // none of the scroll-spy <-> URL syncing that drives the portfolio page.
@@ -3259,10 +3126,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen font-sans text-[15px] selection:bg-zinc-800 selection:text-white lg:flex relative ${theme === 'light'
-      ? 'bg-[#fafafa] text-[#5a5a5a] selection:bg-zinc-200 selection:text-black'
-      : 'bg-[#0b0b0d] text-[#a1a1aa] selection:bg-zinc-800 selection:text-white'
-      }`}>
+    <div className={`min-h-screen font-sans text-[15px] selection:bg-zinc-800 selection:text-white lg:flex relative bg-[var(--cream)] text-[var(--ink-body)] selection:bg-[var(--sage-soft)] selection:text-[var(--accent-ink)]`}>
       <CustomCursor />
       <SidebarNavigation
         theme={theme}
@@ -3277,26 +3141,18 @@ export default function App() {
       <BookCallModal isOpen={showBookCall} onClose={() => setShowBookCall(false)} theme={theme} />
       <HarvestSnakeModal isOpen={showGame} onClose={() => setShowGame(false)} theme={theme} />
 
-      {/* Progress Bar */}
-      <motion.div
-        className={`fixed top-0 left-0 right-0 h-[2px] z-[60] origin-left ${theme === 'dark' ? 'bg-white' : 'bg-black'}`}
-        style={{ scaleX }}
-      />
-
       <div className="flex-1 min-w-0">
         <main>
           {/* --- Hero Section --- */}
           <Hero onBookCall={() => setShowBookCall(true)} />
 
           {/* --- 01 / Overview Section --- */}
-          <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
             <ApproachSection theme={theme} isInView={aboutInView} />
           </section>
 
           {/* --- 02 / Experience Section --- */}
-          <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
             <div className="section-head">
               <SectionHeading theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
               <p
@@ -3307,80 +3163,75 @@ export default function App() {
               </p>
             </div>
 
-            <div className="space-y-0 relative">
+            <ol className="xp-list" aria-label="Work history, most recent first">
               {EXPERIENCES.map((exp, index) => {
                 const isLast = index === EXPERIENCES.length - 1;
+                const isCurrent = exp.end === null;
                 return (
-                  <div
+                  <li
                     key={exp.id}
-                    className={`flex gap-4 sm:gap-6 group ${getAnimClass(expInView)}`}
+                    className={`xp-item ${isCurrent ? 'is-current' : ''} ${getAnimClass(expInView)}`}
                     style={{ animationDelay: `${240 + index * 60}ms` }}
                   >
-                    {/* Timeline left column */}
-                    <div className="flex flex-col items-center">
-                      <div className={`w-11 h-11 rounded-[10px] border flex items-center justify-center text-[12px] font-mono font-medium shrink-0 shadow-sm ${theme === 'light'
-                        ? 'border-[#e0e0e0] bg-[#ffffff] text-[#1a1a1a]'
-                        : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#e5e5e5]'
-                        }`}>
+                    {/* Timeline rail: logo tile, then the line down to the next role */}
+                    <div className="xp-rail" aria-hidden="true">
+                      <div className="xp-logo">
                         <ExperienceLogo exp={exp} theme={theme} />
                       </div>
-                      {!isLast && (
-                        <div className={`w-[1px] flex-1 my-2 min-h-[40px] ${theme === 'light' ? 'bg-[#d8d8d8]' : 'bg-[#242424]'
-                          }`} />
-                      )}
+                      {!isLast && <div className="xp-line" />}
                     </div>
 
-                    {/* Timeline right column */}
-                    <div className="pb-10 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <h3 className="t-h3 font-sans c-primary">{exp.company}</h3>
-                        <span className="t-label font-mono lowercase c-tertiary">· {exp.employmentType} ({exp.location})</span>
-                      </div>
+                    <article className="xp-body">
+                      <header className="xp-head">
+                        <div className="min-w-0">
+                          <h3 className="xp-role">{exp.role}</h3>
+                          <p className="xp-company">
+                            <span className="xp-company-name">{exp.company}</span>
+                            <span aria-hidden="true"> · </span>
+                            {exp.employmentType}
+                            <span aria-hidden="true"> · </span>
+                            {exp.location}
+                          </p>
+                        </div>
 
-                      <div className="t-h3 font-sans c-secondary mt-0.5">
-                        {exp.role}
-                      </div>
-
-                      <div className="t-label font-mono uppercase c-tertiary mt-1.5">
-                        {exp.period}
-                      </div>
-
-                      <p className="t-body font-sans c-secondary mt-3 max-w-2xl">
-                        {exp.description}
-                      </p>
-
-                      {/* Skill tags */}
-                      <div className="flex flex-wrap items-center gap-2 mt-3.5">
-                        {exp.skills.map((skill, sIdx) => (
-                          <span
-                            key={sIdx}
-                            className={`border rounded-md px-2.5 py-1 t-mono font-mono lowercase ${theme === 'light'
-                              ? 'border-[#e0e0e0] text-[#5a5a5a] bg-[#f0f0f0]'
-                              : 'border-[#2a2a2a] text-[#cccccc] bg-[#111113]'
-                              }`}
-                          >
-                            {skill.toLowerCase()}
+                        <div className="xp-when">
+                          <span className="xp-dates">
+                            <time dateTime={exp.start}>{formatYm(exp.start)}</time>
+                            {' – '}
+                            {isCurrent ? 'Present' : <time dateTime={exp.end!}>{formatYm(exp.end!)}</time>}
                           </span>
+                          <span className="xp-tenure">
+                            {isCurrent && <span className="xp-now"><i aria-hidden="true" />current</span>}
+                            {formatTenure(exp.start, exp.end)}
+                          </span>
+                        </div>
+                      </header>
+
+                      <p className="xp-summary">{exp.summary}</p>
+
+                      <ul className="xp-highlights">
+                        {exp.highlights.map((h) => (
+                          <li key={h}>{h}</li>
                         ))}
-                        {exp.moreSkillsCount && (
-                          <span className={`border border-dashed rounded-md px-2.5 py-1 t-mono font-mono lowercase ${theme === 'light'
-                            ? 'border-[#e0e0e0] text-[#8a8a8a]'
-                            : 'border-[#2a2a2a] text-[#777777]'
-                            }`}>
-                            +{exp.moreSkillsCount} skills
-                          </span>
-                        )}
+                      </ul>
+
+                      <div className="xp-stack">
+                        <span className="xp-stack-label">stack</span>
+                        <ul className="xp-tags" aria-label={`Tools used at ${exp.company}`}>
+                          {exp.skills.map((skill) => (
+                            <li key={skill}>{skill.toLowerCase()}</li>
+                          ))}
+                        </ul>
                       </div>
-                    </div>
-                  </div>
+                    </article>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
 
             {/* Experience bottom footer */}
             <div
-              className={`border-t pt-6 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${getAnimClass(expInView)} ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-                }`}
+              className={`border-t pt-6 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${getAnimClass(expInView)} border-[var(--sand-deep)]`}
               style={{ animationDelay: `${240 + EXPERIENCES.length * 60}ms` }}
             >
               <div className="t-small font-sans c-secondary">
@@ -3392,15 +3243,14 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <GithubLogo weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>github</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </a>
                 <a
@@ -3408,28 +3258,26 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <LinkedinLogo weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>LINKEDIN</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </a>
                 <button
                   onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <Calendar weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>BOOK CALL</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </button>
               </div>
@@ -3437,13 +3285,11 @@ export default function App() {
           </section>
 
           {/* --- 03 / Stack Section --- */}
-          <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
             <div className="section-head">
               <SectionHeading theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
               <p
-                className={`t-lead font-sans ${getAnimClass(stackInView)} ${theme === 'light' ? 'text-[#4c5bc4]' : 'text-[#7c8ce0]'
-                  }`}
+                className={`t-lead font-sans ${getAnimClass(stackInView)} text-[var(--accent-ink)]`}
                 style={{ animationDelay: '160ms' }}
               >
                 Tools, ranked by how often I reach for them.
@@ -3459,8 +3305,7 @@ export default function App() {
                   style={{ animationDelay: `${240 + groupIdx * 60}ms` }}
                 >
                   {/* Category Header */}
-                  <div className={`t-label font-mono uppercase mb-2.5 select-none border-b pb-1.5 c-tertiary ${theme === 'light' ? 'border-[#e0e0e0]' : 'border-[#222222]'
-                    }`}>
+                  <div className={`t-label font-mono uppercase mb-2.5 select-none border-b pb-1.5 c-tertiary border-[var(--sand-deep)]`}>
                     {group.category}
                   </div>
 
@@ -3471,8 +3316,7 @@ export default function App() {
                       return (
                         <div
                           key={tool.name}
-                          className={`flex items-center py-[9px] transition-colors px-0.5 ${theme === 'light' ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.015]'
-                            } ${isLastInGroup ? '' : (theme === 'light' ? 'border-b border-[#ececec]' : 'border-b border-[#1a1a1a]')
+                          className={`flex items-center py-[9px] transition-colors px-0.5 hover:bg-[var(--hover-fill)] ${isLastInGroup ? '' : ('border-b border-[var(--sand-deep)]')
                             }`}
                         >
                           {/* Left: Icon + Tool Name */}
@@ -3482,7 +3326,7 @@ export default function App() {
                             ) : tool.iconClass ? (
                               <i className={`${tool.iconClass} text-[14px] shrink-0 opacity-90`} />
                             ) : (
-                              <Cpu size={14} className={`shrink-0 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#888888]'}`} />
+                              <Cpu size={14} className={`shrink-0 text-[var(--ink-muted)]`} />
                             )}
                             <span className={`t-body font-sans truncate c-primary`}>
                               {tool.name}
@@ -3498,8 +3342,7 @@ export default function App() {
           </section>
 
           {/* --- Certifications Section --- */}
-          <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
             <div className="section-head flex items-start justify-between gap-8">
               <div className="min-w-0">
                 <h2
@@ -3530,7 +3373,7 @@ export default function App() {
                   className={`group relative isolate overflow-hidden flex flex-col items-center text-center px-6 py-10 md:py-4 ${getAnimClass(certInView)} ${
                     // Divider between columns only: never on the outside, never when stacked.
                     index > 0
-                      ? `md:border-l ${theme === 'light' ? 'md:border-[#ececec]' : 'md:border-[#232326]'}`
+                      ? `md:border-l md:border-[var(--sand-deep)]`
                       : ''
                     }`}
                   style={{ animationDelay: `${240 + index * 80}ms` }}
@@ -3539,18 +3382,14 @@ export default function App() {
                       content and is clipped so it never crosses a divider. */}
                   <span
                     aria-hidden="true"
-                    className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-[#e5e5e5]'
-                      }`}
-                    style={{ opacity: theme === 'light' ? 0.04 : 0.06 }}
+                    className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[var(--ink)]`}
+                    style={{ opacity: theme === 'light' ? 0.016 : 0.06 }}
                   >
                     <cert.Icon size={190} />
                   </span>
 
                   <span
-                    className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 border-[0.5px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 ${theme === 'light'
-                      ? 'border-[#e6e6e3] text-[#1a1a1a]'
-                      : 'border-[#232326] text-[#e5e5e5]'
-                      }`}
+                    className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 border-[0.5px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 border-[var(--sand-deep)] text-[var(--ink)]`}
                   >
                     <cert.Icon size={17} />
                   </span>
@@ -3559,10 +3398,7 @@ export default function App() {
                     {cert.title}
                   </h3>
 
-                  <span className={`inline-flex items-center gap-1.5 t-label font-mono lowercase mt-2 transition-colors duration-200 ease-out ${theme === 'light'
-                    ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]'
-                    : 'text-[#7a7a80] group-hover:text-[#e5e5e5]'
-                    }`}>
+                  <span className={`inline-flex items-center gap-1.5 t-label font-mono lowercase mt-2 transition-colors duration-200 ease-out text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}>
                     {cert.issuer}
                     <ArrowUpRight weight="light" size={11} className="shrink-0" />
                   </span>
@@ -3572,8 +3408,7 @@ export default function App() {
           </section>
 
           {/* --- How I Think Section --- */}
-          <section id="process" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="process" className={`section border-t border-[var(--sand-deep)]`}>
             <div className="section-head">
               <h2 className="t-h2 c-primary font-geist lowercase">
                 how i think
@@ -3583,8 +3418,7 @@ export default function App() {
           </section>
 
           {/* --- Projects Section --- */}
-          <section id="projects" className={`section border-t select-none overflow-hidden ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="projects" className={`section border-t select-none overflow-hidden border-[var(--sand-deep)]`}>
             <div className="section-head flex justify-between items-start gap-4">
               <div className="min-w-0">
                 {/* The toggle sits on the heading's own line so it reads as
@@ -3604,8 +3438,7 @@ export default function App() {
                 </div>
               </div>
 
-              <span className={`shrink-0 flex items-center gap-1 t-label font-mono ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-[#666666]'
-                }`}>
+              <span className={`shrink-0 flex items-center gap-1 t-label font-mono text-[var(--ink-muted)]`}>
                 
                 <ArrowUpRight weight="light" size={10} className="shrink-0" />
               </span>
@@ -3626,15 +3459,11 @@ export default function App() {
                     <div
                       key={project.id}
                       onClick={() => setSelectedProject(project)}
-                      className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 ${theme === 'light'
-                        ? 'bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.13)]'
-                        : 'bg-[#0e0e12] shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-[#131318] hover:shadow-[0_10px_28px_rgba(0,0,0,0.75)]'
-                        }`}
+                      className={`cursor-pointer group rounded-[10px] overflow-hidden min-w-0 transition-[box-shadow,background-color] duration-200 bg-[var(--sand)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]`}
                     >
                       {/* Fixed height keeps mobile cards compact; above md an
                           aspect ratio lets the thumbnail scale with the column. */}
-                      <div className={`h-[70px] md:h-auto md:aspect-[16/10] w-full overflow-hidden flex items-center justify-center ${theme === 'light' ? 'bg-[#f0f0f0]' : 'bg-[#141414]'
-                        }`}>
+                      <div className={`h-[70px] md:h-auto md:aspect-[16/10] w-full overflow-hidden flex items-center justify-center bg-[var(--sand)]`}>
                         {project.image ? (
                           <img
                             src={project.image}
@@ -3644,8 +3473,7 @@ export default function App() {
                           />
                         ) : (
                           // Flat placeholder rather than a broken image
-                          <div className={`w-1/2 h-1/2 rounded-[4px] ${theme === 'light' ? 'bg-[#e8e8e8]' : 'bg-[#1c1c1c]'
-                            }`} />
+                          <div className={`w-1/2 h-1/2 rounded-[4px] bg-[var(--sand)]`} />
                         )}
                       </div>
 
@@ -3655,10 +3483,7 @@ export default function App() {
                         <div className="t-mono font-mono truncate c-primary">
                           {project.title}
                         </div>
-                        <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate ${theme === 'light'
-                          ? 'border-[#ececec] text-[#a0a0a0]'
-                          : 'border-[#1e1e1e] text-[#5a5a57]'
-                          }`}>
+                        <span className={`self-start inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] max-w-full truncate border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
                           {project.tags?.[0]?.toLowerCase() || 'web'}
                         </span>
                       </div>
@@ -3679,26 +3504,21 @@ export default function App() {
                       viewport={{ once: true }}
                       transition={{ delay: index * 0.04 }}
                       className={`flex items-center justify-between gap-3 py-[10px] lg:py-[16px] cursor-pointer group border-b-[0.5px] ${index === 0 ? 'border-t-[0.5px]' : ''
-                        } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
+                        } border-[var(--sand-deep)]`}
                       onClick={() => setSelectedProject(project)}
                     >
-                      <span className={`t-h3 font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
-                        }`}>
+                      <span className={`t-h3 font-mono transition-colors truncate text-[var(--ink-muted)] lg:text-[var(--ink-body)]`}>
                         {project.title}
                       </span>
 
                       <span className="shrink-0 flex items-center gap-2">
-                        <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
-                          ? 'border-[#ececec] text-[#a0a0a0]'
-                          : 'border-[#1e1e1e] text-[#333333]'
-                          }`}>
+                        <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
                           {project.tags?.[0]?.toLowerCase() || 'web'}
                         </span>
                         <ArrowUpRight
                           weight="light"
                           size={10}
-                          className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
-                            }`}
+                          className={`shrink-0 transition-colors text-[var(--arrow-ink)] group-hover:text-[var(--ink-body)]`}
                         />
                       </span>
                     </motion.div>
@@ -3715,26 +3535,21 @@ export default function App() {
                 className={`flex items-center justify-between gap-3 py-[10px] lg:py-[16px] cursor-pointer group border-b-[0.5px] ${worksView === 'grid'
                   ? 'mt-2 md:mt-3 lg:mt-4 border-t-[0.5px]'
                   : ''
-                  } ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1a1a1a]'}`}
+                  } border-[var(--sand-deep)]`}
                 onClick={() => setShowAllProjects(true)}
               >
-                <span className={`t-h3 font-mono transition-colors truncate ${theme === 'light' ? 'text-[#8a8a8a] lg:text-[#5a5a5a]' : 'text-[#777777] lg:text-[#9a9a9a] group-hover:text-[#bbbbbb] lg:group-hover:text-[#e5e5e5]'
-                  }`}>
+                <span className={`t-h3 font-mono transition-colors truncate text-[var(--ink-muted)] lg:text-[var(--ink-body)]`}>
                   browse all
                 </span>
 
                 <span className="shrink-0 flex items-center gap-2">
-                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] ${theme === 'light'
-                    ? 'border-[#ececec] text-[#a0a0a0]'
-                    : 'border-[#1e1e1e] text-[#333333]'
-                    }`}>
+                  <span className={`inline-flex t-label font-mono uppercase px-1.5 py-0.5 rounded-[3px] border-[0.5px] border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
                     all
                   </span>
                   <ArrowUpRight
                     weight="light"
                     size={10}
-                    className={`shrink-0 transition-colors ${theme === 'light' ? 'text-[#c4c4c0] group-hover:text-[#5a5a5a]' : 'text-[#2a2a2a] group-hover:text-[#666666]'
-                      }`}
+                    className={`shrink-0 transition-colors text-[var(--arrow-ink)] group-hover:text-[var(--ink-body)]`}
                   />
                 </span>
               </motion.div>
@@ -3742,12 +3557,10 @@ export default function App() {
           </section>
 
           {/* --- Services Section --- */}
-          <section id="services" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="services" className={`section border-t border-[var(--sand-deep)]`}>
             <SectionHeading className="section-head" theme={theme}>Services</SectionHeading>
 
-            <div className={`border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-zinc-900/30 dark:border-zinc-800/60'
-              }`}>
+            <div className={`border-t border-[var(--sand-deep)]`}>
               {SERVICES.map((service, index) => {
                 return (
                   <motion.div
@@ -3758,40 +3571,30 @@ export default function App() {
                     transition={{ delay: index * 0.08, duration: 0.4 }}
                   >
                     {/* Mobile Layout (< 768px) */}
-                    <div className={`flex flex-col gap-1.5 py-5 px-0 border-b relative group cursor-pointer transition-all duration-200 md:hidden ${theme === 'light'
-                      ? 'border-[#ececec] hover:bg-[#f0f0f0]/60'
-                      : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-100/30 dark:hover:bg-zinc-900/20'
-                      }`}>
+                    <div className={`flex flex-col gap-1.5 py-5 px-0 border-b relative group cursor-pointer transition-all duration-200 md:hidden border-[var(--sand-deep)] hover:bg-[var(--hover-fill)]`}>
                       <div className="flex items-center gap-2.5 pr-8">
                         <ArrowRight
                           weight="light"
                           size={13}
-                          className={`shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
-                            }`}
+                          className={`shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 text-[var(--ink-muted)]`}
                         />
-                        <h4 className={`t-h3 uppercase font-sans break-words ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
-                          }`}>
+                        <h4 className={`t-h3 uppercase font-sans break-words text-[var(--ink)]`}>
                           {service.title}
                         </h4>
                       </div>
                       <p className="t-body break-words pr-8 c-secondary">
                         {service.description}
                       </p>
-                      <div className={`absolute right-0 top-5 transition-colors ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white'
-                        }`}>
+                      <div className={`absolute right-0 top-5 transition-colors text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}>
                         <ArrowUpRight className="w-4 h-4" />
                       </div>
                     </div>
 
                     {/* Tablet & Desktop Layout (>= 768px) */}
-                    <div className={`hidden md:flex items-center gap-5 py-[var(--item-gap)] px-1 border-b group cursor-pointer transition-all duration-200 ${theme === 'light'
-                      ? 'border-[#ececec] hover:bg-[#f0f0f0]/60'
-                      : 'border-zinc-900/30 dark:border-zinc-800/50 hover:bg-zinc-900/20'
-                      }`}>
+                    <div className={`hidden md:flex items-center gap-5 py-[var(--item-gap)] px-1 border-b group cursor-pointer transition-all duration-200 border-[var(--sand-deep)] hover:bg-[var(--hover-fill)]`}>
                       {/* Keeps the w-6 column so the titles stay aligned now that
                           the two-digit number is gone. */}
-                      <span className={`w-6 shrink-0 flex items-center ${theme === 'light' ? 'text-[#8a8a8a]' : 'text-zinc-500'
-                        }`}>
+                      <span className={`w-6 shrink-0 flex items-center text-[var(--ink-muted)]`}>
                         <ArrowRight
                           weight="light"
                           size={14}
@@ -3799,16 +3602,14 @@ export default function App() {
                         />
                       </span>
                       <div className="flex-1 flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-5">
-                        <h4 className={`t-h3 font-sans uppercase lg:flex-1 truncate ${theme === 'light' ? 'text-[#1a1a1a]' : 'text-zinc-900 dark:text-white'
-                          }`}>
+                        <h4 className={`t-h3 font-sans uppercase lg:flex-1 truncate text-[var(--ink)]`}>
                           {service.title}
                         </h4>
                         <p className="t-body lg:flex-1 break-words c-secondary">
                           {service.description}
                         </p>
                       </div>
-                      <ArrowUpRight className={`w-5 h-5 transition-all duration-300 shrink-0 ${theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white'
-                        }`} />
+                      <ArrowUpRight className={`w-5 h-5 transition-all duration-300 shrink-0 text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`} />
                     </div>
                   </motion.div>
                 );
@@ -3817,8 +3618,7 @@ export default function App() {
           </section>
 
           {/* --- Resources Section --- */}
-          <section id="resources" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="resources" className={`section border-t border-[var(--sand-deep)]`}>
             <div className="section-head">
               <h2 className="t-h2 c-primary font-geist lowercase">
                 resources
@@ -3832,16 +3632,14 @@ export default function App() {
           </section>
 
           {/* --- GitHub Section --- */}
-          <section id="github" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="github" className={`section border-t border-[var(--sand-deep)]`}>
             <div className="max-w-[640px]">
               <GithubSection theme={theme} />
             </div>
           </section>
 
           {/* --- Contact Section --- */}
-          <section id="contact" className={`section border-t ${theme === 'light' ? 'border-[#ececec]' : 'border-[#1e1e1e]'
-            }`}>
+          <section id="contact" className={`section border-t border-[var(--sand-deep)]`}>
             <div className="mb-4">
               <span className="t-label font-mono uppercase block c-tertiary">
                 CONTACT
@@ -3856,10 +3654,7 @@ export default function App() {
               <div>
                 <a
                   href="mailto:kellasandrei00@gmail.com"
-                  className={`inline-block t-lead font-sans transition-colors border-b pb-2 ${theme === 'light'
-                    ? 'text-[#1a1a1a] hover:text-black border-[#e0e0e0]'
-                    : 'text-[#e5e5e5] hover:text-white border-[#2a2a2a]'
-                    }`}
+                  className={`inline-block t-lead font-sans transition-colors border-b pb-2 text-[var(--ink)] hover:text-[var(--accent-ink)] border-[var(--sand-deep)]`}
                 >
                   kellasandrei00@gmail.com
                 </a>
@@ -3869,15 +3664,14 @@ export default function App() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-3">
                 <button
                   onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <Calendar weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>BOOK A CALL</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </button>
 
@@ -3886,15 +3680,14 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <GithubLogo weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>github</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </a>
 
@@ -3903,15 +3696,14 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group ${theme === 'light' ? 'text-[#5a5a5a] hover:text-[#1a1a1a]' : 'text-[#cccccc] hover:text-white'
-                    }`}
+                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                 >
                   <LinkedinLogo weight="light" size={16} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                   <span>LINKEDIN</span>
                   <ArrowUpRight weight="light" size={14} className={
-                    theme === 'light' ? 'text-[#8a8a8a] group-hover:text-[#1a1a1a]' : 'text-[#888888] group-hover:text-white'
+                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
                   } />
                 </a>
               </div>
@@ -3919,8 +3711,7 @@ export default function App() {
           </section>
         </main>
 
-        <footer className={`section !py-12 border-t flex flex-col md:flex-row justify-between items-center gap-6 t-label font-mono uppercase ${theme === 'light' ? 'border-[#ececec] text-[#8a8a8a]' : 'border-zinc-900 text-zinc-600'
-          }`}>
+        <footer className={`section !py-12 border-t flex flex-col md:flex-row justify-between items-center gap-6 t-label font-mono uppercase border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
           <div className="flex gap-8">
             <span></span>
             <span></span>
