@@ -5,14 +5,14 @@
  * Keep the two in step.
  */
 export const PALETTE_HEX = {
-  cream: '#F7F2E7',
-  sand: '#EFE7D6',
-  sandDeep: '#E2D8C0',
-  sageSoft: '#DCE4CC',
-  sage: '#8FA67E',
-  moss: '#3F5D3A',
+  cream: '#FAF6EC',
+  sand: '#F1EBDC',
+  sandDeep: '#CBC1A7',
+  sageSoft: '#DCE6CF',
+  sage: '#6F8A5F',
+  moss: '#2F4A2B',
   limeSoft: '#D9E589',
-  ink: '#2F3A2B',
+  ink: '#26301F',
 } as const;
 
 /** Dark theme (lamp-lit) mirror of the :root[data-theme="dark"] tokens. */

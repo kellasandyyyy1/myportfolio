@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarBlank, GithubLogo, LinkedinLogo, NotePencil } from '@phosphor-icons/react';
+import { NavIcon3D } from './NavIcon3D';
 import { playExternalLink, playNavTick } from '../lib/sound';
 
-/** Small monochrome keycap: soft top light, darker lip underneath. */
+/** The 3D object beside each hero link; it lifts and tips when the link is hovered. */
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <span className="hx-key" aria-hidden="true">
-      <span className="hx-key-cap">{children}</span>
+    <span className="hx-obj" aria-hidden="true">
+      {children}
     </span>
   );
 }
@@ -82,7 +82,7 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
         </figure>
 
         <div className="hx-intro">
-          <h1 className="hx-name hx-in" style={{ '--d': '120ms' } as React.CSSProperties}>Kellas Andrei</h1>
+          <h1 className="hx-name hx-in" data-tour="hero-name" style={{ '--d': '120ms' } as React.CSSProperties}>Kellas Andrei</h1>
           <p className="hx-copy hx-in" style={{ '--d': '190ms' } as React.CSSProperties}>
             I'm a fullstack web developer. I care more about whether something works under real load
             than whether it looks good in a demo.
@@ -92,26 +92,27 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
             software gets built.
           </p>
           <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
-            <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" onClick={playExternalLink}>
-              <Key><GithubLogo weight="fill" /></Key>
+            <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" onClick={playExternalLink} data-tour="hero-social">
+              <Key><NavIcon3D name="github" size={22} /></Key>
               github <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             <a
               href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
+              data-tour="hero-social"
               target="_blank"
               rel="noopener noreferrer"
               onClick={playExternalLink}
             >
-              <Key><LinkedinLogo weight="fill" /></Key>
+              <Key><NavIcon3D name="linkedin" size={22} /></Key>
               linkedin <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             {/* Blog lives on its own route and is intentionally absent from the nav. */}
             <Link to="/blog" onClick={playNavTick}>
-              <Key><NotePencil weight="bold" /></Key>
+              <Key><NavIcon3D name="blog" size={22} /></Key>
               blog <span className="hx-arrow" aria-hidden="true">↗</span>
             </Link>
-            <button type="button" onClick={() => { playExternalLink(); onBookCall(); }}>
-              <Key><CalendarBlank weight="bold" /></Key>
+            <button type="button" data-tour="hero-book" onClick={() => { playExternalLink(); onBookCall(); }}>
+              <Key><NavIcon3D name="calendar" size={22} /></Key>
               book a call <span className="hx-arrow" aria-hidden="true">↗</span>
             </button>
           </nav>
