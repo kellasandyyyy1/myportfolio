@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:wght@100..900&family=Instrument+Serif:ital@0;1&family=Pixelify+Sans:wght@400..700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cal+Sans&family=Caveat:wght@400..700&family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:wght@100..900&family=Instrument+Serif:ital@0;1&family=Pixelify+Sans:wght@400..700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 
 @font-face {
@@ -470,8 +470,12 @@ body {
   font-family: "Plus Jakarta Sans", Geist, system-ui, sans-serif;
 }
 
-/* Geist proportional — section headings. Distinct from .font-sans so the
-   two can diverge without one silently inheriting the other. */
+/* Cal Sans for headings; Geist proportional for UI labels. Both distinct from
+   .font-sans so they can diverge without one silently inheriting another. */
+.font-cal {
+  font-family: "Cal Sans", Geist, system-ui, sans-serif;
+}
+
 .font-geist {
   font-family: Geist, system-ui, sans-serif;
 }
@@ -522,6 +526,7 @@ body {
 @theme {
   --font-sans: "Plus Jakarta Sans", "Geist", system-ui, sans-serif;
   --font-geist: "Geist", system-ui, sans-serif;
+  --font-cal: "Cal Sans", "Geist", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-display: "Geist Pixel", "Geist Mono", monospace;
   --font-serif: "Source Serif 4", Georgia, serif;
@@ -932,76 +937,191 @@ body {
 }
 
 /* ===== APPROACH — SYSTEM DIAGRAM =====
- * Monochrome line art of one product: interface → client → server. Hovering a
- * row in the list lifts its band and dims the others. Decorative only.
+ * One request staged as a stop-motion set: interface → client → server.
+ * Hovering a row in the list lifts its panel and dims the others. Decorative.
  */
-.ad {
+/* Stop-motion set: a fixed pastel palette (it's a physical card, so it keeps
+   its colours in both themes), soft cut-out shadows, and motion on held
+   frames: every animation steps instead of easing. */
+.sd {
+  --sd-ink: #2A2722;
+  --sd-paper: #FBF6EA;
+  --sd-pink: #F2C4BE;
+  --sd-pink-pale: #F7DDD8;
+  --sd-butter: #F3DC92;
+  --sd-butter-pale: #F8EDC8;
+  --sd-sky: #B9D4E4;
+  --sd-sky-pale: #DAE8F0;
+  --sd-mint: #BCD9C0;
   width: 100%;
   max-width: 360px;
   height: auto;
   overflow: visible;
 }
 
-.ad-zone { transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1); }
-.ad-zone.is-dim { opacity: 0.32; }
-
-.ad-frame {
-  fill: none;
-  stroke: var(--border);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
-  transition: stroke 300ms ease;
+:root[data-theme='dark'] .sd { filter: brightness(0.9) saturate(0.85); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .sd { filter: brightness(0.9) saturate(0.85); }
 }
-.ad-zone.is-on .ad-frame { stroke: var(--text-muted); stroke-dasharray: none; }
 
-.ad-shape {
-  fill: none;
-  stroke: var(--text-secondary);
-  stroke-width: 1.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: stroke 300ms ease;
+.sd-zone { transition: opacity 300ms steps(3, end); }
+.sd-zone.is-dim { opacity: 0.35; }
+
+/* Hovered panel lifts off its shadow in three held frames. */
+.sd-lift { transition: transform 240ms steps(3, end); }
+.sd-zone.is-on .sd-lift { transform: translate(-3px, -4px); }
+
+/* Each panel nudges a hair between frames, like a cut-out on a set. */
+.sd-jitter {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sd-jitter 0.75s steps(1) infinite;
 }
-.ad-fill { fill: var(--bg-page); }
-.ad-zone.is-on .ad-shape { stroke: var(--text-primary); }
+.sd-zone:nth-of-type(2) .sd-jitter { animation-delay: -0.25s; }
+.sd-zone:nth-of-type(3) .sd-jitter { animation-delay: -0.5s; }
 
-.ad-solid { fill: var(--text-primary); opacity: 0.85; }
-.ad-soft { fill: var(--text-muted); opacity: 0.45; }
-.ad-dot { fill: none; stroke: var(--text-muted); stroke-width: 1; }
-.ad-cursor { fill: var(--text-primary); stroke: var(--bg-page); stroke-width: 1; stroke-linejoin: round; }
-.ad-led { fill: var(--text-primary); }
+.sd-panel { stroke: var(--sd-ink); stroke-width: 1.8; }
+.sd-pink { fill: var(--sd-pink); }
+.sd-butter { fill: var(--sd-butter); }
+.sd-sky { fill: var(--sd-sky); }
+.sd-mint { fill: var(--sd-mint); }
+.sd-panel.sd-pink { fill: var(--sd-pink-pale); }
+.sd-butter-pale { fill: var(--sd-butter-pale); }
+.sd-sky-pale { fill: var(--sd-sky-pale); }
 
-.ad-tag {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 1px;
+/* A little shade: soft cut-out shadows and a tint along each panel's floor. */
+.sd-shade { fill: var(--sd-ink); opacity: 0.2; }
+.sd-panel-shade { fill: var(--sd-ink); opacity: 0.06; }
+
+.sd-line {
+  stroke: var(--sd-ink);
+  stroke-width: 1.6;
+  stroke-linejoin: miter;
+  stroke-linecap: square;
+}
+
+.sd-fill { fill: var(--sd-paper); }
+.sd-ink { fill: var(--sd-ink); }
+.sd-soft { fill: var(--sd-ink); opacity: 0.32; }
+
+/* Title plaque: centered, double-ruled, wide-tracked caps. */
+.sd-plaque-inner { fill: none; stroke: var(--sd-ink); stroke-width: 0.6; }
+.sd-plaque {
+  font-family: Futura, 'Century Gothic', 'Avenir Next', var(--font-geist), sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  fill: var(--text-muted);
+  text-anchor: middle;
+  fill: var(--sd-ink);
 }
 
-.ad-code {
+.sd-cursor {
+  fill: var(--sd-ink);
+  stroke: var(--sd-paper);
+  stroke-width: 1.2;
+  stroke-linejoin: miter;
+  animation: sd-press 2.8s steps(1) infinite;
+}
+
+.sd-burst path {
+  fill: none;
+  stroke: var(--sd-ink);
+  stroke-width: 2;
+  stroke-linecap: square;
+}
+.sd-burst {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: sd-burst 2.8s steps(1) infinite;
+}
+
+.sd-code {
   font-family: var(--font-mono);
   font-size: 10px;
   text-anchor: middle;
-  fill: var(--text-primary);
+  fill: var(--sd-ink);
 }
-.ad-code-start { text-anchor: start; fill: var(--text-muted); }
+.sd-code-start { text-anchor: start; }
+.sd-code-strong { font-weight: 700; }
 
-.ad-note {
+.sd-note {
   font-family: var(--font-mono);
   font-size: 9px;
-  fill: var(--text-muted);
+  fill: var(--sd-ink);
 }
 
-.ad-wire {
+.sd-wire {
   fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 1;
-  stroke-dasharray: 2 3;
+  stroke: var(--sd-ink);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 3;
 }
-.ad-wire-solid { stroke-dasharray: none; }
+.sd-wire-solid { stroke-dasharray: none; }
 
-.ad-packet { fill: var(--text-primary); }
+.sd-arrow {
+  fill: none;
+  stroke: var(--sd-ink);
+  stroke-width: 1.8;
+  stroke-linejoin: miter;
+}
+
+.sd-chip {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--sd-ink);
+}
+
+/* Server lights run in sequence; the database blinks now and then. */
+.sd-led { fill: var(--sd-butter); animation: sd-led 1.125s steps(1) infinite; }
+
+.sd-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sd-blink 4.2s steps(1) infinite;
+}
+
+@keyframes sd-jitter {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(0.5px, -0.4px) rotate(0.25deg); }
+  66% { transform: translate(-0.4px, 0.3px) rotate(-0.2deg); }
+}
+
+@keyframes sd-press {
+  0% { transform: translate(1px, 1px); }
+  12% { transform: none; }
+}
+
+@keyframes sd-burst {
+  0% { opacity: 0; transform: scale(0.5); }
+  4% { opacity: 1; transform: scale(0.9); }
+  12% { opacity: 1; transform: scale(1.2); }
+  20%, 100% { opacity: 0; transform: scale(1.2); }
+}
+
+@keyframes sd-led {
+  0% { fill: var(--sd-butter); }
+  33% { fill: var(--sd-paper); }
+}
+
+@keyframes sd-blink {
+  0%, 93% { transform: scaleY(1); }
+  94% { transform: scaleY(0.15); }
+  97% { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-zone,
+  .sd-lift { transition: none; }
+  .sd-jitter,
+  .sd-cursor,
+  .sd-burst,
+  .sd-led,
+  .sd-eye { animation: none; }
+  .sd-burst { opacity: 0; }
+}
 
 /* List: hairline rows instead of bullets, a mono tag naming each layer. */
 .ad-list { border-top: 1px solid var(--border-subtle); }
@@ -1025,9 +1145,6 @@ body {
 .ad-row.is-on .ad-row-tag { color: var(--text-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ad-zone,
-  .ad-frame,
-  .ad-shape,
   .ad-row-tag { transition: none; }
 }
 
@@ -1819,8 +1936,8 @@ span.tracking-\[0\.4em\] {
 /* --- Intro copy --- */
 .hx-name {
   margin: 0 0 1.5rem;
-  font-family: var(--font-geist);
-  font-weight: 500;
+  font-family: var(--font-cal);
+  font-weight: 400;
   font-size: clamp(2.25rem, 6vw, 3rem);
   line-height: 1;
   letter-spacing: -0.035em;
@@ -2077,7 +2194,7 @@ span.tracking-\[0\.4em\] {
 }
 
 .xp-role {
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: 1.0625rem;
   font-weight: 500;
   line-height: 1.35;
@@ -2097,20 +2214,30 @@ span.tracking-\[0\.4em\] {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-family: var(--font-mono);
+  font-family: var(--font-geist);
+  font-weight: 600;
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+/* Three families in this section: Cal Sans for the role, the sans for prose,
+   Geist for every piece of metadata. The small caps labels (tenure, "stack")
+   share one style. */
+.xp-tenure,
+.xp-stack-label {
+  font-family: var(--font-geist);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .xp-tenure {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
 .xp-now {
@@ -2121,7 +2248,7 @@ span.tracking-\[0\.4em\] {
   border-radius: 999px;
   background: var(--fill-primary);
   color: var(--fill-primary-text);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
 
 .xp-now i {
@@ -2167,14 +2294,6 @@ span.tracking-\[0\.4em\] {
   margin-top: 16px;
 }
 
-.xp-stack-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
 .xp-tags {
   display: flex;
   flex-wrap: wrap;
@@ -2186,8 +2305,9 @@ span.tracking-\[0\.4em\] {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-surface-alt);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-family: var(--font-geist);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
@@ -2201,23 +2321,7 @@ span.tracking-\[0\.4em\] {
 }
 
 /* ===== LIGHT THEME: roles for components styled through shared tokens ===== */
-/* Approach diagram: moss line art on sand, sage connectors. */
-:root .ad-frame { stroke: var(--sand-deep); }
-:root .ad-zone.is-on .ad-frame { stroke: var(--sage); }
-:root .ad-shape { stroke: var(--art-line); }
-:root .ad-fill { fill: var(--sand); }
-:root .ad-solid,
-:root .ad-led,
-:root .ad-packet,
-:root .ad-cursor { fill: var(--art-strong); }
-:root .ad-cursor { stroke: var(--cream); }
-:root .ad-soft { fill: var(--art-soft); }
-:root .ad-dot,
-:root .ad-wire { stroke: var(--art-wire); }
-:root .ad-code { fill: var(--art-strong); }
-:root .ad-tag,
-:root .ad-note,
-:root .ad-code-start { fill: var(--ink-muted); }
+/* Approach list: the hovered layer's tag takes the accent. */
 :root .ad-row.is-on .ad-row-tag { color: var(--accent-ink); }
 
 /* Experience: sand tiles, sage rail, lime tags, moss "current" pill. */
@@ -2493,7 +2597,7 @@ span.tracking-\[0\.4em\] {
 
 .pv-title {
   margin: 0;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
   font-weight: 500;
   line-height: 1.1;
@@ -2674,9 +2778,6 @@ span.tracking-\[0\.4em\] {
 :root .xp-tenure,
 :root .ad-row-tag,
 :root .bc-label { color: var(--ink-label); }
-:root .ad-tag,
-:root .ad-note,
-:root .ad-code-start { fill: var(--ink-label); }
 
 /* Sidebar footer icon buttons: a sand tile with a hairline in light. */
 :root .sidebar-footer .sidebar-icon-btn {
@@ -2765,7 +2866,7 @@ span.tracking-\[0\.4em\] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: 14px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -2881,7 +2982,7 @@ span.tracking-\[0\.4em\] {
 
 .pp-title {
   margin: 0;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: var(--fs-display);
   font-weight: 500;
   line-height: 1.04;
@@ -2962,7 +3063,7 @@ span.tracking-\[0\.4em\] {
 
 .pp-h2 {
   margin: 0;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: var(--fs-h3);
   font-weight: 500;
 }
@@ -3001,7 +3102,7 @@ span.tracking-\[0\.4em\] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: var(--fs-h3);
   font-weight: 500;
   color: var(--text-primary);
@@ -3092,7 +3193,7 @@ span.tracking-\[0\.4em\] {
 
 .sv-title {
   margin: 0;
-  font-family: var(--font-geist);
+  font-family: var(--font-cal);
   font-size: 15px;
   font-weight: 500;
   line-height: 1.3;
@@ -3117,35 +3218,60 @@ span.tracking-\[0\.4em\] {
 
 .sv-cta-text {
   margin: 0;
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--text-primary);
 }
 
+/* Mirrors .hx-links: no box, a 3D object leading a mono label, and an arrow
+   that nudges up-right on hover. The object also lifts and tips. */
 .sv-cta-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--sand-deep);
-  border-radius: 4px;
-  background: transparent;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  background: none;
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-primary);
+  font-size: 13px;
+  color: var(--hx-link-ink);
   cursor: pointer;
-  transition: background-color 200ms ease, border-color 200ms ease;
+  transition: color 250ms ease;
 }
 
-.sv-cta-link svg { transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
-.sv-cta-link:hover { background: var(--hover-fill); border-color: var(--hover-border); }
-.sv-cta-link:hover svg { transform: translate(2px, -2px); }
+.sv-cta-obj {
+  display: inline-flex;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  transition: transform 400ms cubic-bezier(0.34, 1.6, 0.5, 1);
+}
+
+.sv-cta-arrow {
+  display: inline-block;
+  margin-left: -4px;
+  font-size: 11px;
+  color: var(--arrow-ink);
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), color 250ms ease;
+}
+
+.sv-cta-link:hover .sv-cta-obj,
+.sv-cta-link:focus-visible .sv-cta-obj { transform: translateY(-2px) rotate(-8deg); }
+.sv-cta-link:hover .sv-cta-arrow,
+.sv-cta-link:focus-visible .sv-cta-arrow {
+  color: var(--accent-ink);
+  transform: translate(2px, -2px);
+}
 
 .sv-cta-link:focus-visible {
   outline: 2px solid var(--sage);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-cta-obj,
+  .sv-cta-arrow { transition: none; }
 }
 
 @media (min-width: 640px) {
@@ -3802,28 +3928,22 @@ span.tracking-\[0\.4em\] {
 
 .ct-art {
   width: 100%;
-  max-width: 340px;
+  max-width: 240px;
   margin: 0;
+}
+
+@media (min-width: 640px) {
+  .ct-art { max-width: 340px; }
 }
 
 .ct-art img {
   display: block;
   width: 100%;
   height: auto;
-  /* The sketch is mostly empty canvas above and below the figures; crop to them. */
-  aspect-ratio: 5 / 2.6;
-  object-fit: cover;
   filter: var(--hit-duo) var(--img-dim);
-  /* Same edge treatment as the drummer: a long fade along the bottom and a
-     soft one at each side, intersected. */
-  -webkit-mask-image:
-    linear-gradient(to bottom, #000 55%, transparent 100%),
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to bottom, #000 55%, transparent 100%),
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
-  mask-composite: intersect;
+  /* Bottom edge only: the figure's legs fade into the page. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
 }
 
 @media (min-width: 1024px) {
@@ -4071,4 +4191,608 @@ span.tracking-\[0\.4em\] {
 .it-tour-on .sb-link .ni3d,
 .it-tour-on .hx-links .ni3d {
   transition: transform 340ms cubic-bezier(0.22, 0.8, 0.24, 1), filter 240ms ease;
+}
+
+/* ===== GitHub widget =====
+   An iOS-widget look without the card: a solid "lip" under raised surfaces
+   instead of blurry depth, glossy jelly tiles, and a speech-bubble tooltip.
+   Color comes from theme tokens, except the live badge's fixed green. */
+.ghw {
+  --ghw-lip: color-mix(in srgb, var(--ink) 14%, var(--sand-deep));
+  position: relative;
+}
+
+.ghw-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* App icon: squircle with a glassy top highlight, like a springboard icon. */
+.ghw-app {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--cream);
+  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--ink) 55%, var(--sand-deep));
+  overflow: hidden;
+}
+
+.ghw-app::before {
+  content: '';
+  position: absolute;
+  inset: 3px 6px auto;
+  height: 40%;
+  border-radius: 9px 9px 14px 14px;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.22), transparent);
+}
+
+.ghw-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ghw-title {
+  font-size: 1.125rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.ghw-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 11px;
+  color: var(--ink-muted);
+  transition: color 160ms ease;
+}
+
+.ghw-handle:hover { color: var(--text-primary); }
+
+/* Live badge: a solid green capsule with a broadcast mark, closer to an iOS
+   Live Activity or Shopify's live-view chip than a plain status dot. The
+   green is fixed rather than themed so "live" reads the same in both themes. */
+.ghw-live {
+  --live: #2FA463;
+  --live-deep: #1F7A47;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 11px 0 8px;
+  border-radius: 999px;
+  background: var(--live);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 2px 0 var(--live-deep),
+    0 6px 14px -6px color-mix(in srgb, var(--live) 70%, transparent);
+}
+
+.ghw-live-signal {
+  width: 15px;
+  height: 15px;
+  overflow: visible;
+}
+
+.ghw-live-beacon {
+  fill: #fff;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ghw-beacon 1.6s ease-in-out infinite;
+}
+
+.ghw-live-arc {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  opacity: 0.35;
+  animation: ghw-arc 1.6s ease-in-out infinite;
+}
+
+.ghw-live-arc-2 { animation-delay: 0.2s; }
+
+@keyframes ghw-beacon {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.25); }
+}
+
+@keyframes ghw-arc {
+  0%, 15%, 100% { opacity: 0.35; }
+  35% { opacity: 1; }
+}
+
+/* --- Stats --- */
+.ghw-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin-top: 20px;
+}
+
+.ghw-total {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ghw-total-num {
+  font-size: clamp(2.25rem, 1.8rem + 2vw, 2.875rem);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.ghw-total-label,
+.ghw-chip-label {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+}
+
+.ghw-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.ghw-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 68px;
+  height: 58px;
+  padding: 0 10px;
+  border: 1.5px solid var(--sand-deep);
+  border-radius: 16px;
+  background: var(--cream);
+  box-shadow: 0 2px 0 var(--sand-deep);
+}
+
+.ghw-chip-num {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+/* --- Mascot --- */
+.ghw-mascot {
+  width: 26px;
+  height: 26px;
+  overflow: visible;
+  animation: ghw-bob 3.2s ease-in-out infinite;
+}
+
+.ghw-mascot[data-mood='sleepy'] { animation-duration: 5s; }
+.ghw-mascot[data-mood='thrilled'] { animation: ghw-hop 1.4s cubic-bezier(0.3, 0, 0.3, 1) infinite; }
+
+.ghw-mascot-body { fill: var(--gh-2); stroke: var(--ink); stroke-width: 2; }
+.ghw-mascot[data-mood='sleepy'] .ghw-mascot-body { fill: var(--gh-0); }
+.ghw-mascot[data-mood='thrilled'] .ghw-mascot-body { fill: var(--gh-3); }
+.ghw-mascot-shine { fill: rgb(255 255 255 / 0.55); }
+.ghw-mascot-eye { fill: var(--ink); }
+.ghw-mascot-line { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.ghw-mascot-mouth { fill: var(--ink); }
+.ghw-mascot-blush { fill: #E89B8B; opacity: 0.55; }
+.ghw-mascot-z {
+  fill: var(--ink-muted);
+  font: 700 9px var(--font-cal);
+  animation: ghw-z 2.6s ease-in-out infinite;
+}
+
+@keyframes ghw-bob {
+  50% { transform: translateY(-1.5px) rotate(-3deg); }
+}
+
+@keyframes ghw-hop {
+  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
+  15% { transform: translateY(0) scale(1.12, 0.88); }
+  35% { transform: translateY(-5px) scale(0.94, 1.06); }
+}
+
+@keyframes ghw-z {
+  0% { opacity: 0; transform: translate(0, 2px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(3px, -4px); }
+}
+
+/* --- Grid --- */
+.ghw-grid {
+  position: relative;
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--sand);
+}
+
+.ghw-months {
+  position: relative;
+  height: 14px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+.ghw-months span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.ghw-plot { position: relative; }
+
+.ghw-cell,
+.ghw-lift {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.ghw-cell {
+  animation: ghw-pop 420ms cubic-bezier(0.34, 1.6, 0.5, 1) backwards;
+  animation-delay: var(--d);
+}
+
+.ghw-lift {
+  pointer-events: none;
+  transform: scale(1.5);
+  animation: ghw-lift 260ms cubic-bezier(0.34, 1.8, 0.5, 1) both;
+  filter: drop-shadow(0 1.5px 0 var(--ghw-lip));
+}
+
+@keyframes ghw-lift {
+  from { transform: scale(1); }
+}
+
+.ghw-gloss { fill: rgb(255 255 255 / 0.42); pointer-events: none; }
+
+.ghw-today {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  pointer-events: none;
+  animation: ghw-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes ghw-pop {
+  from { transform: scale(0); }
+}
+
+@keyframes ghw-breathe {
+  50% { opacity: 0.3; }
+}
+
+/* Speech bubble: sits above the hovered tile, tail points down at it. */
+.ghw-bubble {
+  --tail-x: 50%;
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 11px 8px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--cream);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--ink) 55%, var(--sand-deep));
+  animation: ghw-bubble-in 240ms cubic-bezier(0.34, 1.7, 0.5, 1) both;
+}
+
+.ghw-bubble[data-align='start'] { --tail-x: 14px; transform: translate(-14px, calc(-100% - 10px)); }
+.ghw-bubble[data-align='end'] { --tail-x: calc(100% - 14px); transform: translate(calc(-100% + 14px), calc(-100% - 10px)); }
+
+.ghw-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: var(--tail-x);
+  width: 10px;
+  height: 7px;
+  margin-left: -5px;
+  margin-top: -1px;
+  background: inherit;
+  clip-path: path('M0 0 H10 Q6 2 5 7 Q4 2 0 0 Z');
+}
+
+.ghw-bubble-count { font-size: 13px; line-height: 1.1; }
+.ghw-bubble-date { font-size: 10px; opacity: 0.7; }
+
+@keyframes ghw-bubble-in {
+  from { opacity: 0; scale: 0.6; }
+}
+
+/* --- Footer --- */
+.ghw-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ghw-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+.ghw-legend-tile {
+  width: 10px;
+  height: 10px;
+  border-radius: 3.5px;
+}
+
+.ghw-legend-tile:first-of-type { margin-left: 2px; }
+.ghw-legend-tile:last-of-type { margin-right: 2px; }
+
+.ghw-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1.5px solid var(--sand-deep);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--text-primary);
+  font-size: 11px;
+  box-shadow: 0 2px 0 var(--sand-deep);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.ghw-open:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--sand-deep); }
+.ghw-open:active { transform: translateY(2px); box-shadow: 0 0 0 var(--sand-deep); }
+
+@media (max-width: 479px) {
+
+  .ghw-grid { padding: 10px; }
+  .ghw-chips { width: 100%; }
+  .ghw-chip { flex: 1; min-width: 0; }
+  .ghw-legend { display: none; }
+  .ghw-foot { justify-content: flex-end; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghw-cell,
+  .ghw-mascot,
+  .ghw-mascot-z,
+  .ghw-today,
+  .ghw-bubble,
+  .ghw-live-beacon,
+  .ghw-live-arc { animation: none; }
+  .ghw-lift { animation: none; }
+}
+
+/* ===== Collapsible desktop sidebar =====
+   The rail narrows to an icon column. Icons never move: the aside's padding
+   and each row's left padding stay fixed, so only the width animates and text
+   fades out of the clipped edge. The page reflows with it because <main> is
+   flex: 1 beside the aside. */
+.sb {
+  --sb-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  width: 210px;
+  overflow-x: hidden;
+  transition:
+    width 380ms var(--sb-ease),
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.sb[data-collapsed='true'] { width: 68px; }
+
+.sb-identity { position: relative; }
+
+/* Profile link home. Bleeds 4px past the row so its hover tile frames the
+   avatar without shifting it. */
+.sb-home {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  margin: -4px;
+  padding: 4px;
+  border-radius: 10px;
+  transition: background-color 160ms ease;
+}
+
+@media (hover: hover) {
+  .sb-home:hover { background: var(--sb-hover); }
+}
+
+.sb-home:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 1px; }
+
+.sb-name { flex: 1; }
+
+/* Text that leaves when collapsed. On the way out it fades fast and first; on
+   the way back it waits for the width to open so it never wraps or squeezes. */
+.sb :is(.sb-name, .sb-group-text, .sf-label, .sf-text, .sf-theme-opt span, .sf-replay) {
+  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, color 200ms ease;
+}
+.sb .sb-label {
+  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, transform 200ms cubic-bezier(.2, .7, .2, 1);
+}
+.sb .sf-arrow {
+  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, transform 300ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms ease;
+}
+.sb .sf-switch {
+  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, background-color 220ms ease;
+}
+
+.sb[data-collapsed='true'] :is(.sb-name, .sb-label, .sb-group-text, .sf-label, .sf-text, .sf-arrow, .sf-switch, .sf-theme-opt span, .sf-replay) {
+  opacity: 0;
+  visibility: hidden;
+  transition-duration: 120ms, 0s;
+  transition-delay: 0s, 120ms;
+}
+
+.sf-link,
+.sf-row {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Section break: the ENGAGE label hands its slot to a short rule. */
+.sb-group-label { position: relative; }
+.sb-group-label::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 16px;
+  height: 1px;
+  background: var(--sand-deep);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.sb[data-collapsed='true'] .sb-group-label::before { opacity: 1; transition-delay: 160ms; }
+
+/* Toggle button */
+.sb-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease, opacity 200ms ease;
+}
+
+.sb-toggle:hover { color: var(--text-primary); background: var(--sb-hover); }
+.sb-toggle:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 1px; }
+
+.sb-avatar { transition: opacity 200ms ease; }
+
+/* Collapsed: the toggle sits on the avatar and swaps in on hover or focus. */
+.sb[data-collapsed='true'] .sb-toggle {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  margin: 0;
+  opacity: 0;
+}
+.sb[data-collapsed='true'] .sb-identity:hover .sb-toggle,
+.sb[data-collapsed='true'] .sb-toggle:focus-visible { opacity: 1; }
+.sb[data-collapsed='true'] .sb-identity:hover .sb-avatar,
+.sb[data-collapsed='true'] .sb-identity:has(.sb-toggle:focus-visible) .sb-avatar { opacity: 0; }
+
+/* Theme choice stacks vertically so both options still fit the rail. */
+.sb[data-collapsed='true'] .sf-theme { grid-template-columns: 1fr; }
+.sb[data-collapsed='true'] .sf-theme-opt { gap: 0; }
+.sb[data-collapsed='true'] .sf-theme-opt span { display: none; }
+.sb[data-collapsed='true'] .sf-theme-thumb {
+  right: 3px;
+  bottom: auto;
+  width: auto;
+  height: calc(50% - 3px);
+}
+.sb[data-collapsed='true'] .sf-theme[data-mode-choice='dark'] .sf-theme-thumb { transform: translateY(100%); }
+.sb[data-collapsed='true'] .sf-theme[data-mode-choice='light'][data-tour-flip] .sf-theme-thumb { transform: translateY(100%); }
+.sb[data-collapsed='true'] .sf-theme[data-mode-choice='dark'][data-tour-flip] .sf-theme-thumb { transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sb,
+  .sb :is(.sb-name, .sb-label, .sb-group-text, .sf-label, .sf-text, .sf-arrow, .sf-switch, .sf-theme-opt span, .sf-replay),
+  .sb-group-label::before,
+  .sb-toggle,
+  .sb-avatar { transition: none; }
+}
+
+/* ===== Views =====
+   Each nav item renders its own view, so the section that opens a view has
+   nothing above it to separate from. */
+.view > .section:first-child { border-top-width: 0; }
+
+/* Back-to-home link at the top of a view. It takes the empty top padding of
+   the view's first section. */
+.vb {
+  width: 100%;
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: 28px var(--gutter) 0;
+}
+
+.vb + .section { padding-top: 48px; }
+
+/* Desktop has the sidebar one click away, so the back link is mobile/tablet
+   only and the first section gets its normal top padding back. */
+@media (min-width: 1024px) {
+  .vb { display: none; }
+  .vb + .section { padding-top: var(--section-pad); }
+}
+
+/* Desktop: a view fills at least the screen, and a short one (contact,
+   certifications) centers its content in the space under the back button
+   instead of leaving it all empty below. Auto margins collapse to zero once
+   the content is taller than the screen, so long views are unaffected. */
+@media (min-width: 1024px) {
+  .view {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+
+  .view > .section:last-child {
+    margin-block: auto;
+    padding-bottom: calc(var(--section-pad) + 28px);
+  }
+}
+
+/* The view's first section sits under the button, not under other content,
+   so it needs no rule of its own. */
+.vb + .section { border-top-width: 0; }
+
+.vb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: color 200ms ease;
+}
+
+.vb-btn svg { transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (hover: hover) {
+  .vb-btn:hover { color: var(--accent-ink); }
+  .vb-btn:hover svg { transform: translateX(-2px); }
+}
+
+.vb-btn:focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; border-radius: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vb-btn svg { transition: none; }
 }

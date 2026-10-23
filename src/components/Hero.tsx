@@ -84,12 +84,14 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
         <div className="hx-intro">
           <h1 className="hx-name hx-in" data-tour="hero-name" style={{ '--d': '120ms' } as React.CSSProperties}>Kellas Andrei</h1>
           <p className="hx-copy hx-in" style={{ '--d': '190ms' } as React.CSSProperties}>
-            I'm a fullstack web developer. I care more about whether something works under real load
-            than whether it looks good in a demo.
+            I'm a designer and fullstack web developer, so the thing you see and the thing that runs
+            it come from the same head. I build things meant to survive real traffic, not just the
+            screenshot that ends up in the pitch deck.
           </p>
           <p className="hx-copy hx-in" style={{ '--d': '260ms' } as React.CSSProperties}>
-            These days I'm obsessed with agentic dev workflows, and what they change about how
-            software gets built.
+            I work across the whole stack, from the database to the interface, and I leave every
+            codebase a little cleaner than I found it. Fewer surprises, fewer 2am fixes, more sleep
+            for everyone.
           </p>
           <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
             <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" onClick={playExternalLink} data-tour="hero-social">

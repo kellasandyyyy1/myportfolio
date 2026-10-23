@@ -38,6 +38,7 @@ import {
   FileText,
   Printer,
   Calendar,
+  SidebarSimple,
   Clock,
   CheckCircle,
   CheckCircle as CheckCircle2,
@@ -616,9 +617,9 @@ const ThemeToggleIcon = ({ theme, size }: { theme: 'dark' | 'light'; size: numbe
 );
 
 /**
- * Route path -> section element id. Every route renders the same continuous
- * page and resolves to a scroll position; "work" is the one place where the
- * nav key and the DOM id disagree (`/work` -> `#projects`).
+ * Nav keys, each rendered as its own view rather than as a stop on one long
+ * page. Value is the section's element id; "work" is the one place the nav key
+ * and the DOM id disagree (`/work` -> `#projects`).
  */
 const NAV_SECTION_IDS: Record<string, string> = {
   about: 'about',
@@ -631,31 +632,24 @@ const NAV_SECTION_IDS: Record<string, string> = {
   contact: 'contact',
 };
 
-/** Sticky header height to clear below lg, where the header overlays content. */
-const scrollOffsetForViewport = () =>
-  window.matchMedia('(min-width: 1024px)').matches ? 0 : 56;
-
 /**
- * Scrolls to a section, retrying across frames until the element has a stable
- * position. On a cold load the sections exist immediately but fonts and images
- * are still settling, so a single early call lands at the wrong offset.
+ * View for a path. A nav key shows that section alone; "/" (and anything
+ * unknown) is "home", the whole site as one scrollable page from the hero.
  */
-function scrollToSection(sectionId: string, behavior: ScrollBehavior) {
-  let frames = 0;
-  const attempt = () => {
-    const el = document.getElementById(sectionId);
-    if (!el) {
-      // Give up rather than loop forever on an unknown id.
-      if (frames++ < 30) requestAnimationFrame(attempt);
-      return;
-    }
-    const top = el.getBoundingClientRect().top + window.scrollY - scrollOffsetForViewport();
-    window.scrollTo({ top, behavior });
-    // Re-measure once more after layout settles on first paint.
-    if (frames++ < 2) requestAnimationFrame(attempt);
-  };
-  requestAnimationFrame(attempt);
-}
+const viewForPath = (pathname: string) => {
+  const key = pathname.replace(/^\//, '').split('/')[0];
+  return key in NAV_SECTION_IDS ? key : 'home';
+};
+
+/** Back to home atop every view but About. Outlined like the grid/list switch, so it reads as a button. */
+const ViewBack = () => (
+  <div className="vb">
+    <Link to="/" onClick={playNavTick} className="vb-btn">
+      <ArrowLeft size={15} weight="bold" aria-hidden="true" />
+      back to home
+    </Link>
+  </div>
+);
 
 type ToggleTheme = () => void;
 
@@ -877,22 +871,47 @@ const SidebarNavigation = ({
   onOpenGame,
 }: SidebarNavigationProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('about');
   const [soundMuted, toggleSound] = useSoundMuted();
   const reduceMotion = useReducedMotion();
   const location = useLocation();
-  const navigate = useNavigate();
-  // A deep link should land instantly; later navigations animate.
-  const isFirstRouteRef = React.useRef(true);
+  const activeSection = viewForPath(location.pathname);
   const menuButtonRef = React.useRef<HTMLButtonElement>(null);
   // Stable so the menu's lock/trap effect doesn't re-run on every render.
   const closeMenu = React.useCallback(() => setIsOpen(false), []);
+
+  // Desktop rail mode. Read synchronously so a remembered choice paints
+  // collapsed on first frame instead of animating shut on load.
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sb-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = React.useCallback(() => {
+    playNavTick();
+    setCollapsed((c) => !c);
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('sb-collapsed', collapsed ? '1' : '0'); } catch { /* private mode */ }
+  }, [collapsed]);
+  // "[" toggles the rail, as in Linear and Figma. Ignored while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '[' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      toggleCollapsed();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggleCollapsed]);
   const handleMobileNavigate = (id: string) => {
     playNavTick();
     setIsOpen(false);
-    // Tapping the section you're already on doesn't change the route, so the
-    // URL -> scroll effect never fires; scroll directly instead.
-    if (location.pathname === `/${id}`) scrollToSection(NAV_SECTION_IDS[id], 'smooth');
+    // Tapping the view you're already on doesn't change the route; take it
+    // back to the top instead.
+    if (location.pathname === `/${id}`) window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const goHome = () => {
+    playNavTick();
+    // Already home: no route change, so glide back up to the hero instead.
+    if (location.pathname === '/') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const group1Links = [
@@ -911,84 +930,22 @@ const SidebarNavigation = ({
 
   const navLinks = [...group1Links, ...group2Links];
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = ['about', 'experience', 'stack', 'certifications', 'projects', 'services', 'resources', 'contact'];
-      const scrollPosition = window.scrollY + 200;
-
-      // The last tracked section that starts above the reading line. Sections
-      // without a nav entry ("how i think") fall under the one before them,
-      // so the active item and the URL can never be left pointing somewhere
-      // the visitor has already scrolled away from.
-      let current: string | null = null;
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el && scrollPosition >= el.offsetTop) current = sectionId;
-      }
-      if (current) setActiveSection(current === 'projects' ? 'work' : current);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // --- Routing <-> scroll, kept in sync in both directions ---
-  //
-  // Marks a URL change that the scroll spy wrote, so the route effect below
-  // doesn't treat it as a navigation request and scroll-jack the user.
-  const urlFromScrollRef = React.useRef(false);
-  // Last section the spy published. Comparing against this is what makes the
-  // spy effect fire on SCROLL changes only — depending on location.pathname
-  // made it fire on clicks too, where it would navigate straight back to the
-  // section you were leaving and cancel the scroll.
-  const lastSyncedSectionRef = React.useRef(activeSection);
-  // A click starts a smooth scroll that sweeps past intermediate sections. Muting
-  // the spy for that window stops the URL churning through every section on the way.
-  const muteSpyUntilRef = React.useRef(0);
-
-  // Last path this effect acted on. Effects can re-run without the URL changing
-  // (hot reload, a remount); those must never scroll the page.
+  // Every nav key is its own view, so a route change starts at the top. The
+  // exception is coming back from a project page, which restores where the
+  // visitor was in the work list. Effects can re-run without the URL changing
+  // (hot reload, a remount); those must never scroll.
   const lastRoutedPathRef = React.useRef<string | null>(null);
-
-  // URL -> scroll: clicks, deep links, back/forward. Declared first so a deep
-  // link is handled on mount before anything else can overwrite it.
   useEffect(() => {
     if (lastRoutedPathRef.current === location.pathname) return;
+    const isFirst = lastRoutedPathRef.current === null;
     lastRoutedPathRef.current = location.pathname;
-    if (urlFromScrollRef.current) {
-      urlFromScrollRef.current = false;
-      return;
-    }
     const returnY = takeWorksReturn(location.pathname);
     if (returnY !== null) {
-      isFirstRouteRef.current = false;
-      muteSpyUntilRef.current = Date.now() + 600;
       restoreScrollY(returnY);
       return;
     }
-    const sectionId = NAV_SECTION_IDS[location.pathname.replace(/^\//, '')];
-    const isFirst = isFirstRouteRef.current;
-    isFirstRouteRef.current = false;
-    if (!sectionId) return;
-
-    muteSpyUntilRef.current = Date.now() + 1200;
-    // Instant on first paint so a deep link doesn't animate down from the top.
-    scrollToSection(sectionId, isFirst ? 'auto' : 'smooth');
+    if (!isFirst) window.scrollTo({ top: 0, behavior: 'auto' });
   }, [location.pathname]);
-
-  // Scroll spy -> URL. Depends on activeSection ONLY. `replace` so scrolling
-  // never floods the back button.
-  useEffect(() => {
-    if (lastSyncedSectionRef.current === activeSection) return; // also skips mount
-    lastSyncedSectionRef.current = activeSection;
-    if (Date.now() < muteSpyUntilRef.current) return;
-
-    const path = `/${activeSection}`;
-    // Read live rather than from the closure, which may be a render behind.
-    if (window.location.pathname === path) return;
-    urlFromScrollRef.current = true;
-    navigate(path, { replace: true });
-  }, [activeSection, navigate]);
 
   // Play a transition only on a genuine change. The ref seeds with the initial
   // section so nothing sounds on first paint.
@@ -999,16 +956,16 @@ const SidebarNavigation = ({
     playTransition();
   }, [activeSection]);
 
-  // Router match drives the active state. `/` has no match, so About takes
-  // it — that's where the page opens.
-  const isLinkActive = (id: string, isActive: boolean) =>
-    isActive || (location.pathname === '/' && id === 'about');
+  // Router match drives the active state. On home (`/`) no section is active.
+  const isLinkActive = (id: string, isActive: boolean) => isActive || activeSection === id;
 
   const renderDesktopNavLink = (link: { id: string; name: string; href: string; icon: React.ReactNode }) => (
     <NavLink
       key={link.id}
       to={`/${link.id}`}
       onClick={playNavTick}
+      aria-label={link.name}
+      title={collapsed ? link.name : undefined}
       data-tour={link.id === 'work' ? 'sb-work' : ['services', 'resources', 'contact'].includes(link.id) ? 'sb-more' : 'sb-top'}
       className={({ isActive }) => `sb-link group ${isLinkActive(link.id, isActive) ? 'is-active' : ''}`}
     >
@@ -1036,11 +993,35 @@ const SidebarNavigation = ({
   return (
     <>
       {/* Desktop Fixed Left Sidebar (≥1024px) */}
-      <aside className={`hidden lg:flex w-[210px] flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none transition-colors overflow-y-auto bg-[var(--sidebar-bg)] border-[var(--sand-deep)]`}>
+      <aside
+        className={`sb hidden lg:flex flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none overflow-y-auto bg-[var(--sidebar-bg)] border-[var(--sand-deep)]`}
+        data-collapsed={collapsed}
+      >
         {/* Top: Identity Block */}
         <div className="sb-identity">
-          <img src="/img/drei.png" alt="" className="sb-avatar" />
-          <div className="min-w-0 t-small font-sans font-medium truncate c-primary">Kellas Andrei</div>
+          {/* Home: the full page from the hero down, scrollable through every section. */}
+          <Link
+            to="/"
+            onClick={goHome}
+            className="sb-home"
+            aria-label="Kellas Andrei, home"
+            aria-current={activeSection === 'home' ? 'page' : undefined}
+            title={collapsed ? 'Home' : undefined}
+          >
+            <img src="/img/drei.png" alt="" className="sb-avatar" />
+            <span className="sb-name min-w-0 t-small font-sans font-medium truncate c-primary">Kellas Andrei</span>
+          </Link>
+          {/* Collapsed, this sits over the avatar and fades in on hover. */}
+          <button
+            type="button"
+            className="sb-toggle"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar  [`}
+          >
+            <SidebarSimple size={16} weight="regular" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Vertical Nav Links, two groups */}
@@ -1050,7 +1031,7 @@ const SidebarNavigation = ({
           </div>
 
           <span className="sb-group-label t-label font-mono uppercase c-tertiary">
-            ENGAGE
+            <span className="sb-group-text">ENGAGE</span>
           </span>
           <div className="flex flex-col gap-0.5">
             {group2Links.map(renderDesktopNavLink)}
@@ -1074,9 +1055,11 @@ const SidebarNavigation = ({
                   onClick={playExternalLink}
                   className="sf-link"
                   data-tour="sb-social"
+                  aria-label={link.label}
+                  title={collapsed ? link.label : undefined}
                 >
                   <NavIcon3D name={link.icon} size={16} />
-                  <span>{link.label}</span>
+                  <span className="sf-text">{link.label}</span>
                   <ArrowUpRight weight="light" size={11} className="sf-arrow" aria-hidden="true" />
                 </a>
               </li>
@@ -1094,9 +1077,11 @@ const SidebarNavigation = ({
               if (!nowMuted) playNavTick();
             }}
             className="sf-row"
+            aria-label="Sound"
+            title={collapsed ? (soundMuted ? 'Sound off' : 'Sound on') : undefined}
           >
             <NavIcon3D name={soundMuted ? 'mute' : 'sound'} size={16} />
-            <span>Sound</span>
+            <span className="sf-text">Sound</span>
             <span className="sf-switch" aria-hidden="true"><i /></span>
           </button>
 
@@ -1107,6 +1092,7 @@ const SidebarNavigation = ({
               aria-pressed={theme === 'light'}
               onClick={() => { if (theme !== 'light') toggleTheme(); }}
               className="sf-theme-opt"
+              aria-label="Light theme"
             >
               <NavIcon3D name="sun" size={14} />
               <span>light</span>
@@ -1116,6 +1102,7 @@ const SidebarNavigation = ({
               aria-pressed={theme === 'dark'}
               onClick={() => { if (theme !== 'dark') toggleTheme(); }}
               className="sf-theme-opt"
+              aria-label="Dark theme"
             >
               <NavIcon3D name="moon" size={14} />
               <span>dark</span>
@@ -1131,7 +1118,7 @@ const SidebarNavigation = ({
       {/* Tablet Header (768px - 1023px) */}
       <header className={`hidden md:flex lg:hidden w-full border-b px-6 py-3.5 items-center justify-between sticky top-0 z-50 transition-colors bg-[var(--cream)] border-[var(--sand-deep)]`}>
         <div className="flex items-center gap-2.5">
-          <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
+          <Link to="/" onClick={goHome} className="t-h3 font-sans c-primary" aria-label="Kellas Andrei, home">Kellas Andrei</Link>
         </div>
 
         <div className="flex items-center gap-5" data-tour="tab-nav">
@@ -1174,7 +1161,7 @@ const SidebarNavigation = ({
       {/* Mobile Top Bar (<768px) */}
       <header className={`flex md:hidden w-full border-b px-4 py-3 items-center justify-between sticky top-0 z-50 transition-colors bg-[var(--cream)] border-[var(--sand-deep)]`}>
         <div className="flex items-center gap-2">
-          <span className={`t-h3 font-sans c-primary`}>Kellas Andrei</span>
+          <Link to="/" onClick={goHome} className="t-h3 font-sans c-primary" aria-label="Kellas Andrei, home">Kellas Andrei</Link>
         </div>
 
         <div className="flex items-center gap-1">
@@ -1230,7 +1217,7 @@ const SectionHeading = ({
   return (
     <div className={className}>
       <h2
-        className={`t-h2 c-primary font-geist lowercase ${animClass}`}
+        className={`t-h2 c-primary font-cal lowercase ${animClass}`}
         style={isInView !== undefined ? { animationDelay: `${baseDelay}ms` } : undefined}
       >
         {textVal}
@@ -1559,7 +1546,6 @@ const ProjectPage: React.FC<{ project: WorkProject }> = ({ project }) => {
 
       <header className="pp-head">
         <h1 className="pp-title">{project.title}</h1>
-        {project.tags.length > 0 && <p className="pp-tags">{project.tags.join(' · ')}</p>}
       </header>
 
       {(project.liveUrl || project.repoUrl) && (
@@ -1720,7 +1706,7 @@ const AllProjectsModal = ({
               <span className={`text-[10px] font-mono tracking-[1.5px] uppercase block text-[var(--ink-muted)]`}>
                 projects
               </span>
-              <h3 className={`text-[18px] md:text-[22px] font-geist font-normal leading-none tracking-normal mt-1 lowercase text-[var(--ink)]`}>
+              <h3 className={`text-[18px] md:text-[22px] font-cal font-normal leading-none tracking-normal mt-1 lowercase text-[var(--ink)]`}>
                 all projects
               </h3>
             </div>
@@ -2546,95 +2532,182 @@ const APPROACH_STAGES: ApproachStage[] = [
 ];
 
 /**
- * Line-art map of one product, interface → client → server. Each band is a
- * real layer: the page someone touches, the component tree that renders it,
- * and the API + database behind it. Dots travel the connectors to show requests
- * going down and responses coming back. Decorative; the list carries the text.
+ * One request, staged like a stop-motion set: interface → client → server.
+ * Pastel paper panels with soft cut-out shadows, centered title plaques, and
+ * everything animated on held frames: the ink lines "boil" a few times a
+ * second, panels nudge between frames, and the envelope and JSON chip hop
+ * along the wires rather than glide. Hovering a row in the list lifts its
+ * panel. Decorative; the list carries the text.
  */
+
+/** Positions 0→1 in `n` held frames, for discrete animateMotion. */
+const hopFrames = (n: number) => Array.from({ length: n + 1 }, (_, i) => +(i / n).toFixed(3));
+
 const SystemDiagram: React.FC<{ active: LayerId | null; reduced: boolean }> = ({ active, reduced }) => {
   const zone = (id: LayerId) =>
-    `ad-zone${active && active !== id ? ' is-dim' : ''}${active === id ? ' is-on' : ''}`;
+    `sd-zone${active && active !== id ? ' is-dim' : ''}${active === id ? ' is-on' : ''}`;
+
+  /** Paper panel: soft shadow, pastel card, a lower-edge shade, and a centered plaque. */
+  const panel = (y: number, h: number, label: string, tint: string, children: React.ReactNode) => {
+    const plaqueW = label.length * 8 + 30;
+    return (
+      <>
+        <rect className="sd-shade" x="13" y={y + 5} width="340" height={h} />
+        <g className="sd-lift">
+          <g className="sd-jitter">
+            <rect className={`sd-panel ${tint}`} x="8" y={y} width="340" height={h} />
+            <rect className="sd-panel-shade" x="9" y={y + h - 14} width="338" height="13" />
+            {children}
+            <rect className="sd-shade" x={180 - plaqueW / 2 + 2} y={y - 8} width={plaqueW} height="18" />
+            <rect className="sd-line sd-fill" x={180 - plaqueW / 2} y={y - 10} width={plaqueW} height="18" />
+            <rect className="sd-plaque-inner" x={180 - plaqueW / 2 + 3} y={y - 7} width={plaqueW - 6} height="12" />
+            <text className="sd-plaque" x="180" y={y + 2.5}>{label}</text>
+          </g>
+        </g>
+      </>
+    );
+  };
+
+  /** Box with a soft cut-out shadow, so every piece sits under the same light. */
+  const block = (x: number, y: number, w: number, h: number, fill = 'sd-fill') => (
+    <>
+      <rect className="sd-shade" x={x + 3} y={y + 3} width={w} height={h} />
+      <rect className={`sd-line ${fill}`} x={x} y={y} width={w} height={h} />
+    </>
+  );
+
+  const down = hopFrames(6);
+  const roundTrip = [...hopFrames(5), ...hopFrames(5).reverse().slice(1)];
 
   return (
-    <svg className="ad" viewBox="0 0 360 400" aria-hidden="true">
-      {/* Connectors sit beneath the bands so they read as passing between them. */}
-      <path id="ad-wire-1" className="ad-wire" d="M180 112 V156" />
-      <path id="ad-wire-2" className="ad-wire" d="M180 228 V292" />
-      <text className="ad-note" x="190" y="138">render · events</text>
-      <text className="ad-note" x="190" y="262">fetch · json</text>
-      {!reduced && (
-        <>
-          <circle className="ad-packet" r="2.5">
-            <animateMotion dur="2.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.45;1" calcMode="linear">
-              <mpath href="#ad-wire-1" />
-            </animateMotion>
-          </circle>
-          <circle className="ad-packet" r="2.5" visibility="hidden">
-            <set attributeName="visibility" to="visible" begin="0.9s" />
-            <animateMotion dur="2.6s" begin="0.9s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.4;0.8" calcMode="linear">
-              <mpath href="#ad-wire-2" />
-            </animateMotion>
-          </circle>
-        </>
-      )}
+    <svg className="sd" viewBox="0 0 360 424" aria-hidden="true">
+      <defs>
+        {/* Line boil: the displacement noise swaps seed on held frames. */}
+        <filter id="sd-boil" x="-4%" y="-4%" width="108%" height="108%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="2">
+            {!reduced && (
+              <animate attributeName="seed" values="2;9;15;4" dur="0.5s" calcMode="discrete" repeatCount="indefinite" />
+            )}
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" scale="1.8" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
 
-      {/* Interface: the page itself */}
-      <g className={zone('ui')}>
-        <rect className="ad-frame" x="4" y="4" width="352" height="120" rx="12" />
-        <text className="ad-tag" x="18" y="22">interface</text>
-        <rect className="ad-shape ad-fill" x="90" y="28" width="180" height="84" rx="7" />
-        <path className="ad-shape" d="M90 42 H270" />
-        <circle className="ad-dot" cx="100" cy="35" r="2" />
-        <circle className="ad-dot" cx="107" cy="35" r="2" />
-        <circle className="ad-dot" cx="114" cy="35" r="2" />
-        <rect className="ad-solid" x="104" y="52" width="66" height="6" rx="3" />
-        <rect className="ad-soft" x="104" y="64" width="78" height="3.5" rx="1.75" />
-        <rect className="ad-soft" x="104" y="71" width="58" height="3.5" rx="1.75" />
-        <rect className="ad-shape" x="104" y="84" width="46" height="16" rx="4" />
-        <rect className="ad-soft" x="112" y="90.5" width="30" height="3" rx="1.5" />
-        <path className="ad-cursor" d="M140 93 l0 11 l3 -3 l2.4 4.6 l1.8 -0.9 l-2.4 -4.5 l4.2 0 z" />
-        <rect className="ad-shape" x="196" y="52" width="60" height="48" rx="4" />
-        <circle className="ad-shape" cx="242" cy="64" r="4" />
-        <path className="ad-shape" d="M200 94 L215 78 L226 89 L234 81 L252 96" />
-      </g>
+      <g filter="url(#sd-boil)">
+        {/* --- Interface: the page someone touches --- */}
+        <g className={zone('ui')}>
+          {panel(18, 112, 'interface', 'sd-pink', (
+            <>
+              {block(92, 32, 176, 86)}
+              <path className="sd-line" d="M92 45 H268" />
+              {[99, 107, 115].map((x) => (
+                <rect key={x} className="sd-line sd-fill" x={x} y="36" width="5" height="5" />
+              ))}
+              <rect className="sd-ink" x="102" y="54" width="66" height="7" />
+              <rect className="sd-soft" x="102" y="66" width="78" height="3.5" />
+              <rect className="sd-soft" x="102" y="73" width="56" height="3.5" />
+              {block(102, 86, 50, 17, 'sd-butter')}
+              <rect className="sd-soft" x="111" y="93" width="32" height="3" />
+              <g className="sd-burst">
+                <path d="M156 86 l5 -5 M159 94 h7 M153 81 v-6" />
+              </g>
+              <path className="sd-cursor" d="M146 94 l0 12 l3.2 -3.2 l2.6 5 l2 -1 l-2.6 -4.8 l4.6 0 z" />
+              {block(184, 54, 72, 52, 'sd-sky')}
+              <circle className="sd-line sd-butter" cx="241" cy="66" r="5" />
+              <path className="sd-line sd-mint" d="M185 105 L205 81 L218 94 L229 84 L255 105 Z" />
+            </>
+          ))}
+        </g>
 
-      {/* Client: the component tree that renders it */}
-      <g className={zone('frontend')}>
-        <rect className="ad-frame" x="4" y="144" width="352" height="104" rx="12" />
-        <text className="ad-tag" x="18" y="162">client</text>
-        <path className="ad-shape" d="M180 178 V194 M100 194 H260 M100 194 V206 M180 194 V206 M260 194 V206" />
-        <rect className="ad-shape ad-fill" x="146" y="156" width="68" height="22" rx="5" />
-        <text className="ad-code" x="180" y="170.5">{'<App />'}</text>
-        {[
-          { x: 66, label: '<Nav />' },
-          { x: 146, label: '<Feed />' },
-          { x: 226, label: '<Form />' },
-        ].map((n) => (
-          <g key={n.label}>
-            <rect className="ad-shape ad-fill" x={n.x} y="206" width="68" height="22" rx="5" />
-            <text className="ad-code" x={n.x + 34} y="220.5">{n.label}</text>
-          </g>
-        ))}
-      </g>
+        <path id="sd-wire-1" className="sd-wire" d="M180 136 V164" />
+        <path className="sd-arrow" d="M175 158 L180 165 L185 158" />
+        <path className="sd-line sd-fill" d="M196 138 H284 V156 H204 L196 162 Z" />
+        <text className="sd-note" x="203" y="150.5">click → render</text>
 
-      {/* Server: API in front of the database */}
-      <g className={zone('api')}>
-        <rect className="ad-frame" x="4" y="268" width="352" height="124" rx="12" />
-        <text className="ad-tag" x="18" y="286">server</text>
-        <rect className="ad-shape ad-fill" x="120" y="292" width="110" height="78" rx="6" />
-        <path className="ad-shape" d="M120 318 H230 M120 344 H230" />
-        {[305, 331, 357].map((y) => (
-          <g key={y}>
-            <circle className="ad-led" cx="133" cy={y} r="2.2" />
-            <rect className="ad-soft" x="142" y={y - 2} width="40" height="4" rx="2" />
-          </g>
-        ))}
-        <text className="ad-code ad-code-start" x="194" y="308">/api</text>
-        <path className="ad-wire ad-wire-solid" d="M230 331 H262" />
-        <ellipse className="ad-shape ad-fill" cx="292" cy="302" rx="30" ry="8" />
-        <path className="ad-shape" d="M262 302 V358 A30 8 0 0 0 322 358 V302" />
-        <path className="ad-shape" d="M262 330 A30 8 0 0 0 322 330" />
-        <text className="ad-code" x="292" y="384">database</text>
+        {/* --- Client: the component tree --- */}
+        <g className={zone('frontend')}>
+          {panel(172, 102, 'client', 'sd-butter-pale', (
+            <>
+              <path className="sd-line" d="M180 209 V219 M100 219 H260 M100 219 V232 M180 219 V232 M260 219 V232" />
+              {block(144, 186, 72, 23, 'sd-pink')}
+              <text className="sd-code sd-code-strong" x="180" y="201.5">{'<App />'}</text>
+              {[
+                { x: 64, label: '<Nav />' },
+                { x: 144, label: '<Feed />' },
+                { x: 224, label: '<Form />' },
+              ].map((n) => (
+                <g key={n.label}>
+                  {block(n.x, 232, 72, 23)}
+                  <text className="sd-code" x={n.x + 36} y="247.5">{n.label}</text>
+                </g>
+              ))}
+            </>
+          ))}
+        </g>
+
+        <path id="sd-wire-2" className="sd-wire" d="M180 280 V308" />
+        <path className="sd-arrow" d="M175 286 L180 279 L185 286" />
+        <path className="sd-arrow" d="M175 302 L180 309 L185 302" />
+        <path className="sd-line sd-fill" d="M196 282 H282 V300 H204 L196 306 Z" />
+        <text className="sd-note" x="203" y="294.5">fetch ⇄ json</text>
+
+        {/* --- Server: API in front of a (friendly) database --- */}
+        <g className={zone('api')}>
+          {panel(316, 100, 'server', 'sd-sky-pale', (
+            <>
+              {block(104, 330, 110, 72)}
+              <path className="sd-line" d="M104 354 H214 M104 378 H214" />
+              {[342, 366, 390].map((y, i) => (
+                <g key={y}>
+                  <rect className="sd-line sd-led" x="113" y={y - 3} width="6" height="6" style={{ animationDelay: `${i * 0.375}s` }} />
+                  <rect className="sd-soft" x="126" y={y - 2} width="38" height="4" />
+                </g>
+              ))}
+              <text className="sd-code sd-code-start" x="176" y="345">/api</text>
+              <path className="sd-wire sd-wire-solid" d="M214 366 H256" />
+              <path className="sd-arrow" d="M250 361 L257 366 L250 371" />
+              <path className="sd-shade" d="M266 342 V390 A30 8 0 0 0 326 390 V342 Z" />
+              <path className="sd-line sd-mint" d="M262 338 V386 A30 8 0 0 0 322 386 V338" />
+              <ellipse className="sd-line sd-fill" cx="292" cy="338" rx="30" ry="8" />
+              <rect className="sd-ink sd-eye" x="282" y="355" width="3" height="5" />
+              <rect className="sd-ink sd-eye" x="298" y="355" width="3" height="5" />
+              <path className="sd-line" d="M286 366 Q291.5 371 297 366" fill="none" />
+            </>
+          ))}
+        </g>
+
+        {!reduced && (
+          <>
+            <g className="sd-packet">
+              <rect className="sd-line sd-fill" x="-6" y="-4" width="12" height="8" />
+              <path className="sd-line" d="M-6 -4 L0 1 L6 -4" fill="none" />
+              <animateMotion
+                dur="2.8s"
+                repeatCount="indefinite"
+                calcMode="discrete"
+                keyPoints={[...down, 1].join(';')}
+                keyTimes={[...down.map((_, i) => +(i * 0.065).toFixed(3)), 0.9].join(';')}
+              >
+                <mpath href="#sd-wire-1" />
+              </animateMotion>
+            </g>
+            <g className="sd-packet" visibility="hidden">
+              <set attributeName="visibility" to="visible" begin="1.1s" />
+              <rect className="sd-line sd-butter" x="-10" y="-6" width="20" height="12" />
+              <text className="sd-chip" x="0" y="2.6">{'{}'}</text>
+              <animateMotion
+                dur="2.8s"
+                begin="1.1s"
+                repeatCount="indefinite"
+                calcMode="discrete"
+                keyPoints={[...roundTrip, 0].join(';')}
+                keyTimes={[...roundTrip.map((_, i) => +(i * 0.065).toFixed(3)), 0.9].join(';')}
+              >
+                <mpath href="#sd-wire-2" />
+              </animateMotion>
+            </g>
+          </>
+        )}
       </g>
     </svg>
   );
@@ -2698,7 +2771,7 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
   );
 };
 
-// --- GitHub contribution dot matrix ---
+// --- GitHub contribution widget ---
 
 const GITHUB_PROFILE_URL = 'https://github.com/kellasandyyyy1';
 const MATRIX_ROWS = 7; // one row per weekday, matching GitHub's week-column layout
@@ -2708,20 +2781,20 @@ interface ContributionDay {
   count: number;
 }
 
-/** Size + brightness step per bucket. Flat fills only — no gradients or glow. */
+/** Fill per bucket. Tiles stay one size; only the color steps up. */
 const CONTRIBUTION_BUCKETS = [
-  { min: 0, r: 1, fill: 'var(--gh-0)' },
-  { min: 1, r: 1.4, fill: 'var(--gh-1)' },
-  { min: 3, r: 2, fill: 'var(--gh-2)' },
-  { min: 6, r: 2.6, fill: 'var(--gh-3)' },
-  { min: 10, r: 3.4, fill: 'var(--gh-4)' },
+  { min: 0, fill: 'var(--gh-0)' },
+  { min: 1, fill: 'var(--gh-1)' },
+  { min: 3, fill: 'var(--gh-2)' },
+  { min: 6, fill: 'var(--gh-3)' },
+  { min: 10, fill: 'var(--gh-4)' },
 ];
 
-const bucketFor = (count: number) => {
+const bucketIndex = (count: number) => {
   for (let i = CONTRIBUTION_BUCKETS.length - 1; i > 0; i--) {
-    if (count >= CONTRIBUTION_BUCKETS[i].min) return CONTRIBUTION_BUCKETS[i];
+    if (count >= CONTRIBUTION_BUCKETS[i].min) return i;
   }
-  return CONTRIBUTION_BUCKETS[0];
+  return 0;
 };
 
 /**
@@ -2734,13 +2807,52 @@ const placeholderDays = (count: number): ContributionDay[] =>
     return { date: `placeholder-${i}`, count: h < 55 ? 0 : h < 88 ? 1 : 3 };
   });
 
-const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
-  const isLight = theme === 'light';
+const parseDay = (date: string) => new Date(`${date}T00:00:00`);
+const formatDay = (date: string) =>
+  parseDay(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+
+/** Little blob whose face follows the last seven days: asleep, content, or thrilled. */
+function GhMascot({ week }: { week: number }) {
+  const mood = week === 0 ? 'sleepy' : week < 8 ? 'happy' : 'thrilled';
+  return (
+    <svg className="ghw-mascot" data-mood={mood} viewBox="0 0 40 40" aria-hidden="true">
+      <path
+        className="ghw-mascot-body"
+        d="M20 4c9.5 0 16 6.6 16 15.6S30.4 36 20 36 4 29.6 4 19.6 10.5 4 20 4Z"
+      />
+      <ellipse className="ghw-mascot-shine" cx="13" cy="11" rx="4" ry="2.2" transform="rotate(-24 13 11)" />
+      {mood === 'sleepy' ? (
+        <>
+          <path className="ghw-mascot-line" d="M12.5 20.5q2.5 1.8 5 0M22.5 20.5q2.5 1.8 5 0" />
+          <path className="ghw-mascot-line" d="M18.5 27h3" />
+          <text className="ghw-mascot-z" x="29" y="10">z</text>
+        </>
+      ) : mood === 'happy' ? (
+        <>
+          <circle className="ghw-mascot-eye" cx="15" cy="19.5" r="1.9" />
+          <circle className="ghw-mascot-eye" cx="25" cy="19.5" r="1.9" />
+          <path className="ghw-mascot-line" d="M16.5 25.5q3.5 3 7 0" />
+        </>
+      ) : (
+        <>
+          <path className="ghw-mascot-line" d="M12.5 20.5q2.5-2.6 5 0M22.5 20.5q2.5-2.6 5 0" />
+          <path className="ghw-mascot-mouth" d="M15.5 24.5h9q-.6 5-4.5 5t-4.5-5Z" />
+          <circle className="ghw-mascot-blush" cx="11.5" cy="24" r="2" />
+          <circle className="ghw-mascot-blush" cx="28.5" cy="24" r="2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [spacing, setSpacing] = useState(10);
+  const [spacing, setSpacing] = useState(12);
   const [columns, setColumns] = useState(53);
   const [data, setData] = useState<{ total: number; days: ContributionDay[] } | null>(null);
   const [failed, setFailed] = useState(false);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   // Fit as many week-columns as the measured container allows, rather than
   // hardcoding counts per breakpoint.
@@ -2751,9 +2863,8 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
     const measure = () => {
       const width = el.clientWidth;
       if (!width) return;
-      // 8px is the floor: the brightest bucket is 6.8px across, so tighter
-      // spacing makes adjacent peak days visually collide.
-      const gap = width < 768 ? 8 : 10;
+      // Below 10px a tile's gloss highlight shrinks to noise.
+      const gap = width < 480 ? 10 : 12;
       setSpacing(gap);
       setColumns(Math.max(12, Math.min(53, Math.floor(width / gap))));
     };
@@ -2790,91 +2901,238 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = ({ theme }) => {
   // Keep the most recent weeks when the container can't fit the full year.
   const days = sourceDays ? sourceDays.slice(-totalCells) : null;
 
+  const stats = React.useMemo(() => {
+    if (!data || data.days.length === 0) return null;
+    const all = data.days;
+    // Today often has nothing yet; don't let that break an otherwise live streak.
+    let i = all.length - 1;
+    if (all[i].count === 0) i--;
+    let streak = 0;
+    for (; i >= 0 && all[i].count > 0; i--) streak++;
+    const best = all.reduce((top, d) => (d.count > top.count ? d : top), all[0]);
+    const week = all.slice(-7).reduce((sum, d) => sum + d.count, 0);
+    return { streak, best, week };
+  }, [data]);
+
+  // A month label sits over the first column whose week starts in that month.
+  const months = React.useMemo(() => {
+    if (!data || !days) return [];
+    const labels: { col: number; label: string }[] = [];
+    let last = -1;
+    for (let col = 0; col * MATRIX_ROWS < days.length; col++) {
+      const first = parseDay(days[col * MATRIX_ROWS].date);
+      if (first.getMonth() === last) continue;
+      last = first.getMonth();
+      labels.push({ col, label: first.toLocaleDateString('en-US', { month: 'short' }) });
+    }
+    // The first column is usually a partial month; drop its label if it would crowd the next.
+    if (labels.length > 1 && labels[1].col - labels[0].col < 3) labels.shift();
+    return labels;
+  }, [data, days]);
+
   const width = columns * spacing;
   const height = MATRIX_ROWS * spacing;
+  const tile = spacing * 0.78;
+  const inset = (spacing - tile) / 2;
+  const hoveredDay = data && days && hovered !== null ? days[hovered] : null;
+  const hoveredCol = hovered !== null ? Math.floor(hovered / MATRIX_ROWS) : 0;
+  const hoveredRow = hovered !== null ? hovered % MATRIX_ROWS : 0;
 
   return (
-    <div>
-      {/* Header row — stays on one line at every width */}
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`t-mono font-mono whitespace-nowrap c-tertiary`}>
-            github
-          </span>
-          <span className="flex items-center gap-1 shrink-0">
-            <span
-              aria-hidden="true"
-              className="w-[5px] h-[5px] rounded-full"
-              style={{ backgroundColor: 'var(--sage)' }}
-            />
-            <span className={`t-label font-mono text-[var(--accent-ink)]`}>
-              live
-            </span>
-          </span>
+    <div className="ghw">
+      <div className="ghw-head">
+        <span className="ghw-app" aria-hidden="true">
+          <GithubLogo weight="fill" size={20} />
+        </span>
+        <div className="ghw-id">
+          <span className="ghw-title font-cal">github</span>
+          <a
+            href={GITHUB_PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={playExternalLink}
+            className="ghw-handle font-mono"
+          >
+            <span className="truncate">@kellasandyyyy1</span>
+            <ArrowUpRight weight="bold" size={10} className="shrink-0" />
+          </a>
         </div>
+        <span className="ghw-live font-cal">
+          {/* Broadcast mark: a beacon dot with two arcs that light up in turn. */}
+          <svg className="ghw-live-signal" viewBox="0 0 16 16" aria-hidden="true">
+            <circle className="ghw-live-beacon" cx="5" cy="8" r="2.4" />
+            <path className="ghw-live-arc ghw-live-arc-1" d="M8.6 4.8a4.6 4.6 0 0 1 0 6.4" />
+            <path className="ghw-live-arc ghw-live-arc-2" d="M11.2 2.6a7.8 7.8 0 0 1 0 10.8" />
+          </svg>
+          live
+        </span>
+      </div>
 
+      {data && stats && (
+        <div className="ghw-stats">
+          <div className="ghw-total">
+            <span className="ghw-total-num font-cal">{data.total.toLocaleString()}</span>
+            <span className="ghw-total-label font-mono">contributions this year</span>
+          </div>
+          <div className="ghw-chips">
+            <span className="ghw-chip">
+              <span className="ghw-chip-num font-cal">{stats.streak}</span>
+              <span className="ghw-chip-label font-mono">day streak</span>
+            </span>
+            <span className="ghw-chip">
+              <span className="ghw-chip-num font-cal">{stats.best.count}</span>
+              <span className="ghw-chip-label font-mono">best day</span>
+            </span>
+            <span className="ghw-chip ghw-chip-mascot" title={`${plural(stats.week, 'contribution')} in the last 7 days`}>
+              <GhMascot week={stats.week} />
+              <span className="ghw-chip-label font-mono">this week</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div ref={containerRef} className="ghw-grid">
+        {months.length > 0 && (
+          <div className="ghw-months font-mono" aria-hidden="true">
+            {months.map((m) => (
+              <span key={`${m.col}-${m.label}`} style={{ left: `${(m.col / columns) * 100}%` }}>
+                {m.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {days && (
+          <div className="ghw-plot" onPointerLeave={() => setHovered(null)}>
+            <svg
+              viewBox={`0 0 ${width} ${height}`}
+              style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+              role="img"
+              aria-label={
+                data
+                  ? `${data.total.toLocaleString()} GitHub contributions in the last year`
+                  : 'GitHub contribution activity'
+              }
+            >
+              {days.map((day, i) => {
+                const level = bucketIndex(day.count);
+                const col = Math.floor(i / MATRIX_ROWS);
+                const row = i % MATRIX_ROWS;
+                const x = col * spacing + inset;
+                const y = row * spacing + inset;
+                const isToday = data !== null && i === days.length - 1;
+                return (
+                  <g
+                    key={`${day.date}-${i}`}
+                    className="ghw-cell"
+                    style={{ '--d': `${col * 14 + row * 10}ms` } as React.CSSProperties}
+                    onPointerEnter={data ? () => setHovered(i) : undefined}
+                  >
+                    <rect x={x} y={y} width={tile} height={tile} rx={tile * 0.32} fill={CONTRIBUTION_BUCKETS[level].fill} />
+                    {level > 0 && (
+                      <rect
+                        className="ghw-gloss"
+                        x={x + tile * 0.18}
+                        y={y + tile * 0.14}
+                        width={tile * 0.4}
+                        height={tile * 0.18}
+                        rx={tile * 0.09}
+                      />
+                    )}
+                    {isToday && (
+                      <rect
+                        className="ghw-today"
+                        x={x - 1.2}
+                        y={y - 1.2}
+                        width={tile + 2.4}
+                        height={tile + 2.4}
+                        rx={tile * 0.4}
+                      />
+                    )}
+                  </g>
+                );
+              })}
+              {/* Hovered tile is redrawn last so its springy lift sits above its neighbours. */}
+              {hoveredDay && (
+                <g key={`lift-${hovered}`} className="ghw-lift" aria-hidden="true">
+                  <rect
+                    x={hoveredCol * spacing + inset}
+                    y={hoveredRow * spacing + inset}
+                    width={tile}
+                    height={tile}
+                    rx={tile * 0.32}
+                    fill={CONTRIBUTION_BUCKETS[bucketIndex(hoveredDay.count)].fill}
+                  />
+                  {hoveredDay.count > 0 && (
+                    <rect
+                      className="ghw-gloss"
+                      x={hoveredCol * spacing + inset + tile * 0.18}
+                      y={hoveredRow * spacing + inset + tile * 0.14}
+                      width={tile * 0.4}
+                      height={tile * 0.18}
+                      rx={tile * 0.09}
+                    />
+                  )}
+                </g>
+              )}
+            </svg>
+
+            {hoveredDay && (
+              <div
+                key={hovered}
+                className="ghw-bubble"
+                data-align={hoveredCol < 5 ? 'start' : hoveredCol > columns - 6 ? 'end' : 'center'}
+                style={{
+                  left: `${((hoveredCol + 0.5) / columns) * 100}%`,
+                  top: `${(hoveredRow / MATRIX_ROWS) * 100}%`,
+                }}
+                role="status"
+              >
+                <span className="ghw-bubble-count font-cal">
+                  {hoveredDay.count === 0 ? 'no contributions' : plural(hoveredDay.count, 'contribution')}
+                </span>
+                <span className="ghw-bubble-date font-mono">{formatDay(hoveredDay.date)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="ghw-foot">
+        <span className="ghw-legend font-mono" aria-hidden="true">
+          less
+          {CONTRIBUTION_BUCKETS.map((b) => (
+            <span key={b.min} className="ghw-legend-tile" style={{ background: b.fill }} />
+          ))}
+          more
+        </span>
         <a
           href={GITHUB_PROFILE_URL}
           target="_blank"
           rel="noopener noreferrer"
           onClick={playExternalLink}
-          className={`inline-flex items-center gap-1 t-mono font-mono transition-colors min-w-0 text-[var(--ink-muted)] hover:text-[var(--accent-ink)]`}
+          className="ghw-open font-mono"
         >
-          <span className="truncate">github.com/kellasandyyyy1</span>
-          <ArrowUpRight weight="light" size={11} className="shrink-0" />
+          open profile
+          <ArrowUpRight weight="bold" size={11} />
         </a>
       </div>
-
-      {/* Dot matrix — no border or fill, sits directly on the page background */}
-      <div ref={containerRef} className="w-full">
-        {days && (
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            style={{ width: '100%', height: 'auto' }}
-            role="img"
-            aria-label={
-              data
-                ? `${data.total.toLocaleString()} GitHub contributions in the last year`
-                : 'GitHub contribution activity'
-            }
-          >
-            {days.map((day, i) => {
-              const bucket = bucketFor(day.count);
-              const col = Math.floor(i / MATRIX_ROWS);
-              const row = i % MATRIX_ROWS;
-              return (
-                <circle
-                  key={`${day.date}-${i}`}
-                  cx={col * spacing + spacing / 2}
-                  cy={row * spacing + spacing / 2}
-                  r={bucket.r}
-                  fill={bucket.fill}
-                />
-              );
-            })}
-          </svg>
-        )}
-      </div>
-
-      {/* Caption is omitted entirely on failure rather than showing a fabricated number */}
-      {data && (
-        <p className={`t-label font-mono mt-4 c-tertiary`}>
-          {data.total.toLocaleString()} contributions in the last year
-        </p>
-      )}
     </div>
   );
 };
 
 function useSectionInView() {
-  const ref = React.useRef<HTMLElement | null>(null);
   const [isInView, setIsInView] = useState(false);
+  const observerRef = React.useRef<IntersectionObserver | null>(null);
 
-  useEffect(() => {
-    const el = ref.current;
+  // A callback ref rather than an effect: sections mount and unmount as views
+  // change, and an effect keyed to the App's mount would never see them.
+  const ref = React.useCallback((el: HTMLElement | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
     if (!el) return;
 
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setIsInView(true);
       return;
     }
@@ -2883,17 +3141,13 @@ function useSectionInView() {
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsInView(true);
-          observer.unobserve(el);
+          observer.disconnect();
         }
       },
       { threshold: 0.15 }
     );
-
     observer.observe(el);
-
-    return () => {
-      observer.disconnect();
-    };
+    observerRef.current = observer;
   }, []);
 
   return [ref, isInView] as const;
@@ -2940,6 +3194,10 @@ export default function App() {
   const blogLocation = useLocation();
   // /work/:slug renders a project page in place of the home sections.
   const workMatch = useMatch('/work/:slug');
+  const view = viewForPath(blogLocation.pathname);
+  // Home renders every group in order; a nav view renders just its own.
+  const shows = (key: string) => view === key || view === 'home';
+  const reduceMotion = useReducedMotion();
   const getAnimClass = (inView: boolean) => `scroll-animate-child ${inView ? 'animated' : ''}`;
 
   const switchTimer = React.useRef<number | undefined>(undefined);
@@ -3029,481 +3287,522 @@ export default function App() {
               : <NotFoundPage />
           ) : (
           <>
-          {/* --- Hero Section --- */}
-          <Hero onBookCall={() => setShowBookCall(true)} />
-
-          {/* --- 01 / Overview Section --- */}
-          <section id="about" ref={aboutRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
-            <ApproachSection theme={theme} isInView={aboutInView} />
-          </section>
-
-          {/* --- 02 / Experience Section --- */}
-          <section id="experience" ref={expRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="section-head">
-              <SectionHeading theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
-              <p
-                className={`t-lead font-sans c-secondary ${getAnimClass(expInView)}`}
-                style={{ animationDelay: '160ms' }}
-              >
-                1+ years of building scalable full-stack applications, modern web interfaces, and digital products.
-              </p>
-            </div>
-
-            <ol className="xp-list" aria-label="Work history, most recent first">
-              {EXPERIENCES.map((exp, index) => {
-                const isLast = index === EXPERIENCES.length - 1;
-                const isCurrent = exp.end === null;
-                return (
-                  <li
-                    key={exp.id}
-                    className={`xp-item ${isCurrent ? 'is-current' : ''} ${getAnimClass(expInView)}`}
-                    style={{ animationDelay: `${240 + index * 60}ms` }}
-                  >
-                    {/* Timeline rail: logo tile, then the line down to the next role */}
-                    <div className="xp-rail" aria-hidden="true">
-                      <div className="xp-logo">
-                        <ExperienceLogo exp={exp} theme={theme} />
-                      </div>
-                      {!isLast && <div className="xp-line" />}
-                    </div>
-
-                    <article className="xp-body">
-                      <header className="xp-head">
-                        <div className="min-w-0">
-                          <h3 className="xp-role">{exp.role}</h3>
-                          <p className="xp-company">
-                            <span className="xp-company-name">{exp.company}</span>
-                            <span aria-hidden="true"> · </span>
-                            {exp.employmentType}
-                            <span aria-hidden="true"> · </span>
-                            {exp.location}
-                          </p>
-                        </div>
-
-                        <div className="xp-when">
-                          <span className="xp-dates">
-                            <time dateTime={exp.start}>{formatYm(exp.start)}</time>
-                            {' – '}
-                            {isCurrent ? 'Present' : <time dateTime={exp.end!}>{formatYm(exp.end!)}</time>}
-                          </span>
-                          <span className="xp-tenure">
-                            {isCurrent && <span className="xp-now"><i aria-hidden="true" />current</span>}
-                            {formatTenure(exp.start, exp.end)}
-                          </span>
-                        </div>
-                      </header>
-
-                      <p className="xp-summary">{exp.summary}</p>
-
-                      <ul className="xp-highlights">
-                        {exp.highlights.map((h) => (
-                          <li key={h}>{h}</li>
-                        ))}
-                      </ul>
-
-                      <div className="xp-stack">
-                        <span className="xp-stack-label">stack</span>
-                        <ul className="xp-tags" aria-label={`Tools used at ${exp.company}`}>
-                          {exp.skills.map((skill) => (
-                            <li key={skill}>{skill.toLowerCase()}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </article>
-                  </li>
-                );
-              })}
-            </ol>
-
-            {/* Experience bottom footer */}
-            <div
-              className={`border-t pt-6 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${getAnimClass(expInView)} border-[var(--sand-deep)]`}
-              style={{ animationDelay: `${240 + EXPERIENCES.length * 60}ms` }}
+          {/* Each nav key is its own view; home shows them all in one page.
+              "How I think" has no nav entry and reads as part of About;
+              GitHub activity sits with Work. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={view}
+              className="view"
+              initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+              transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="t-small font-sans c-secondary">
-                Interested in collaborating or discussing technical roles?
-              </div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                <a
-                  href="https://github.com/kellasandyyyy1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="github" size={18} />
-                  <span>github</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </a>
-                <a
-                  href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="linkedin" size={18} />
-                  <span>LINKEDIN</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </a>
-                <button
-                  onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="calendar" size={18} />
-                  <span>BOOK CALL</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </button>
-              </div>
-            </div>
-          </section>
+            {view !== 'home' && <ViewBack />}
+            {shows('about') && (
+              <>
+                {/* --- Hero Section --- */}
+                <Hero onBookCall={() => setShowBookCall(true)} />
 
-          {/* --- 03 / Stack Section --- */}
-          <section id="stack" ref={stackRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="section-head">
-              <SectionHeading theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
-              <p
-                className={`t-lead font-sans ${getAnimClass(stackInView)} text-[var(--accent-ink)]`}
-                style={{ animationDelay: '160ms' }}
-              >
-                Tools, ranked by how often I reach for them.
-              </p>
-            </div>
+                {/* --- 01 / Overview Section --- */}
+                <section id="about" ref={aboutRef} className={`section border-t border-[var(--sand-deep)]`}>
+                  <ApproachSection theme={theme} isInView={aboutInView} />
+                </section>
 
-            {/* Multi-column Grid (3 columns on desktop, 1 on mobile) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10 w-full max-w-6xl">
-              {TECH_STACK_DATA.map((group, groupIdx) => (
-                <div
-                  key={group.category}
-                  className={`flex flex-col ${getAnimClass(stackInView)}`}
-                  style={{ animationDelay: `${240 + groupIdx * 60}ms` }}
-                >
-                  {/* Category Header */}
-                  <div className={`t-label font-mono uppercase mb-2.5 select-none border-b pb-1.5 c-tertiary border-[var(--sand-deep)]`}>
-                    {group.category}
+                {/* --- How I Think Section --- */}
+                <section id="process" className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="section-head">
+                    <h2 className="t-h2 c-primary font-cal lowercase">
+                      how i think
+                    </h2>
+                  </div>
+                  <HowIThinkSection theme={theme} />
+                </section>
+              </>
+            )}
+            {shows('experience') && (
+              <>
+                {/* --- 02 / Experience Section --- */}
+                <section id="experience" ref={expRef} className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="section-head">
+                    <SectionHeading theme={theme} isInView={expInView} baseDelay={0}>Experience</SectionHeading>
+                    <p
+                      className={`t-lead font-sans c-secondary ${getAnimClass(expInView)}`}
+                      style={{ animationDelay: '160ms' }}
+                    >
+                      1+ years of building scalable full-stack applications, modern web interfaces, and digital products.
+                    </p>
                   </div>
 
-                  {/* Tool rows within column */}
-                  <div className="flex flex-col">
-                    {group.tools.map((tool, idx) => {
-                      const isLastInGroup = idx === group.tools.length - 1;
+                  <ol className="xp-list" aria-label="Work history, most recent first">
+                    {EXPERIENCES.map((exp, index) => {
+                      const isLast = index === EXPERIENCES.length - 1;
+                      const isCurrent = exp.end === null;
                       return (
-                        <div
-                          key={tool.name}
-                          className={`flex items-center py-[9px] transition-colors px-0.5 hover:bg-[var(--hover-fill)] ${isLastInGroup ? '' : ('border-b border-[var(--sand-deep)]')
-                            }`}
+                        <li
+                          key={exp.id}
+                          className={`xp-item ${isCurrent ? 'is-current' : ''} ${getAnimClass(expInView)}`}
+                          style={{ animationDelay: `${240 + index * 60}ms` }}
                         >
-                          {/* Left: Icon + Tool Name */}
-                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                            {tool.customIcon ? (
-                              tool.customIcon
-                            ) : tool.iconClass ? (
-                              <i className={`${tool.iconClass} text-[14px] shrink-0 opacity-90`} />
-                            ) : (
-                              <Cpu size={14} className={`shrink-0 text-[var(--ink-muted)]`} />
-                            )}
-                            <span className={`t-body font-sans truncate c-primary`}>
-                              {tool.name}
-                            </span>
+                          {/* Timeline rail: logo tile, then the line down to the next role */}
+                          <div className="xp-rail" aria-hidden="true">
+                            <div className="xp-logo">
+                              <ExperienceLogo exp={exp} theme={theme} />
+                            </div>
+                            {!isLast && <div className="xp-line" />}
                           </div>
-                        </div>
+
+                          <article className="xp-body">
+                            <header className="xp-head">
+                              <div className="min-w-0">
+                                <h3 className="xp-role">{exp.role}</h3>
+                                <p className="xp-company">
+                                  <span className="xp-company-name">{exp.company}</span>
+                                  <span aria-hidden="true"> · </span>
+                                  {exp.employmentType}
+                                  <span aria-hidden="true"> · </span>
+                                  {exp.location}
+                                </p>
+                              </div>
+
+                              <div className="xp-when">
+                                <span className="xp-dates">
+                                  <time dateTime={exp.start}>{formatYm(exp.start)}</time>
+                                  {' – '}
+                                  {isCurrent ? 'Present' : <time dateTime={exp.end!}>{formatYm(exp.end!)}</time>}
+                                </span>
+                                <span className="xp-tenure">
+                                  {isCurrent && <span className="xp-now"><i aria-hidden="true" />current</span>}
+                                  {formatTenure(exp.start, exp.end)}
+                                </span>
+                              </div>
+                            </header>
+
+                            <p className="xp-summary">{exp.summary}</p>
+
+                            <ul className="xp-highlights">
+                              {exp.highlights.map((h) => (
+                                <li key={h}>{h}</li>
+                              ))}
+                            </ul>
+
+                            <div className="xp-stack">
+                              <span className="xp-stack-label">stack</span>
+                              <ul className="xp-tags" aria-label={`Tools used at ${exp.company}`}>
+                                {exp.skills.map((skill) => (
+                                  <li key={skill}>{skill.toLowerCase()}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </article>
+                        </li>
                       );
                     })}
+                  </ol>
+
+                  {/* Experience bottom footer */}
+                  <div
+                    className={`border-t pt-6 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${getAnimClass(expInView)} border-[var(--sand-deep)]`}
+                    style={{ animationDelay: `${240 + EXPERIENCES.length * 60}ms` }}
+                  >
+                    <div className="t-small font-sans c-secondary">
+                      Interested in collaborating or discussing technical roles?
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                      <a
+                        href="https://github.com/kellasandyyyy1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={playExternalLink}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="github" size={18} />
+                        <span>github</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </a>
+                      <a
+                        href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={playExternalLink}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="linkedin" size={18} />
+                        <span>LINKEDIN</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </a>
+                      <button
+                        onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="calendar" size={18} />
+                        <span>BOOK CALL</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </section>
+              </>
+            )}
+            {shows('stack') && (
+              <>
+                {/* --- 03 / Stack Section --- */}
+                <section id="stack" ref={stackRef} className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="section-head">
+                    <SectionHeading theme={theme} isInView={stackInView} baseDelay={0}>My Tech Stack</SectionHeading>
+                    <p
+                      className={`t-lead font-sans ${getAnimClass(stackInView)} text-[var(--accent-ink)]`}
+                      style={{ animationDelay: '160ms' }}
+                    >
+                      Tools, ranked by how often I reach for them.
+                    </p>
+                  </div>
 
-          {/* --- Certifications Section --- */}
-          <section id="certifications" ref={certRef as React.RefObject<HTMLDivElement>} className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="section-head flex items-start justify-between gap-8">
-              <div className="min-w-0">
-                <h2
-                  className={`t-h2 c-primary font-geist lowercase ${getAnimClass(certInView)}`}
-                  style={{ animationDelay: '80ms' }}
-                >
-                  certifications
-                </h2>
-                <p
-                  className={`t-lead font-sans c-secondary ${getAnimClass(certInView)}`}
-                  style={{ animationDelay: '160ms' }}
-                >
-                  verified industry certifications and technical credentials issued by official platforms.
-                </p>
-              </div>
-            </div>
+                  {/* Multi-column Grid (3 columns on desktop, 1 on mobile) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10 w-full max-w-6xl">
+                    {TECH_STACK_DATA.map((group, groupIdx) => (
+                      <div
+                        key={group.category}
+                        className={`flex flex-col ${getAnimClass(stackInView)}`}
+                        style={{ animationDelay: `${240 + groupIdx * 60}ms` }}
+                      >
+                        {/* Category Header */}
+                        <div className={`t-label font-mono uppercase mb-2.5 select-none border-b pb-1.5 c-tertiary border-[var(--sand-deep)]`}>
+                          {group.category}
+                        </div>
 
-            {/* No outer border, no card fills: only the dividers between columns. */}
-            <div className="grid grid-cols-1 md:grid-cols-3">
-              {CERTIFICATIONS.map((cert, index) => (
-                <a
-                  key={cert.id}
-                  href={cert.verifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={playExternalLink}
-                  aria-label={`${cert.title}, issued by ${cert.issuer}`}
-                  className={`group relative isolate overflow-hidden flex flex-col items-center text-center px-6 py-10 md:py-4 ${getAnimClass(certInView)} ${
-                    // Divider between columns only: never on the outside, never when stacked.
-                    index > 0
-                      ? `md:border-l md:border-[var(--sand-deep)]`
-                      : ''
-                    }`}
-                  style={{ animationDelay: `${240 + index * 80}ms` }}
-                >
-                  {/* Brand watermark. Decorative, sits behind the cell's own
-                      content and is clipped so it never crosses a divider. */}
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[var(--ink)]`}
-                    style={{ opacity: theme === 'light' ? 0.016 : 0.06 }}
-                  >
-                    <cert.Icon size={190} />
-                  </span>
+                        {/* Tool rows within column */}
+                        <div className="flex flex-col">
+                          {group.tools.map((tool, idx) => {
+                            const isLastInGroup = idx === group.tools.length - 1;
+                            return (
+                              <div
+                                key={tool.name}
+                                className={`flex items-center py-[9px] transition-colors px-0.5 hover:bg-[var(--hover-fill)] ${isLastInGroup ? '' : ('border-b border-[var(--sand-deep)]')
+                                  }`}
+                              >
+                                {/* Left: Icon + Tool Name */}
+                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                  {tool.customIcon ? (
+                                    tool.customIcon
+                                  ) : tool.iconClass ? (
+                                    <i className={`${tool.iconClass} text-[14px] shrink-0 opacity-90`} />
+                                  ) : (
+                                    <Cpu size={14} className={`shrink-0 text-[var(--ink-muted)]`} />
+                                  )}
+                                  <span className={`t-body font-sans truncate c-primary`}>
+                                    {tool.name}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+            {shows('certifications') && (
+              <>
+                {/* --- Certifications Section --- */}
+                <section id="certifications" ref={certRef} className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="section-head flex items-start justify-between gap-8">
+                    <div className="min-w-0">
+                      <h2
+                        className={`t-h2 c-primary font-cal lowercase ${getAnimClass(certInView)}`}
+                        style={{ animationDelay: '80ms' }}
+                      >
+                        certifications
+                      </h2>
+                      <p
+                        className={`t-lead font-sans c-secondary ${getAnimClass(certInView)}`}
+                        style={{ animationDelay: '160ms' }}
+                      >
+                        verified industry certifications and technical credentials issued by official platforms.
+                      </p>
+                    </div>
+                  </div>
 
-                  <span
-                    className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 border-[0.5px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 border-[var(--sand-deep)] text-[var(--ink)]`}
-                  >
-                    <cert.Icon size={17} />
-                  </span>
+                  {/* No outer border, no card fills: only the dividers between columns. */}
+                  <div className="grid grid-cols-1 md:grid-cols-3">
+                    {CERTIFICATIONS.map((cert, index) => (
+                      <a
+                        key={cert.id}
+                        href={cert.verifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={playExternalLink}
+                        aria-label={`${cert.title}, issued by ${cert.issuer}`}
+                        className={`group relative isolate overflow-hidden flex flex-col items-center text-center px-6 py-10 md:py-4 ${getAnimClass(certInView)} ${
+                          // Divider between columns only: never on the outside, never when stacked.
+                          index > 0
+                            ? `md:border-l md:border-[var(--sand-deep)]`
+                            : ''
+                          }`}
+                        style={{ animationDelay: `${240 + index * 80}ms` }}
+                      >
+                        {/* Brand watermark. Decorative, sits behind the cell's own
+                            content and is clipped so it never crosses a divider. */}
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[var(--ink)]`}
+                          style={{ opacity: theme === 'light' ? 0.016 : 0.06 }}
+                        >
+                          <cert.Icon size={190} />
+                        </span>
 
-                  <h3 className="t-h3 font-sans c-primary mt-5">
-                    {cert.title}
-                  </h3>
+                        <span
+                          className={`relative w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 border-[0.5px] transition-transform duration-200 ease-out group-hover:-translate-y-0.5 border-[var(--sand-deep)] text-[var(--ink)]`}
+                        >
+                          <cert.Icon size={17} />
+                        </span>
 
-                  <span className={`inline-flex items-center gap-1.5 t-label font-mono lowercase mt-2 transition-colors duration-200 ease-out text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}>
-                    {cert.issuer}
-                    <ArrowUpRight weight="light" size={11} className="shrink-0" />
-                  </span>
-                </a>
-              ))}
-            </div>
-          </section>
+                        <h3 className="t-h3 font-sans c-primary mt-5">
+                          {cert.title}
+                        </h3>
 
-          {/* --- How I Think Section --- */}
-          <section id="process" className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="section-head">
-              <h2 className="t-h2 c-primary font-geist lowercase">
-                how i think
-              </h2>
-            </div>
-            <HowIThinkSection theme={theme} />
-          </section>
+                        <span className={`inline-flex items-center gap-1.5 t-label font-mono lowercase mt-2 transition-colors duration-200 ease-out text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]`}>
+                          {cert.issuer}
+                          <ArrowUpRight weight="light" size={11} className="shrink-0" />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+            {shows('work') && (
+              <>
+                {/* --- Projects Section --- */}
+                <section id="projects" className={`section border-t select-none overflow-hidden border-[var(--sand-deep)]`}>
+                  <div className="section-head flex justify-between items-start gap-4">
+                    <div className="min-w-0">
+                      {/* The toggle sits on the heading's own line so it reads as
+                          belonging to "my works". It is deliberately NOT grouped with
+                          the 01—08 page indicator, which is unrelated and stays far
+                          right on its own. */}
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <h2 className="t-h2 c-primary font-cal lowercase">
+                          my works
+                        </h2>
+                        <WorksViewToggle
+                          view={worksView}
+                          onChange={setWorksView}
+                          theme={theme}
+                          className="shrink-0"
+                        />
+                      </div>
+                    </div>
 
-          {/* --- Projects Section --- */}
-          <section id="projects" className={`section border-t select-none overflow-hidden border-[var(--sand-deep)]`}>
-            <div className="section-head flex justify-between items-start gap-4">
-              <div className="min-w-0">
-                {/* The toggle sits on the heading's own line so it reads as
-                    belonging to "my works". It is deliberately NOT grouped with
-                    the 01—08 page indicator, which is unrelated and stays far
-                    right on its own. */}
-                <div className="flex items-center gap-3 md:gap-4">
-                  <h2 className="t-h2 c-primary font-geist lowercase">
-                    my works
-                  </h2>
-                  <WorksViewToggle
-                    view={worksView}
-                    onChange={setWorksView}
-                    theme={theme}
-                    className="shrink-0"
-                  />
-                </div>
-              </div>
+                    <span className={`shrink-0 flex items-center gap-1 t-label font-mono text-[var(--ink-muted)]`}>
+                      
+                      <ArrowUpRight weight="light" size={10} className="shrink-0" />
+                    </span>
+                  </div>
 
-              <span className={`shrink-0 flex items-center gap-1 t-label font-mono text-[var(--ink-muted)]`}>
-                
-                <ArrowUpRight weight="light" size={10} className="shrink-0" />
-              </span>
-            </div>
+                  {/* Works — ONE state-driven render for every breakpoint. The old
+                      separate `hidden md:grid` desktop block is gone, so the toggle is
+                      the single source of truth for which view is active. Horizontal
+                      padding comes from the <section> (px-6 md:px-12 max-w-7xl), the
+                      same container the other sections use. */}
+                  <div>
+                    {worksView === 'grid' && (
+                      <div
+                        key="works-grid"
+                        className="works-fade grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 md:gap-x-5 md:gap-y-8"
+                      >
+                        {WORKS.map((project) => (
+                          <WorkCard key={project.slug} project={project} />
+                        ))}
+                      </div>
+                    )}
 
-            {/* Works — ONE state-driven render for every breakpoint. The old
-                separate `hidden md:grid` desktop block is gone, so the toggle is
-                the single source of truth for which view is active. Horizontal
-                padding comes from the <section> (px-6 md:px-12 max-w-7xl), the
-                same container the other sections use. */}
-            <div>
-              {worksView === 'grid' && (
-                <div
-                  key="works-grid"
-                  className="works-fade grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 md:gap-x-5 md:gap-y-8"
-                >
-                  {WORKS.map((project) => (
-                    <WorkCard key={project.slug} project={project} />
-                  ))}
-                </div>
-              )}
+                    {worksView === 'list' && (
+                      // Capped so rows don't stretch to absurd line lengths on wide
+                      // screens; matches the max-width convention used elsewhere.
+                      <div key="works-list" className="wl-list">
+                        {WORKS.map((project, index) => (
+                          <WorkRow key={project.slug} project={project} index={index} />
+                        ))}
+                      </div>
+                    )}
 
-              {worksView === 'list' && (
-                // Capped so rows don't stretch to absurd line lengths on wide
-                // screens; matches the max-width convention used elsewhere.
-                <div key="works-list" className="wl-list">
-                  {WORKS.map((project, index) => (
-                    <WorkRow key={project.slug} project={project} index={index} />
-                  ))}
-                </div>
-              )}
+                    {/* Browse all row — shared by both views. In grid view it needs its
+                        own top edge; in list view it inherits one from the row above. */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      className={`wk-all ${worksView === 'grid' ? 'is-grid' : ''}`}
+                      onClick={() => setShowAllProjects(true)}
+                    >
+                      <span className="wk-all-label">browse all</span>
 
-              {/* Browse all row — shared by both views. In grid view it needs its
-                  own top edge; in list view it inherits one from the row above. */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className={`wk-all ${worksView === 'grid' ? 'is-grid' : ''}`}
-                onClick={() => setShowAllProjects(true)}
-              >
-                <span className="wk-all-label">browse all</span>
+                      <span className="wk-all-end">
+                        <span className="wk-all-tag">all</span>
+                        <ArrowUpRight weight="light" size={13} className="wk-arrow" />
+                      </span>
+                    </motion.div>
+                  </div>
+                </section>
 
-                <span className="wk-all-end">
-                  <span className="wk-all-tag">all</span>
-                  <ArrowUpRight weight="light" size={13} className="wk-arrow" />
-                </span>
-              </motion.div>
-            </div>
-          </section>
+                {/* --- GitHub Section --- */}
+                <section id="github" className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="max-w-[640px]">
+                    <GithubSection theme={theme} />
+                  </div>
+                </section>
+              </>
+            )}
+            {shows('services') && (
+              <>
+                {/* --- Services Section --- */}
+                <section id="services" className={`section border-t border-[var(--sand-deep)]`}>
+                  <SectionHeading className="section-head" theme={theme}>Services</SectionHeading>
 
-          {/* --- Services Section --- */}
-          <section id="services" className={`section border-t border-[var(--sand-deep)]`}>
-            <SectionHeading className="section-head" theme={theme}>Services</SectionHeading>
+                  {/* A hairline grid: 3 across on desktop, 2 on tablet, 1 on phones.
+                      The cells are information, not links, so nothing pretends to be
+                      clickable; the one real action is the call link underneath. */}
+                  <ul className="sv-grid">
+                    {SERVICES.map((service, index) => (
+                      <motion.li
+                        key={service.title}
+                        className="sv-cell"
+                        initial={{ opacity: 0, y: 8 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.05, duration: 0.4 }}
+                      >
+                        <span className="sv-icon" aria-hidden="true">{service.icon}</span>
+                        <h3 className="sv-title">{service.title}</h3>
+                        <p className="sv-desc">{service.description}</p>
+                      </motion.li>
+                    ))}
+                  </ul>
 
-            {/* A hairline grid: 3 across on desktop, 2 on tablet, 1 on phones.
-                The cells are information, not links, so nothing pretends to be
-                clickable; the one real action is the call link underneath. */}
-            <ul className="sv-grid">
-              {SERVICES.map((service, index) => (
-                <motion.li
-                  key={service.title}
-                  className="sv-cell"
-                  initial={{ opacity: 0, y: 8 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05, duration: 0.4 }}
-                >
-                  <span className="sv-icon" aria-hidden="true">{service.icon}</span>
-                  <h3 className="sv-title">{service.title}</h3>
-                  <p className="sv-desc">{service.description}</p>
-                </motion.li>
-              ))}
-            </ul>
+                  <div className="sv-cta">
+                    <p className="sv-cta-text font-cal">have a project in mind?</p>
+                    {/* Same anatomy as the hero links: 3D object, mono label, nudging arrow. */}
+                    <button
+                      type="button"
+                      className="sv-cta-link"
+                      onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                    >
+                      <span className="sv-cta-obj" aria-hidden="true">
+                        <NavIcon3D name="calendar" size={22} />
+                      </span>
+                      book a call <span className="sv-cta-arrow" aria-hidden="true">↗</span>
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
+            {shows('resources') && (
+              <>
+                {/* --- Resources Section --- */}
+                <section id="resources" className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="section-head">
+                    <h2 className="t-h2 c-primary font-cal lowercase">
+                      resources
+                    </h2>
+                    <p className="t-lead font-sans c-secondary">
+                      the courses, docs, and writing i actually go back to. curated, not collected.
+                    </p>
+                  </div>
 
-            <div className="sv-cta">
-              <p className="sv-cta-text">have a project in mind?</p>
-              <button type="button" className="sv-cta-link" onClick={() => setShowBookCall(true)}>
-                book a call <ArrowUpRight size={13} aria-hidden="true" />
-              </button>
-            </div>
-          </section>
+                  <ResourcesGrid theme={theme} />
+                </section>
+              </>
+            )}
+            {shows('contact') && (
+              <>
+                {/* --- Contact Section --- */}
+                <section id="contact" className={`section border-t border-[var(--sand-deep)]`}>
+                  <div className="mb-4">
+                    <span className="t-label font-mono uppercase block c-tertiary">
+                      CONTACT
+                    </span>
+                                </div>
 
-          {/* --- Resources Section --- */}
-          <section id="resources" className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="section-head">
-              <h2 className="t-h2 c-primary font-geist lowercase">
-                resources
-              </h2>
-              <p className="t-lead font-sans c-secondary">
-                the courses, docs, and writing i actually go back to. curated, not collected.
-              </p>
-            </div>
+                  <div className="ct-layout">
+                  <figure className="ct-art">
+                    <img src="/gif/brooding_recline.gif" alt="Illustration of a figure reclining on a phone call, cigarette in mouth" loading="lazy" />
+                  </figure>
 
-            <ResourcesGrid theme={theme} />
-          </section>
+                  <div className="max-w-[560px] space-y-7">
+                    <h3 className="t-h2 font-sans c-primary">
+                      Have a project in mind? Let's talk.
+                    </h3>
 
-          {/* --- GitHub Section --- */}
-          <section id="github" className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="max-w-[640px]">
-              <GithubSection theme={theme} />
-            </div>
-          </section>
+                    <div>
+                      <a
+                        href="mailto:kellasandrei00@gmail.com"
+                        className={`inline-block t-lead font-sans transition-colors border-b pb-2 text-[var(--ink)] hover:text-[var(--accent-ink)] border-[var(--sand-deep)]`}
+                      >
+                        kellasandrei00@gmail.com
+                      </a>
+                    </div>
 
-          {/* --- Contact Section --- */}
-          <section id="contact" className={`section border-t border-[var(--sand-deep)]`}>
-            <div className="mb-4">
-              <span className="t-label font-mono uppercase block c-tertiary">
-                CONTACT
-              </span>
-                          </div>
+                    {/* Actions row: text links with icons on left & arrow on right */}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-3">
+                      <button
+                        onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="calendar" size={18} />
+                        <span>BOOK A CALL</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </button>
 
-            <div className="ct-layout">
-            <figure className="ct-art">
-              <img src="/img/contact.png" alt="Pencil sketch of a figure running, in four strides" loading="lazy" />
-            </figure>
+                      <a
+                        href="https://github.com/kellasandyyyy1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={playExternalLink}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="github" size={18} />
+                        <span>github</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </a>
 
-            <div className="max-w-[560px] space-y-7">
-              <h3 className="t-h2 font-sans c-primary">
-                Have a project in mind? Let's talk.
-              </h3>
-
-              <div>
-                <a
-                  href="mailto:kellasandrei00@gmail.com"
-                  className={`inline-block t-lead font-sans transition-colors border-b pb-2 text-[var(--ink)] hover:text-[var(--accent-ink)] border-[var(--sand-deep)]`}
-                >
-                  kellasandrei00@gmail.com
-                </a>
-              </div>
-
-              {/* Actions row: text links with icons on left & arrow on right */}
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-3">
-                <button
-                  onClick={() => { playExternalLink(); setShowBookCall(true); }}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="calendar" size={18} />
-                  <span>BOOK A CALL</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </button>
-
-                <a
-                  href="https://github.com/kellasandyyyy1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="github" size={18} />
-                  <span>github</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </a>
-
-                <a
-                  href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={playExternalLink}
-                  className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
-                >
-                  <NavIcon3D name="linkedin" size={18} />
-                  <span>LINKEDIN</span>
-                  <ArrowUpRight weight="light" size={14} className={
-                    'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
-                  } />
-                </a>
-              </div>
-            </div>
-            </div>
-          </section>
+                      <a
+                        href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={playExternalLink}
+                        className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
+                      >
+                        <NavIcon3D name="linkedin" size={18} />
+                        <span>LINKEDIN</span>
+                        <ArrowUpRight weight="light" size={14} className={
+                          'text-[var(--ink-muted)] group-hover:text-[var(--accent-ink)]'
+                        } />
+                      </a>
+                    </div>
+                  </div>
+                  </div>
+                </section>
+              </>
+            )}
+            </motion.div>
+          </AnimatePresence>
           </>
           )}
         </main>
-
-        <footer className={`section !py-12 border-t flex flex-col md:flex-row justify-between items-center gap-6 t-label font-mono uppercase border-[var(--sand-deep)] text-[var(--ink-muted)]`}>
-          <div className="flex gap-8">
-            <span></span>
-            <span></span>
-          </div>
-        </footer>
       </div>
     </div>
   );

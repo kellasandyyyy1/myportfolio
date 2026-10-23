@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { PALETTE_HEX, PALETTE_HEX_DARK } from '../lib/palette';
 import { Sprout, X, Volume2, VolumeX, Trophy, Play, RotateCcw, ShieldAlert, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 
@@ -923,19 +924,13 @@ export function HarvestSnakeModal({
                     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 w-full max-w-sm mb-4 text-left">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] uppercase tracking-wider font-bold text-emerald-400">Featured App</span>
-                        <a
-                          href="#projects"
-                          onClick={() => {
-                            onClose();
-                            setTimeout(() => {
-                              const el = document.getElementById('projects');
-                              if (el) el.scrollIntoView({ behavior: 'smooth' });
-                            }, 300);
-                          }}
+                        <Link
+                          to="/work"
+                          onClick={onClose}
                           className="text-[9px] text-zinc-500 hover:text-white flex items-center gap-1 font-bold underline"
                         >
                           View Work <ExternalLink size={10} />
-                        </a>
+                        </Link>
                       </div>
                       <h5 className="text-xs font-bold uppercase text-white mt-1.5 mb-1">Social Website (Privy)</h5>
                       <p className="text-[9px] text-zinc-400 line-clamp-2">
