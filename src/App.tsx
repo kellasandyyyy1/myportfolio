@@ -3555,7 +3555,7 @@ export default function App() {
                         <span
                           aria-hidden="true"
                           className={`pointer-events-none absolute inset-0 -z-10 flex items-center justify-center text-[var(--ink)]`}
-                          style={{ opacity: theme === 'light' ? 0.016 : 0.06 }}
+                          style={{ opacity: theme === 'light' ? 0.045 : 0.06 }}
                         >
                           <cert.Icon size={190} />
                         </span>

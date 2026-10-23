@@ -48,12 +48,56 @@ function PhMap() {
   );
 }
 
+/**
+ * Paper-crumple stages for the photo's opening unfold, mildest first. Each
+ * displaces the photo along turbulence noise and shades the same noise as fold
+ * relief. Two seeds per stage, so consecutive held frames "boil" like paper
+ * shot frame by frame.
+ */
+const CRUMPLE_STAGES = [
+  { stage: 1, scale: 4, relief: 1.2 },
+  { stage: 2, scale: 10, relief: 2 },
+  { stage: 3, scale: 18, relief: 3 },
+  { stage: 4, scale: 28, relief: 4 },
+];
+
+function CrumpleFilters() {
+  return (
+    <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
+      {CRUMPLE_STAGES.flatMap(({ stage, scale, relief }) =>
+        (['a', 'b'] as const).map((variant, i) => (
+          <filter
+            key={`${stage}${variant}`}
+            id={`hx-crumple-${stage}${variant}`}
+            x="-10%"
+            y="-10%"
+            width="120%"
+            height="120%"
+            colorInterpolationFilters="sRGB"
+          >
+            {/* Two octaves: enough fold detail, and noticeably cheaper per frame than three. */}
+            <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves={2} seed={stage * 7 + i * 3} result="paper" />
+            <feDisplacementMap in="SourceGraphic" in2="paper" scale={scale} xChannelSelector="R" yChannelSelector="G" result="crumpled" />
+            <feDiffuseLighting in="paper" surfaceScale={relief} lightingColor="#ffffff" result="folds">
+              <feDistantLight azimuth={225} elevation={58} />
+            </feDiffuseLighting>
+            <feComposite in="folds" in2="crumpled" operator="in" result="shaded" />
+            <feBlend in="shaded" in2="crumpled" mode="multiply" />
+          </filter>
+        ))
+      )}
+    </svg>
+  );
+}
+
 export function Hero({ onBookCall }: { onBookCall: () => void }) {
 
   return (
     <section className="section hx">
       <div className="hx-top">
-        <figure className="hx-window hx-in" style={{ '--d': '50ms' } as React.CSSProperties}>
+        <CrumpleFilters />
+        {/* Opens as a crumpled paper ball and unfolds on held frames. */}
+        <figure className="hx-window hx-crumple" style={{ '--d': '150ms' } as React.CSSProperties}>
           <div className="hx-titlebar" aria-hidden="true">
             <span className="hx-closebox" />
             <span className="hx-stripes" />
