@@ -4290,11 +4290,12 @@ span.tracking-\[0\.4em\] {
 }
 
 /* ===== GitHub widget =====
-   An iOS-widget look without the card: a solid "lip" under raised surfaces
-   instead of blurry depth, glossy jelly tiles, and a speech-bubble tooltip.
-   Color comes from theme tokens, except the live badge's fixed green. */
+   A courtyard ledger: four ticket stubs, a framed tile grid, and the site's
+   sand-deep edges with a solid lip underneath instead of blur. Every colour
+   is a theme token, so it follows the courtyard palette in light and at dusk;
+   the tile ramp is the shared --gh-* scale. */
 .ghw {
-  --ghw-lip: color-mix(in srgb, var(--ink) 14%, var(--sand-deep));
+  --ghw-edge: var(--sand-deep);
   position: relative;
 }
 
@@ -4304,34 +4305,24 @@ span.tracking-\[0\.4em\] {
   gap: 12px;
 }
 
-/* App icon: squircle with a glassy top highlight, like a springboard icon. */
+/* App icon: a moss sticker, slightly askew, pressed onto the page. */
 .ghw-app {
-  position: relative;
   display: grid;
   place-items: center;
   flex: none;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: var(--ink);
-  color: var(--cream);
-  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--ink) 55%, var(--sand-deep));
-  overflow: hidden;
-}
-
-.ghw-app::before {
-  content: '';
-  position: absolute;
-  inset: 3px 6px auto;
-  height: 40%;
-  border-radius: 9px 9px 14px 14px;
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0.22), transparent);
+  border-radius: 11px;
+  background: var(--moss);
+  color: var(--on-moss);
+  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--moss) 55%, var(--sand-deep));
+  transform: rotate(-3deg);
 }
 
 .ghw-id {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
@@ -4339,7 +4330,7 @@ span.tracking-\[0\.4em\] {
 .ghw-title {
   font-size: 1.125rem;
   line-height: 1;
-  color: var(--text-primary);
+  color: var(--accent-ink);
 }
 
 .ghw-handle {
@@ -4355,174 +4346,135 @@ span.tracking-\[0\.4em\] {
 
 .ghw-handle:hover { color: var(--text-primary); }
 
-/* Live badge: a solid green capsule with a broadcast mark, closer to an iOS
-   Live Activity or Shopify's live-view chip than a plain status dot. The
-   green is fixed rather than themed so "live" reads the same in both themes. */
+/* Live badge: a small "on air" sign with a sage lamp. */
 .ghw-live {
-  --live: #2FA463;
-  --live-deep: #1F7A47;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex: none;
   height: 26px;
-  padding: 0 11px 0 8px;
+  padding: 0 11px 0 9px;
+  border: 1.5px solid var(--ghw-edge);
   border-radius: 999px;
-  background: var(--live);
-  color: #fff;
-  font-size: 12.5px;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.3),
-    0 2px 0 var(--live-deep),
-    0 6px 14px -6px color-mix(in srgb, var(--live) 70%, transparent);
-}
-
-.ghw-live-signal {
-  width: 15px;
-  height: 15px;
-  overflow: visible;
-}
-
-.ghw-live-beacon {
-  fill: #fff;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: ghw-beacon 1.6s ease-in-out infinite;
-}
-
-.ghw-live-arc {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  opacity: 0.35;
-  animation: ghw-arc 1.6s ease-in-out infinite;
-}
-
-.ghw-live-arc-2 { animation-delay: 0.2s; }
-
-@keyframes ghw-beacon {
-  0%, 100% { transform: scale(1); }
-  20% { transform: scale(1.25); }
-}
-
-@keyframes ghw-arc {
-  0%, 15%, 100% { opacity: 0.35; }
-  35% { opacity: 1; }
-}
-
-/* --- Stats --- */
-.ghw-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px 20px;
-  margin-top: 20px;
-}
-
-.ghw-total {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ghw-total-num {
-  font-size: clamp(2.25rem, 1.8rem + 2vw, 2.875rem);
-  line-height: 0.9;
-  letter-spacing: -0.01em;
+  background: var(--cream);
   color: var(--text-primary);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 var(--ghw-edge);
 }
 
-.ghw-total-label,
-.ghw-chip-label {
-  font-size: 10.5px;
-  color: var(--ink-muted);
+.ghw-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+  box-shadow: 0 0 0 2.5px var(--lime-soft);
+  animation: ghw-lamp 1.8s ease-in-out infinite;
 }
 
-.ghw-chips {
-  display: flex;
-  gap: 8px;
+@keyframes ghw-lamp {
+  50% { opacity: 0.4; }
 }
 
-.ghw-chip {
+/* --- Stats: four equal ticket stubs --- */
+.ghw-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0 0;
+}
+
+.ghw-stub {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-width: 68px;
-  height: 58px;
-  padding: 0 10px;
-  border: 1.5px solid var(--sand-deep);
-  border-radius: 16px;
-  background: var(--cream);
-  box-shadow: 0 2px 0 var(--sand-deep);
-}
-
-.ghw-chip-num {
-  font-size: 1.25rem;
-  line-height: 1;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 8px 13px;
+  border: 1.5px solid var(--ghw-edge);
+  border-radius: 12px;
+  background: var(--sand);
   color: var(--text-primary);
+  box-shadow: 0 2.5px 0 var(--ghw-edge);
+  text-align: center;
 }
 
-/* --- Mascot --- */
-.ghw-mascot {
-  width: 26px;
-  height: 26px;
-  overflow: visible;
-  animation: ghw-bob 3.2s ease-in-out infinite;
+.ghw-stub[data-tone='moss'] {
+  border-color: var(--moss);
+  background: var(--moss);
+  color: var(--on-moss);
+  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--moss) 55%, var(--sand-deep));
+}
+.ghw-stub[data-tone='sage'] { background: var(--sage-soft); }
+.ghw-stub[data-tone='lime'] { background: var(--lime-soft); color: var(--on-lime); }
+
+/* Ticket notches: half-discs of page colour punched into each side. */
+.ghw-stub::before,
+.ghw-stub::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 1.5px solid var(--ghw-edge);
+  border-radius: 50%;
+  background: var(--bg-page);
 }
 
-.ghw-mascot[data-mood='sleepy'] { animation-duration: 5s; }
-.ghw-mascot[data-mood='thrilled'] { animation: ghw-hop 1.4s cubic-bezier(0.3, 0, 0.3, 1) infinite; }
+.ghw-stub[data-tone='moss']::before,
+.ghw-stub[data-tone='moss']::after { border-color: var(--moss); }
 
-.ghw-mascot-body { fill: var(--gh-2); stroke: var(--ink); stroke-width: 2; }
-.ghw-mascot[data-mood='sleepy'] .ghw-mascot-body { fill: var(--gh-0); }
-.ghw-mascot[data-mood='thrilled'] .ghw-mascot-body { fill: var(--gh-3); }
-.ghw-mascot-shine { fill: rgb(255 255 255 / 0.55); }
-.ghw-mascot-eye { fill: var(--ink); }
-.ghw-mascot-line { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
-.ghw-mascot-mouth { fill: var(--ink); }
-.ghw-mascot-blush { fill: #E89B8B; opacity: 0.55; }
-.ghw-mascot-z {
-  fill: var(--ink-muted);
-  font: 700 9px var(--font-cal);
-  animation: ghw-z 2.6s ease-in-out infinite;
+.ghw-stub::before { left: -7.5px; clip-path: inset(-2px -2px -2px 50%); }
+.ghw-stub::after { right: -7.5px; clip-path: inset(-2px 50% -2px -2px); }
+
+.ghw-stub-label {
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  white-space: nowrap;
 }
 
-@keyframes ghw-bob {
-  50% { transform: translateY(-1.5px) rotate(-3deg); }
+.ghw-stub-num {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 1.875rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
 }
 
-@keyframes ghw-hop {
-  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
-  15% { transform: translateY(0) scale(1.12, 0.88); }
-  35% { transform: translateY(-5px) scale(0.94, 1.06); }
-}
-
-@keyframes ghw-z {
-  0% { opacity: 0; transform: translate(0, 2px); }
-  40% { opacity: 1; }
-  100% { opacity: 0; transform: translate(3px, -4px); }
-}
-
-/* --- Grid --- */
+/* --- Grid: framed like a postcard, with an inner hairline --- */
 .ghw-grid {
   position: relative;
-  margin-top: 20px;
-  padding: 12px;
-  border-radius: 18px;
+  margin-top: 22px;
+  padding: 16px 16px 14px;
+  border: 1.5px solid var(--ghw-edge);
+  border-radius: 16px;
   background: var(--sand);
+  box-shadow: 0 2.5px 0 var(--ghw-edge);
+}
+
+.ghw-grid::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--ghw-edge) 60%, transparent);
+  border-radius: 11px;
+  pointer-events: none;
 }
 
 .ghw-months {
   position: relative;
-  height: 14px;
-  margin-bottom: 6px;
-  font-size: 10px;
+  height: 12px;
+  margin-bottom: 8px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--ink-muted);
 }
 
@@ -4547,21 +4499,23 @@ span.tracking-\[0\.4em\] {
 
 .ghw-lift {
   pointer-events: none;
-  transform: scale(1.5);
+  transform: scale(1.55);
   animation: ghw-lift 260ms cubic-bezier(0.34, 1.8, 0.5, 1) both;
-  filter: drop-shadow(0 1.5px 0 var(--ghw-lip));
+}
+
+.ghw-lift rect {
+  stroke: var(--accent-line);
+  stroke-width: 0.9;
 }
 
 @keyframes ghw-lift {
   from { transform: scale(1); }
 }
 
-.ghw-gloss { fill: rgb(255 255 255 / 0.42); pointer-events: none; }
-
 .ghw-today {
   fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.2;
+  stroke: var(--accent-ink);
+  stroke-width: 1.3;
   pointer-events: none;
   animation: ghw-breathe 2.4s ease-in-out infinite;
 }
@@ -4571,7 +4525,7 @@ span.tracking-\[0\.4em\] {
 }
 
 @keyframes ghw-breathe {
-  50% { opacity: 0.3; }
+  50% { opacity: 0.35; }
 }
 
 /* Speech bubble: sits above the hovered tile, tail points down at it. */
@@ -4581,20 +4535,20 @@ span.tracking-\[0\.4em\] {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   padding: 7px 11px 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--ink);
   color: var(--cream);
   white-space: nowrap;
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 10px));
-  box-shadow: 0 2.5px 0 color-mix(in srgb, var(--ink) 55%, var(--sand-deep));
+  transform: translate(-50%, calc(-100% - 11px));
+  box-shadow: 0 2.5px 0 var(--sage);
   animation: ghw-bubble-in 240ms cubic-bezier(0.34, 1.7, 0.5, 1) both;
 }
 
-.ghw-bubble[data-align='start'] { --tail-x: 14px; transform: translate(-14px, calc(-100% - 10px)); }
-.ghw-bubble[data-align='end'] { --tail-x: calc(100% - 14px); transform: translate(calc(-100% + 14px), calc(-100% - 10px)); }
+.ghw-bubble[data-align='start'] { --tail-x: 14px; transform: translate(-14px, calc(-100% - 11px)); }
+.ghw-bubble[data-align='end'] { --tail-x: calc(100% - 14px); transform: translate(calc(-100% + 14px), calc(-100% - 11px)); }
 
 .ghw-bubble::after {
   content: '';
@@ -4610,7 +4564,7 @@ span.tracking-\[0\.4em\] {
 }
 
 .ghw-bubble-count { font-size: 13px; line-height: 1.1; }
-.ghw-bubble-date { font-size: 10px; opacity: 0.7; }
+.ghw-bubble-date { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
 
 @keyframes ghw-bubble-in {
   from { opacity: 0; scale: 0.6; }
@@ -4622,61 +4576,67 @@ span.tracking-\[0\.4em\] {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .ghw-legend {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--ink-muted);
 }
 
 .ghw-legend-tile {
   width: 10px;
   height: 10px;
-  border-radius: 3.5px;
+  border-radius: 2.5px;
 }
 
-.ghw-legend-tile:first-of-type { margin-left: 2px; }
-.ghw-legend-tile:last-of-type { margin-right: 2px; }
+.ghw-legend-tile:first-of-type { margin-left: 3px; }
+.ghw-legend-tile:last-of-type { margin-right: 3px; }
 
+/* Matches the site's secondary button: cream, accent edge, sage-soft on hover. */
 .ghw-open {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  padding: 0 13px;
-  border: 1.5px solid var(--sand-deep);
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1.5px solid var(--ghw-edge);
   border-radius: 999px;
   background: var(--cream);
-  color: var(--text-primary);
-  font-size: 11px;
-  box-shadow: 0 2px 0 var(--sand-deep);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  color: var(--btn2-ink);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 2.5px 0 var(--ghw-edge);
+  transition: transform 140ms ease, box-shadow 140ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
-.ghw-open:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--sand-deep); }
-.ghw-open:active { transform: translateY(2px); box-shadow: 0 0 0 var(--sand-deep); }
+.ghw-open:hover {
+  border-color: var(--hover-border);
+  background: var(--cta-hover-bg);
+  transform: translateY(-1px);
+  box-shadow: 0 3.5px 0 var(--hover-border);
+}
+.ghw-open:active { transform: translateY(2.5px); box-shadow: 0 0 0 var(--ghw-edge); }
+.ghw-open:focus-visible { outline: 2px solid var(--sage); outline-offset: 3px; }
 
 @media (max-width: 479px) {
-
-  .ghw-grid { padding: 10px; }
-  .ghw-chips { width: 100%; }
-  .ghw-chip { flex: 1; min-width: 0; }
+  .ghw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ghw-grid { padding: 12px 12px 10px; }
   .ghw-legend { display: none; }
   .ghw-foot { justify-content: flex-end; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ghw-cell,
-  .ghw-mascot,
-  .ghw-mascot-z,
   .ghw-today,
   .ghw-bubble,
-  .ghw-live-beacon,
-  .ghw-live-arc { animation: none; }
+  .ghw-live-dot,
   .ghw-lift { animation: none; }
 }
 

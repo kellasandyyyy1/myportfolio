@@ -2812,40 +2812,6 @@ const formatDay = (date: string) =>
   parseDay(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
 
-/** Little blob whose face follows the last seven days: asleep, content, or thrilled. */
-function GhMascot({ week }: { week: number }) {
-  const mood = week === 0 ? 'sleepy' : week < 8 ? 'happy' : 'thrilled';
-  return (
-    <svg className="ghw-mascot" data-mood={mood} viewBox="0 0 40 40" aria-hidden="true">
-      <path
-        className="ghw-mascot-body"
-        d="M20 4c9.5 0 16 6.6 16 15.6S30.4 36 20 36 4 29.6 4 19.6 10.5 4 20 4Z"
-      />
-      <ellipse className="ghw-mascot-shine" cx="13" cy="11" rx="4" ry="2.2" transform="rotate(-24 13 11)" />
-      {mood === 'sleepy' ? (
-        <>
-          <path className="ghw-mascot-line" d="M12.5 20.5q2.5 1.8 5 0M22.5 20.5q2.5 1.8 5 0" />
-          <path className="ghw-mascot-line" d="M18.5 27h3" />
-          <text className="ghw-mascot-z" x="29" y="10">z</text>
-        </>
-      ) : mood === 'happy' ? (
-        <>
-          <circle className="ghw-mascot-eye" cx="15" cy="19.5" r="1.9" />
-          <circle className="ghw-mascot-eye" cx="25" cy="19.5" r="1.9" />
-          <path className="ghw-mascot-line" d="M16.5 25.5q3.5 3 7 0" />
-        </>
-      ) : (
-        <>
-          <path className="ghw-mascot-line" d="M12.5 20.5q2.5-2.6 5 0M22.5 20.5q2.5-2.6 5 0" />
-          <path className="ghw-mascot-mouth" d="M15.5 24.5h9q-.6 5-4.5 5t-4.5-5Z" />
-          <circle className="ghw-mascot-blush" cx="11.5" cy="24" r="2" />
-          <circle className="ghw-mascot-blush" cx="28.5" cy="24" r="2" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const [spacing, setSpacing] = useState(12);
@@ -2863,7 +2829,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
     const measure = () => {
       const width = el.clientWidth;
       if (!width) return;
-      // Below 10px a tile's gloss highlight shrinks to noise.
+      // Below 10px a tile's rounded corners and gap blur together.
       const gap = width < 480 ? 10 : 12;
       setSpacing(gap);
       setColumns(Math.max(12, Math.min(53, Math.floor(width / gap))));
@@ -2942,7 +2908,7 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
     <div className="ghw">
       <div className="ghw-head">
         <span className="ghw-app" aria-hidden="true">
-          <GithubLogo weight="fill" size={20} />
+          <GithubLogo weight="fill" size={19} />
         </span>
         <div className="ghw-id">
           <span className="ghw-title font-cal">github</span>
@@ -2957,38 +2923,26 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
             <ArrowUpRight weight="bold" size={10} className="shrink-0" />
           </a>
         </div>
-        <span className="ghw-live font-cal">
-          {/* Broadcast mark: a beacon dot with two arcs that light up in turn. */}
-          <svg className="ghw-live-signal" viewBox="0 0 16 16" aria-hidden="true">
-            <circle className="ghw-live-beacon" cx="5" cy="8" r="2.4" />
-            <path className="ghw-live-arc ghw-live-arc-1" d="M8.6 4.8a4.6 4.6 0 0 1 0 6.4" />
-            <path className="ghw-live-arc ghw-live-arc-2" d="M11.2 2.6a7.8 7.8 0 0 1 0 10.8" />
-          </svg>
+        <span className="ghw-live font-mono">
+          <span className="ghw-live-dot" aria-hidden="true" />
           live
         </span>
       </div>
 
       {data && stats && (
-        <div className="ghw-stats">
-          <div className="ghw-total">
-            <span className="ghw-total-num font-cal">{data.total.toLocaleString()}</span>
-            <span className="ghw-total-label font-mono">contributions this year</span>
-          </div>
-          <div className="ghw-chips">
-            <span className="ghw-chip">
-              <span className="ghw-chip-num font-cal">{stats.streak}</span>
-              <span className="ghw-chip-label font-mono">day streak</span>
-            </span>
-            <span className="ghw-chip">
-              <span className="ghw-chip-num font-cal">{stats.best.count}</span>
-              <span className="ghw-chip-label font-mono">best day</span>
-            </span>
-            <span className="ghw-chip ghw-chip-mascot" title={`${plural(stats.week, 'contribution')} in the last 7 days`}>
-              <GhMascot week={stats.week} />
-              <span className="ghw-chip-label font-mono">this week</span>
-            </span>
-          </div>
-        </div>
+        <dl className="ghw-stats">
+          {[
+            { tone: 'moss', num: data.total, label: 'this year' },
+            { tone: 'sage', num: stats.streak, label: 'day streak' },
+            { tone: 'sand', num: stats.best.count, label: 'best day', title: `on ${formatDay(stats.best.date)}` },
+            { tone: 'lime', num: stats.week, label: 'this week', title: `${plural(stats.week, 'contribution')} in the last 7 days` },
+          ].map((s) => (
+            <div key={s.label} className="ghw-stub" data-tone={s.tone} title={s.title}>
+              <dt className="ghw-stub-label font-mono">{s.label}</dt>
+              <dd className="ghw-stub-num font-cal">{s.num.toLocaleString()}</dd>
+            </div>
+          ))}
+        </dl>
       )}
 
       <div ref={containerRef} className="ghw-grid">
@@ -3028,25 +2982,15 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
                     style={{ '--d': `${col * 14 + row * 10}ms` } as React.CSSProperties}
                     onPointerEnter={data ? () => setHovered(i) : undefined}
                   >
-                    <rect x={x} y={y} width={tile} height={tile} rx={tile * 0.32} fill={CONTRIBUTION_BUCKETS[level].fill} />
-                    {level > 0 && (
-                      <rect
-                        className="ghw-gloss"
-                        x={x + tile * 0.18}
-                        y={y + tile * 0.14}
-                        width={tile * 0.4}
-                        height={tile * 0.18}
-                        rx={tile * 0.09}
-                      />
-                    )}
+                    <rect x={x} y={y} width={tile} height={tile} rx={tile * 0.22} fill={CONTRIBUTION_BUCKETS[level].fill} />
                     {isToday && (
                       <rect
                         className="ghw-today"
-                        x={x - 1.2}
-                        y={y - 1.2}
-                        width={tile + 2.4}
-                        height={tile + 2.4}
-                        rx={tile * 0.4}
+                        x={x - 1.4}
+                        y={y - 1.4}
+                        width={tile + 2.8}
+                        height={tile + 2.8}
+                        rx={tile * 0.3}
                       />
                     )}
                   </g>
@@ -3060,19 +3004,9 @@ const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
                     y={hoveredRow * spacing + inset}
                     width={tile}
                     height={tile}
-                    rx={tile * 0.32}
+                    rx={tile * 0.22}
                     fill={CONTRIBUTION_BUCKETS[bucketIndex(hoveredDay.count)].fill}
                   />
-                  {hoveredDay.count > 0 && (
-                    <rect
-                      className="ghw-gloss"
-                      x={hoveredCol * spacing + inset + tile * 0.18}
-                      y={hoveredRow * spacing + inset + tile * 0.14}
-                      width={tile * 0.4}
-                      height={tile * 0.18}
-                      rx={tile * 0.09}
-                    />
-                  )}
                 </g>
               )}
             </svg>
