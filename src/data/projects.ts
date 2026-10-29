@@ -22,13 +22,37 @@ export interface WorkProject {
   year?: string;
   /** Extra screenshots for the detail page, beyond the cover. */
   gallery?: string[];
+  /** Two-colour print palette for the dithered card thumbnail. */
+  duotone?: Duotone;
+  /** Dither pixel size at display, in CSS px (default 3). */
+  ditherPixel?: number;
+  /** Levels black / white points before dithering (defaults 40 / 215). */
+  ditherBlack?: number;
+  ditherWhite?: number;
+  /** Swap ink and paper, for very dark screenshots. */
+  invert?: boolean;
 }
+
+export interface Duotone {
+  /** Dark pixels. */
+  ink: string;
+  /** Light pixels. */
+  paper: string;
+}
+
+/** Charcoal on cream, for any project without its own pair. */
+export const DEFAULT_DUOTONE: Duotone = { ink: '#1C1B18', paper: '#ECE8DF' };
 
 // summary, liveUrl and gallery below are carried over from the project data the
 // site already had. repoUrl, role and year never existed: add them when ready.
 export const WORKS: WorkProject[] = [
   {
     slug: 'yappr',
+    duotone: { ink: '#7A1F14', paper: '#8FC1DD' }, // oxblood / powder blue
+    // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
+    ditherBlack: 4,
+    ditherWhite: 64,
+    invert: true,
     title: 'Yappr',
     tags: ['React', 'Tailwind', 'node.js', 'Express, Supabase, Vite'],
     cover: '/img/p3.PNG',
@@ -39,6 +63,7 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'burger-restaurant-website',
+    duotone: { ink: '#B23A1E', paper: '#E8C35A' }, // tomato / mustard
     title: 'Burger restaurant website',
     tags: ['React', 'TypeScript', 'D3.js', 'Firebase'],
     cover: '/img/h4.PNG',
@@ -49,6 +74,11 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'fitness-ecommerce-website',
+    duotone: { ink: '#13283F', paper: '#C5DCA6' }, // navy / sage
+    // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
+    ditherBlack: 4,
+    ditherWhite: 110,
+    invert: true,
     title: 'fitness Ecommerce website',
     tags: ['React', 'TypeScript', 'tailwind', 'Express'],
     cover: '/img/q3.PNG',
@@ -59,6 +89,11 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'mind-compass',
+    duotone: { ink: '#3B1F3A', paper: '#C9B8E3' }, // plum / lavender
+    // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
+    ditherBlack: 0,
+    ditherWhite: 80,
+    invert: true,
     title: 'Mind compass',
     tags: ['React', 'TypeScript', 'tailwind', 'AI integration'],
     cover: '/img/m3.PNG',
@@ -69,6 +104,7 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'media-kit-website',
+    duotone: { ink: '#1F3B2A', paper: '#F1C7B8' }, // forest / blush
     title: 'Media Kit Website',
     tags: ['React', 'TypeScript', 'Tailwind CSS', 'Framer'],
     cover: '/img/jnb.PNG',
@@ -79,6 +115,7 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'climex-dashboard',
+    duotone: { ink: '#0E3B3F', paper: '#A9D9D4' }, // deep teal / pale aqua
     title: 'Climex dashboard',
     tags: ['Typescript', 'NextJS', 'Tailwind CSS', 'WebSocket'],
     cover: '/img/cl1.PNG',
@@ -89,6 +126,11 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'designarchive',
+    duotone: { ink: '#1C1B18', paper: '#ECE8DF' }, // charcoal / cream
+    // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
+    ditherBlack: 10,
+    ditherWhite: 140,
+    invert: true,
     title: 'Designarchive',
     tags: ['React', 'TypeScript', 'Tailwind CSS', 'Vite'],
     cover: '/img/arc1.png',
@@ -99,6 +141,11 @@ export const WORKS: WorkProject[] = [
   },
   {
     slug: 'dual-finance',
+    duotone: { ink: '#1E2A6B', paper: '#F2E3A0' }, // indigo / butter
+    // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
+    ditherBlack: 10,
+    ditherWhite: 70,
+    invert: true,
     title: 'dual finance',
     tags: ['React', 'TypeScript', 'Tailwind CSS', 'Vite'],
     cover: '/img/b1.png',

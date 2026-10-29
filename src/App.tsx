@@ -3,10 +3,16 @@ import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { WORKS, cardTags, findWork, workPath, type WorkProject } from './data/projects';
+import { WORKS, findWork, workPath, type WorkProject } from './data/projects';
 import { FaAws } from 'react-icons/fa6';
 import { SiPearson, SiCisco, SiUpwork, SiFiverr, SiRakuten } from 'react-icons/si';
-import { playExternalLink, playNavTick, playTransition } from './lib/sound';
+import { play } from './lib/sound';
+import { initUiSounds } from './lib/uiSounds';
+import { XeroxPortrait } from './components/XeroxPortrait';
+import { DitherThumb } from './components/DitherThumb';
+import { ServicesDiagram } from './components/ServicesDiagram';
+import { BookCallModal } from './components/BookCallModal';
+import { GithubSection } from './components/GithubPunchCard';
 import { useSoundMuted } from './lib/useSoundMuted';
 import BlogPage from './components/BlogPage';
 import { HarvestSnakeModal } from './components/HarvestSnake';
@@ -41,7 +47,6 @@ import {
   SidebarSimple,
   Clock,
   CheckCircle,
-  CheckCircle as CheckCircle2,
   Check,
   SpeakerHigh,
   SpeakerSlash,
@@ -280,6 +285,26 @@ const SERVICES: Service[] = [
     title: "Website maintenance",
     description: "ongoing updates, bug fixes, and performance monitoring after launch"
   }
+];
+
+/** The services diagram's flow order; copy comes from SERVICES unchanged. */
+const SERVICE_FLOW = [
+  'Portfolio websites',
+  'Landing pages',
+  'Ecommerce websites',
+  'Web applications',
+  'SEO optimization',
+  'Website maintenance',
+].map((title) => SERVICES.find((s) => s.title === title)!);
+
+/** Per-service print pair, same palette system as the project cards. */
+const SERVICE_DUOTONES = [
+  { ink: '#7A1F14', paper: '#8FC1DD' },
+  { ink: '#B23A1E', paper: '#E8C35A' },
+  { ink: '#13283F', paper: '#C5DCA6' },
+  { ink: '#1E2A6B', paper: '#F2E3A0' },
+  { ink: '#0E3B3F', paper: '#A9D9D4' },
+  { ink: '#3B1F3A', paper: '#C9B8E3' },
 ];
 
 interface Resource {
@@ -644,7 +669,7 @@ const viewForPath = (pathname: string) => {
 /** Back to home atop every view but About. Outlined like the grid/list switch, so it reads as a button. */
 const ViewBack = () => (
   <div className="vb">
-    <Link to="/" onClick={playNavTick} className="vb-btn">
+    <Link to="/" className="vb-btn">
       <ArrowLeft size={15} weight="bold" aria-hidden="true" />
       back to home
     </Link>
@@ -657,7 +682,7 @@ type ToggleTheme = () => void;
 const ThemeToggle = ({ theme, toggleTheme }: { theme: 'dark' | 'light'; toggleTheme: ToggleTheme }) => {
   const label = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
   return (
-    <button type="button" onClick={toggleTheme} aria-label={label} title={label} className="theme-toggle">
+    <button type="button" data-sound="switch" onClick={toggleTheme} aria-label={label} title={label} className="theme-toggle">
       <ThemeToggleIcon theme={theme} size={16} />
     </button>
   );
@@ -775,6 +800,7 @@ const MobileMenu = ({
             </div>
           </div>
 
+          <div className="mobile-menu-body">
           <motion.ul
             className="mobile-menu-list"
             data-tour="m-nav"
@@ -792,9 +818,6 @@ const MobileMenu = ({
                     aria-current={active ? 'true' : undefined}
                     className="mobile-menu-item font-geist"
                   >
-                    <span aria-hidden="true" className="mobile-menu-icon">
-                      <NavIcon3D name={link.id as NavIcon3DName} size={22} />
-                    </span>
                     <span>{link.name}</span>
                   </NavLink>
                 </motion.li>
@@ -802,12 +825,46 @@ const MobileMenu = ({
             })}
           </motion.ul>
 
+          <WorksCarousel onNavigate={onClose} />
+
+          {/* The quieter details live at the end of the scroll, not in the
+              pinned footer, so the projects get the room. */}
+          <div className="mobile-menu-meta">
+            {/* Socials as icons only; each keeps its name for screen readers. */}
+            <span className="mobile-menu-socials">
+              {[
+                { label: 'GitHub', icon: 'github' as const, href: 'https://github.com/kellasandyyyy1', external: true },
+                { label: 'LinkedIn', icon: 'linkedin' as const, href: 'https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4', external: true },
+                { label: 'Email', icon: 'contact' as const, href: 'mailto:kellasandrei00@gmail.com', external: false },
+              ].map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  className="mobile-menu-social"
+                  aria-label={link.label}
+                  title={link.label}
+                >
+                  <NavIcon3D name={link.icon} size={22} />
+                </a>
+              ))}
+            </span>
+            <button
+              type="button"
+              className="mobile-menu-replay"
+              onClick={() => { onClose(); replayIntroTour(); }}
+            >
+              replay intro
+            </button>
+          </div>
+          </div>
+
           <div className="mobile-menu-footer font-geist">
             <div className="flex items-center gap-2">
               {onBookCall && (
                 <button
                   type="button"
-                  onClick={() => { playExternalLink(); onClose(); onBookCall(); }}
+                  data-sound="primary" onClick={() => { onClose(); onBookCall(); }}
                   className="mobile-menu-book"
                   data-tour="m-book"
                 >
@@ -816,11 +873,11 @@ const MobileMenu = ({
                 </button>
               )}
               {/* Stays open on toggle so the state change is visible */}
-              <button
+              <button data-sound="mute-toggle"
                 type="button"
                 onClick={() => {
                   const nowMuted = toggleSound();
-                  if (!nowMuted) playNavTick();
+                  if (!nowMuted) play('switch');
                 }}
                 aria-pressed={!soundMuted}
                 aria-label={soundMuted ? 'Sound Off' : 'Sound On'}
@@ -831,23 +888,6 @@ const MobileMenu = ({
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <a href="mailto:kellasandrei00@gmail.com" onClick={playExternalLink} className="mobile-menu-email">
-                kellasandrei00@gmail.com
-              </a>
-              <span className="mobile-menu-status">
-                <span aria-hidden="true" className="mobile-menu-status-dot" />
-                available
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="mobile-menu-replay"
-              onClick={() => { onClose(); replayIntroTour(); }}
-            >
-              replay intro
-            </button>
           </div>
         </motion.div>
       )}
@@ -885,7 +925,6 @@ const SidebarNavigation = ({
     try { return localStorage.getItem('sb-collapsed') === '1'; } catch { return false; }
   });
   const toggleCollapsed = React.useCallback(() => {
-    playNavTick();
     setCollapsed((c) => !c);
   }, []);
   useEffect(() => {
@@ -902,14 +941,12 @@ const SidebarNavigation = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [toggleCollapsed]);
   const handleMobileNavigate = (id: string) => {
-    playNavTick();
     setIsOpen(false);
     // Tapping the view you're already on doesn't change the route; take it
     // back to the top instead.
     if (location.pathname === `/${id}`) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const goHome = () => {
-    playNavTick();
     // Already home: no route change, so glide back up to the hero instead.
     if (location.pathname === '/') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -947,15 +984,6 @@ const SidebarNavigation = ({
     if (!isFirst) window.scrollTo({ top: 0, behavior: 'auto' });
   }, [location.pathname]);
 
-  // Play a transition only on a genuine change. The ref seeds with the initial
-  // section so nothing sounds on first paint.
-  const previousSection = React.useRef(activeSection);
-  useEffect(() => {
-    if (previousSection.current === activeSection) return;
-    previousSection.current = activeSection;
-    playTransition();
-  }, [activeSection]);
-
   // Router match drives the active state. On home (`/`) no section is active.
   const isLinkActive = (id: string, isActive: boolean) => isActive || activeSection === id;
 
@@ -963,7 +991,6 @@ const SidebarNavigation = ({
     <NavLink
       key={link.id}
       to={`/${link.id}`}
-      onClick={playNavTick}
       aria-label={link.name}
       title={collapsed ? link.name : undefined}
       data-tour={link.id === 'work' ? 'sb-work' : ['services', 'resources', 'contact'].includes(link.id) ? 'sb-more' : 'sb-top'}
@@ -1052,7 +1079,6 @@ const SidebarNavigation = ({
                 <a
                   href={link.href}
                   {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  onClick={playExternalLink}
                   className="sf-link"
                   data-tour="sb-social"
                   aria-label={link.label}
@@ -1067,14 +1093,15 @@ const SidebarNavigation = ({
           </ul>
 
           <span className="sf-label">preferences</span>
-          <button
+          <button data-sound="mute-toggle"
             type="button"
             role="switch"
             aria-checked={!soundMuted}
             onClick={() => {
-              // Play the confirmation chirp only when unmuting, so muting is silent.
+              // Clack only when unmuting, so muting is silent. The delegated click sound
+              // skips this button: at pointerdown the state hasn't flipped yet.
               const nowMuted = toggleSound();
-              if (!nowMuted) playNavTick();
+              if (!nowMuted) play('switch');
             }}
             className="sf-row"
             aria-label="Sound"
@@ -1092,6 +1119,7 @@ const SidebarNavigation = ({
               aria-pressed={theme === 'light'}
               onClick={() => { if (theme !== 'light') toggleTheme(); }}
               className="sf-theme-opt"
+              data-sound="switch"
               aria-label="Light theme"
             >
               <NavIcon3D name="sun" size={14} />
@@ -1102,6 +1130,7 @@ const SidebarNavigation = ({
               aria-pressed={theme === 'dark'}
               onClick={() => { if (theme !== 'dark') toggleTheme(); }}
               className="sf-theme-opt"
+              data-sound="switch"
               aria-label="Dark theme"
             >
               <NavIcon3D name="moon" size={14} />
@@ -1126,7 +1155,6 @@ const SidebarNavigation = ({
             <NavLink
               key={link.id}
               to={`/${link.id}`}
-              onClick={playNavTick}
               className={({ isActive }) => {
                 const active = isActive || (location.pathname === '/' && link.id === 'about');
                 return `tab-link ${active ? 'is-active' : ''} t-label font-geist uppercase transition-colors ${active
@@ -1142,10 +1170,10 @@ const SidebarNavigation = ({
             </NavLink>
           ))}
 
-          <button
+          <button data-sound="mute-toggle"
             onClick={() => {
               const nowMuted = toggleSound();
-              if (!nowMuted) playNavTick();
+              if (!nowMuted) play('switch');
             }}
             aria-pressed={soundMuted}
             aria-label={soundMuted ? 'Unmute interface sounds' : 'Mute interface sounds'}
@@ -1245,7 +1273,7 @@ const ResourceGroupList = ({ group, wide }: { group: ResourceGroup; wide: boolea
 
   const renderItem = (resource: Resource) => (
     <li key={resource.url}>
-      <a href={resource.url} target="_blank" rel="noopener noreferrer" onClick={playExternalLink} className="rs-item">
+      <a href={resource.url} target="_blank" rel="noopener noreferrer" className="rs-item">
         <span className="rs-name">
           {resource.name}
           <ArrowUpRight weight="light" size={12} className="rs-arrow" aria-hidden="true" />
@@ -1396,7 +1424,6 @@ const WorkLiveLink: React.FC<{ project: WorkProject; size?: number }> = ({ proje
       className="wk-live"
       onClick={(e) => {
         e.stopPropagation();
-        playExternalLink();
       }}
     >
       <ArrowUpRight weight="light" size={size} aria-hidden="true" />
@@ -1417,37 +1444,207 @@ const WorkCardLink: React.FC<{ project: WorkProject; onNavigate?: () => void }> 
   />
 );
 
-/**
- * Gallery card: a hairline-framed, square-cornered thumbnail with the title and
- * tags set underneath like a print caption. Shared by the works grid and the
- * browse-all modal so both read the same.
- */
-const WorkCard: React.FC<{ project: WorkProject; onNavigate?: () => void }> = ({ project, onNavigate }) => (
-  <div className="wk-card">
-    <span className="wk-media">
-      {project.cover ? (
-        <img src={project.cover} alt="" loading="lazy" />
-      ) : (
-        <span className="wk-placeholder" aria-hidden="true" />
-      )}
-    </span>
-    <span className="wk-meta">
-      <span className="wk-title">{project.title}</span>
-      <WorkLiveLink project={project} />
-    </span>
-    <span className="wk-tags">{cardTags(project).join(' · ')}</span>
-    <WorkCardLink project={project} onNavigate={onNavigate} />
-  </div>
-);
+/** One hard cut every 1/12s: the hover stepping runs on the hero's stop-motion clock. */
+const DITHER_STEP_MS = 1000 / 12;
+const DITHER_RESOLVED = 3;
 
 /**
- * List-view row, in the resources list's style: the name with its one-line
- * summary underneath, quiet tags and the ↗ live link on the right. The whole
+ * Editorial card: a two-tone dithered thumbnail over a flat light info panel
+ * (title, description, and the ↗ in the footer). Hover or keyboard focus resolves the
+ * dither in four hard-cut steps (3px → 2px → 1px → original) and steps back on
+ * leave. Shared by the works grid and the browse-all modal.
+ */
+const WorkCard: React.FC<{ project: WorkProject; onNavigate?: () => void }> = ({ project, onNavigate }) => {
+  const [step, setStep] = useState(0);
+  const [target, setTarget] = useState(0);
+
+  // Walk one step per frame toward the target; reduced motion jumps straight there.
+  useEffect(() => {
+    if (step === target) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setStep(target);
+      return;
+    }
+    const id = window.setTimeout(() => setStep((s) => s + Math.sign(target - s)), DITHER_STEP_MS);
+    return () => window.clearTimeout(id);
+  }, [step, target]);
+
+  return (
+    <div
+      className={`wk-card${target ? ' is-active' : ''}`}
+      // Mouse only: touch shows the dither, and the detail page the original.
+      onPointerEnter={(e) => e.pointerType === 'mouse' && setTarget(DITHER_RESOLVED)}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && setTarget(0)}
+      onFocus={(e) => (e.target as HTMLElement).matches(':focus-visible') && setTarget(DITHER_RESOLVED)}
+      onBlur={() => setTarget(0)}
+    >
+      <DitherThumb project={project} step={step} className="wk-thumb" />
+      <span className="wk-panel">
+        <span className="wk-name">{project.title}</span>
+        {project.summary && <span className="wk-desc">{project.summary}</span>}
+        <span className="wk-foot">
+          <WorkLiveLink project={project} />
+        </span>
+      </span>
+      <WorkCardLink project={project} onNavigate={onNavigate} />
+    </div>
+  );
+};
+
+/**
+ * List-view row, in the resources list's style: a dithered square, the name
+ * with its one-line summary underneath, and the ↗ live link on the right. The whole
  * row opens the project page. Rows rise in with a short stagger (--i) when the
  * list appears.
  */
+/** The project's live domain, shown above its card, e.g. "holymeltburger.com". */
+const siteHost = (url?: string) => {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Steady drift, in px per second, and the pause after the visitor moves it. */
+const DRIFT_PX_PER_SEC = 32;
+const RESUME_AFTER_MS = 1200;
+
+/**
+ * "my works" in the mobile menu: a row of project cards (the dithered
+ * thumbnail, its domain above and the title below) that drifts continuously
+ * at a steady pace and loops seamlessly. Swipe, drag or use the arrows to move
+ * it; the drift carries on from there a moment later. A tap opens the project
+ * and closes the menu.
+ */
+const WorksCarousel: React.FC<{ onNavigate: () => void }> = ({ onNavigate }) => {
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+  /** Float position: some browsers round scrollLeft, so the drift keeps its own. */
+  const pos = React.useRef(0);
+  const lastInteraction = React.useRef(0);
+
+  /** Distance between card starts: one card plus the gap. */
+  const step = () => {
+    const track = trackRef.current;
+    const cards = track?.querySelectorAll<HTMLElement>('.mm-card');
+    if (!cards || cards.length < 2) return track?.clientWidth ?? 1;
+    return cards[1].offsetLeft - cards[0].offsetLeft;
+  };
+
+  /** Width of one full set of cards: the loop point. */
+  const loopWidth = () => {
+    const track = trackRef.current;
+    const cards = track?.querySelectorAll<HTMLElement>('.mm-card');
+    if (!cards || cards.length <= WORKS.length) return 0;
+    return cards[WORKS.length].offsetLeft - cards[0].offsetLeft;
+  };
+
+  const interacting = () => Date.now() - lastInteraction.current < RESUME_AFTER_MS;
+  const noteInteraction = () => {
+    lastInteraction.current = Date.now();
+  };
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    // While the visitor is moving it, follow them.
+    if (interacting()) pos.current = track.scrollLeft;
+    setIndex(Math.round(track.scrollLeft / step()) % WORKS.length);
+  };
+
+  // The drift: never stops; it only steps aside while the visitor moves the row.
+  useEffect(() => {
+    if (reduceMotion) return;
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const track = trackRef.current;
+      if (track && !interacting()) {
+        const loop = loopWidth();
+        pos.current += DRIFT_PX_PER_SEC * dt;
+        // One full set scrolled past: jump back by exactly one set, seamlessly.
+        if (loop > 0 && pos.current >= loop) pos.current -= loop;
+        track.scrollLeft = pos.current;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduceMotion]);
+
+  const go = (dir: 1 | -1) => {
+    const track = trackRef.current;
+    if (!track) return;
+    noteInteraction();
+    let from = Math.round(track.scrollLeft / step());
+    // Stepping back from the very start wraps into the duplicate set.
+    if (dir < 0 && from === 0) {
+      from = WORKS.length;
+      track.scrollLeft = from * step();
+    }
+    const target = (from + dir) * step();
+    pos.current = target;
+    track.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
+  return (
+    <section
+      className="mm-carousel"
+      aria-label="My works"
+      onPointerDown={noteInteraction}
+      onTouchStart={noteInteraction}
+      onTouchMove={noteInteraction}
+      onWheel={noteInteraction}
+      onKeyDown={noteInteraction}
+    >
+      <div ref={trackRef} className="mm-carousel-track" onScroll={onScroll}>
+        {/* Two sets for a seamless loop; the second is decoration only. */}
+        {[0, 1].map((set) => (
+          <div key={set} className="mm-carousel-set" inert={set === 1} aria-hidden={set === 1 || undefined}>
+            {WORKS.map((project) => (
+              <Link
+                key={project.slug}
+                to={workPath(project)}
+                state={{ fromWorks: true }}
+                className="mm-card"
+                onClick={() => {
+                  rememberWorksScroll();
+                  onNavigate();
+                }}
+              >
+                <span className="mm-card-meta">{siteHost(project.liveUrl) || ' '}</span>
+                <DitherThumb project={project} className="mm-card-thumb" />
+                <span className="mm-card-title">{project.title}</span>
+              </Link>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="mm-carousel-nav">
+        <button type="button" className="mm-carousel-arrow" aria-label="Previous project" onClick={() => go(-1)}>
+          <ArrowLeft size={16} weight="regular" aria-hidden="true" />
+        </button>
+        <span className="mm-carousel-count">
+          {pad2(index + 1)} / {pad2(WORKS.length)}
+        </span>
+        <button type="button" className="mm-carousel-arrow" aria-label="Next project" onClick={() => go(1)}>
+          <ArrowRight size={16} weight="regular" aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+};
+
 const WorkRow: React.FC<{ project: WorkProject; index: number; onNavigate?: () => void }> = ({ project, index, onNavigate }) => (
   <div className="wk-row wl-row" style={{ '--i': index } as React.CSSProperties}>
+    <DitherThumb project={project} className="wl-thumb" />
     <span className="wl-main">
       <span className="wl-title">
         {project.title}
@@ -1456,7 +1653,6 @@ const WorkRow: React.FC<{ project: WorkProject; index: number; onNavigate?: () =
       {project.summary && <span className="wl-desc">{project.summary}</span>}
     </span>
     <span className="wl-end">
-      <span className="wl-tags">{cardTags(project).join(' · ')}</span>
       <WorkLiveLink project={project} size={12} />
     </span>
     <WorkCardLink project={project} onNavigate={onNavigate} />
@@ -1551,12 +1747,12 @@ const ProjectPage: React.FC<{ project: WorkProject }> = ({ project }) => {
       {(project.liveUrl || project.repoUrl) && (
         <div className="pp-actions">
           {project.liveUrl && (
-            <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" onClick={playExternalLink} className="pp-primary">
+            <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="pp-primary">
               visit live site <span aria-hidden="true">↗</span>
             </a>
           )}
           {project.repoUrl && (
-            <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" onClick={playExternalLink} className="pp-secondary">
+            <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="pp-secondary">
               view code <span aria-hidden="true">↗</span>
             </a>
           )}
@@ -1907,200 +2103,6 @@ const ResumeModal = ({
   );
 };
 
-const BookCallModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void; theme?: 'dark' | 'light' }) => {
-  const getTomorrowString = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  };
-  const getTodayString = () => {
-    return new Date().toISOString().split('T')[0];
-  };
-
-  const [selectedDate, setSelectedDate] = useState<string>(getTomorrowString());
-  const [selectedTime, setSelectedTime] = useState<string>('02:00 PM');
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [topic, setTopic] = useState<string>('frontend & web app discussion');
-  const [isScheduled, setIsScheduled] = useState<boolean>(false);
-
-  const times = ['10:00 AM', '11:30 AM', '02:00 PM', '03:30 PM', '05:00 PM', '8:00 PM'];
-
-  if (!isOpen) return null;
-
-  const handleBookWithGoogle = (e: React.FormEvent) => {
-    e.preventDefault();
-    const title = encodeURIComponent(`1-on-1 Call: ${name || 'Guest'} & Kellas Andrei`);
-    const details = encodeURIComponent(`Meeting Date: ${selectedDate} at ${selectedTime}\nMeeting Topic: ${topic}\nContact Email: ${email || 'Not provided'}\n\nBooked via Kellas Andrei Portfolio.`);
-    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}`;
-    window.open(gcalUrl, '_blank');
-    setIsScheduled(true);
-  };
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="scrim fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.96, opacity: 0, y: 10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.96, opacity: 0, y: 10 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          onClick={(e) => e.stopPropagation()}
-          className="bc-panel w-full max-w-[420px] bg-[#0a0a0a] border border-[#2a2a2a] rounded-[2px] overflow-hidden shadow-none font-sans text-white select-none"
-        >
-          {/* Header Row */}
-          <div className="bc-rule px-5 py-4 flex items-center justify-between border-b border-[#2a2a2a]">
-            <div className="bc-title text-[11px] font-sans font-medium uppercase tracking-[1.5px] text-white">
-              &nbsp;BOOK A CALL WITH ME
-            </div>
-            <button
-              onClick={onClose}
-              className="bc-close text-[#888888] hover:text-white transition-colors cursor-pointer p-1 -mr-1"
-              title="Close"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* Body Content */}
-          <div className="p-5">
-            {!isScheduled ? (
-              <form onSubmit={handleBookWithGoogle} className="space-y-4">
-                {/* Date Field */}
-                <div className="space-y-1.5">
-                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                    SELECT DATE
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    min={getTodayString()}
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bc-input w-full bg-[#0a0a0a] text-white border border-[#2a2a2a] rounded-[2px] px-3 py-2 text-[13px] font-sans outline-none focus:border-white transition-colors cursor-pointer [color-scheme:dark]"
-                  />
-                </div>
-
-                {/* Time Slot Row */}
-                <div className="space-y-1.5">
-                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                    TIME SLOT (EST)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {times.map((time) => {
-                      const isSelected = selectedTime === time;
-                      return (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setSelectedTime(time)}
-                          className={`bc-slot ${isSelected ? 'is-on' : ''} px-3 py-1.5 text-[12px] font-sans tracking-[0.5px] rounded-[2px] transition-colors border cursor-pointer ${isSelected
-                            ? 'bg-white text-black border-white font-medium'
-                            : 'bg-[#0a0a0a] text-[#888888] border-[#2a2a2a] hover:text-white hover:border-[#404040]'
-                            }`}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Name & Email Fields (Two-Column Layout, Underline Style) */}
-                <div className="grid grid-cols-2 gap-3.5 pt-1">
-                  <div className="space-y-1">
-                    <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                      NAME
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      placeholder="alex rivera"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                      EMAIL
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      placeholder="alex@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
-                    />
-                  </div>
-                </div>
-
-                {/* Topic Field */}
-                <div className="space-y-1 pt-1">
-                  <label className="bc-label block text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                    TOPIC
-                  </label>
-                  <input
-                    type="text"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    className="bc-input bc-underline w-full bg-transparent text-white border-b border-[#2a2a2a] border-t-0 border-l-0 border-r-0 rounded-none px-0 py-1.5 text-[13px] font-sans outline-none focus:border-white placeholder-[#555555] transition-colors"
-                  />
-                </div>
-
-                {/* Confirm Button */}
-                <div className="pt-3">
-                  <button
-                    type="submit"
-                    className="bc-primary w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2.5 px-4 font-sans text-[13px] font-medium lowercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>confirm booking</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="py-4 text-center space-y-4 font-sans">
-                <div className="bc-done w-10 h-10 rounded-[2px] border border-[#2a2a2a] bg-[#0a0a0a] text-white flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={18} />
-                </div>
-                <div className="space-y-1">
-                  <div className="bc-label text-[10px] font-sans uppercase tracking-[1.5px] text-[#888888]">
-                    INVITE READY
-                  </div>
-                  <h4 className="bc-heading text-[14px] font-sans font-medium text-white">
-                    call scheduled
-                  </h4>
-                  <p className="bc-muted text-[12px] text-[#888888] leading-relaxed max-w-xs mx-auto">
-                    Google Calendar invite created for <span className="bc-strong text-white">{selectedDate}</span> at <span className="bc-strong text-white">{selectedTime}</span>.
-                  </p>
-                </div>
-                <div className="pt-2">
-                  <button
-                    onClick={() => {
-                      setIsScheduled(false);
-                      onClose();
-                    }}
-                    className="bc-primary w-full bg-white text-black hover:bg-[#e5e5e5] rounded-[2px] py-2 px-4 font-sans text-[12px] font-medium lowercase tracking-[0.05em] transition-colors cursor-pointer"
-                  >
-                    close
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
 
 const TypewriterIntro = ({ theme }: { theme: 'dark' | 'light' }) => {
   const fullText = "A developer passionate about building modern, responsive, and high-performance websites and web applications. I focus on creating scalable, user-friendly digital experiences with clean design, smooth functionality, and strong attention to performance.";
@@ -2158,12 +2160,12 @@ interface ProcessNode {
 }
 
 const PROCESS_NODES: ProcessNode[] = [
-  { hash: "9f2c1ab", name: "understand", desc: "read the problem first", lane: 'main', verb: "understanding" },
-  { hash: "4d7e05f", name: "plan", desc: "sketch the approach", lane: 'main', verb: "planning" },
-  { hash: "b18a3c6", name: "build", desc: "write the code", lane: 'branch', verb: "building" },
-  { hash: "6c0f92d", name: "test", desc: "check it actually works", lane: 'branch', verb: "testing" },
-  { hash: "e35b7a4", name: "refine", desc: "clean it up", lane: 'branch', verb: "refining" },
-  { hash: "a07d4e1", name: "done", desc: "five steps, no shortcuts", lane: 'main', verb: "done" },
+  { hash: "9f2c1ab", name: "understand", desc: "listen first, talk later. the problem people describe is rarely the one that’s actually keeping them up at night.", lane: 'main', verb: "understanding" },
+  { hash: "4d7e05f", name: "plan", desc: "map the route before getting in the car. a messy sketch today saves a very tidy disaster next month.", lane: 'main', verb: "planning" },
+  { hash: "b18a3c6", name: "build", desc: "headphones on, world off. this is where the napkin drawings finally become something you can click.", lane: 'branch', verb: "building" },
+  { hash: "6c0f92d", name: "test", desc: "click everything like a curious stranger with too much free time, because eventually one will.", lane: 'branch', verb: "testing" },
+  { hash: "e35b7a4", name: "refine", desc: "sand the edges until nothing snags. if a button needs explaining, it isn’t finished yet.", lane: 'branch', verb: "refining" },
+  { hash: "a07d4e1", name: "done", desc: "", lane: 'main', verb: "done" },
 ];
 
 
@@ -2435,7 +2437,7 @@ const GitGraph: React.FC<{ onActivate?: (index: number) => void }> = ({ onActiva
                 <span className="gg-name t-h3 font-sans">{node.name}</span>
                 {i === last && <span className="gg-head t-label font-mono">HEAD → main</span>}
               </div>
-              <p className="gg-desc t-body font-sans">{node.desc}</p>
+              {node.desc && <p className="gg-desc t-body font-sans">{node.desc}</p>}
             </div>
           </li>
         ))}
@@ -2771,356 +2773,6 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
   );
 };
 
-// --- GitHub contribution widget ---
-
-const GITHUB_PROFILE_URL = 'https://github.com/kellasandyyyy1';
-const MATRIX_ROWS = 7; // one row per weekday, matching GitHub's week-column layout
-
-interface ContributionDay {
-  date: string;
-  count: number;
-}
-
-/** Fill per bucket. Tiles stay one size; only the color steps up. */
-const CONTRIBUTION_BUCKETS = [
-  { min: 0, fill: 'var(--gh-0)' },
-  { min: 1, fill: 'var(--gh-1)' },
-  { min: 3, fill: 'var(--gh-2)' },
-  { min: 6, fill: 'var(--gh-3)' },
-  { min: 10, fill: 'var(--gh-4)' },
-];
-
-const bucketIndex = (count: number) => {
-  for (let i = CONTRIBUTION_BUCKETS.length - 1; i > 0; i--) {
-    if (count >= CONTRIBUTION_BUCKETS[i].min) return i;
-  }
-  return 0;
-};
-
-/**
- * Deterministic quiet pattern shown when the API is unavailable. Uses only the
- * three dimmest buckets so it reads as texture rather than as fake data.
- */
-const placeholderDays = (count: number): ContributionDay[] =>
-  Array.from({ length: count }, (_, i) => {
-    const h = (i * 2654435761) % 101;
-    return { date: `placeholder-${i}`, count: h < 55 ? 0 : h < 88 ? 1 : 3 };
-  });
-
-const parseDay = (date: string) => new Date(`${date}T00:00:00`);
-const formatDay = (date: string) =>
-  parseDay(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
-
-/** Little blob whose face follows the last seven days: asleep, content, or thrilled. */
-function GhMascot({ week }: { week: number }) {
-  const mood = week === 0 ? 'sleepy' : week < 8 ? 'happy' : 'thrilled';
-  return (
-    <svg className="ghw-mascot" data-mood={mood} viewBox="0 0 40 40" aria-hidden="true">
-      <path
-        className="ghw-mascot-body"
-        d="M20 4c9.5 0 16 6.6 16 15.6S30.4 36 20 36 4 29.6 4 19.6 10.5 4 20 4Z"
-      />
-      <ellipse className="ghw-mascot-shine" cx="13" cy="11" rx="4" ry="2.2" transform="rotate(-24 13 11)" />
-      {mood === 'sleepy' ? (
-        <>
-          <path className="ghw-mascot-line" d="M12.5 20.5q2.5 1.8 5 0M22.5 20.5q2.5 1.8 5 0" />
-          <path className="ghw-mascot-line" d="M18.5 27h3" />
-          <text className="ghw-mascot-z" x="29" y="10">z</text>
-        </>
-      ) : mood === 'happy' ? (
-        <>
-          <circle className="ghw-mascot-eye" cx="15" cy="19.5" r="1.9" />
-          <circle className="ghw-mascot-eye" cx="25" cy="19.5" r="1.9" />
-          <path className="ghw-mascot-line" d="M16.5 25.5q3.5 3 7 0" />
-        </>
-      ) : (
-        <>
-          <path className="ghw-mascot-line" d="M12.5 20.5q2.5-2.6 5 0M22.5 20.5q2.5-2.6 5 0" />
-          <path className="ghw-mascot-mouth" d="M15.5 24.5h9q-.6 5-4.5 5t-4.5-5Z" />
-          <circle className="ghw-mascot-blush" cx="11.5" cy="24" r="2" />
-          <circle className="ghw-mascot-blush" cx="28.5" cy="24" r="2" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-const GithubSection: React.FC<{ theme: 'dark' | 'light' }> = () => {
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [spacing, setSpacing] = useState(12);
-  const [columns, setColumns] = useState(53);
-  const [data, setData] = useState<{ total: number; days: ContributionDay[] } | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [hovered, setHovered] = useState<number | null>(null);
-
-  // Fit as many week-columns as the measured container allows, rather than
-  // hardcoding counts per breakpoint.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const measure = () => {
-      const width = el.clientWidth;
-      if (!width) return;
-      // Below 10px a tile's gloss highlight shrinks to noise.
-      const gap = width < 480 ? 10 : 12;
-      setSpacing(gap);
-      setColumns(Math.max(12, Math.min(53, Math.floor(width / gap))));
-    };
-
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/github-contributions')
-      .then((res) => {
-        if (!res.ok) throw new Error(String(res.status));
-        return res.json();
-      })
-      .then((payload: { total: number; days: ContributionDay[] }) => {
-        if (!active) return;
-        if (!Array.isArray(payload?.days)) throw new Error('bad shape');
-        setData(payload);
-      })
-      .catch(() => {
-        // Fail silently — a portfolio page should never surface an API error.
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const totalCells = columns * MATRIX_ROWS;
-  const sourceDays = data?.days ?? (failed ? placeholderDays(totalCells) : null);
-  // Keep the most recent weeks when the container can't fit the full year.
-  const days = sourceDays ? sourceDays.slice(-totalCells) : null;
-
-  const stats = React.useMemo(() => {
-    if (!data || data.days.length === 0) return null;
-    const all = data.days;
-    // Today often has nothing yet; don't let that break an otherwise live streak.
-    let i = all.length - 1;
-    if (all[i].count === 0) i--;
-    let streak = 0;
-    for (; i >= 0 && all[i].count > 0; i--) streak++;
-    const best = all.reduce((top, d) => (d.count > top.count ? d : top), all[0]);
-    const week = all.slice(-7).reduce((sum, d) => sum + d.count, 0);
-    return { streak, best, week };
-  }, [data]);
-
-  // A month label sits over the first column whose week starts in that month.
-  const months = React.useMemo(() => {
-    if (!data || !days) return [];
-    const labels: { col: number; label: string }[] = [];
-    let last = -1;
-    for (let col = 0; col * MATRIX_ROWS < days.length; col++) {
-      const first = parseDay(days[col * MATRIX_ROWS].date);
-      if (first.getMonth() === last) continue;
-      last = first.getMonth();
-      labels.push({ col, label: first.toLocaleDateString('en-US', { month: 'short' }) });
-    }
-    // The first column is usually a partial month; drop its label if it would crowd the next.
-    if (labels.length > 1 && labels[1].col - labels[0].col < 3) labels.shift();
-    return labels;
-  }, [data, days]);
-
-  const width = columns * spacing;
-  const height = MATRIX_ROWS * spacing;
-  const tile = spacing * 0.78;
-  const inset = (spacing - tile) / 2;
-  const hoveredDay = data && days && hovered !== null ? days[hovered] : null;
-  const hoveredCol = hovered !== null ? Math.floor(hovered / MATRIX_ROWS) : 0;
-  const hoveredRow = hovered !== null ? hovered % MATRIX_ROWS : 0;
-
-  return (
-    <div className="ghw">
-      <div className="ghw-head">
-        <span className="ghw-app" aria-hidden="true">
-          <GithubLogo weight="fill" size={20} />
-        </span>
-        <div className="ghw-id">
-          <span className="ghw-title font-cal">github</span>
-          <a
-            href={GITHUB_PROFILE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={playExternalLink}
-            className="ghw-handle font-mono"
-          >
-            <span className="truncate">@kellasandyyyy1</span>
-            <ArrowUpRight weight="bold" size={10} className="shrink-0" />
-          </a>
-        </div>
-        <span className="ghw-live font-cal">
-          {/* Broadcast mark: a beacon dot with two arcs that light up in turn. */}
-          <svg className="ghw-live-signal" viewBox="0 0 16 16" aria-hidden="true">
-            <circle className="ghw-live-beacon" cx="5" cy="8" r="2.4" />
-            <path className="ghw-live-arc ghw-live-arc-1" d="M8.6 4.8a4.6 4.6 0 0 1 0 6.4" />
-            <path className="ghw-live-arc ghw-live-arc-2" d="M11.2 2.6a7.8 7.8 0 0 1 0 10.8" />
-          </svg>
-          live
-        </span>
-      </div>
-
-      {data && stats && (
-        <div className="ghw-stats">
-          <div className="ghw-total">
-            <span className="ghw-total-num font-cal">{data.total.toLocaleString()}</span>
-            <span className="ghw-total-label font-mono">contributions this year</span>
-          </div>
-          <div className="ghw-chips">
-            <span className="ghw-chip">
-              <span className="ghw-chip-num font-cal">{stats.streak}</span>
-              <span className="ghw-chip-label font-mono">day streak</span>
-            </span>
-            <span className="ghw-chip">
-              <span className="ghw-chip-num font-cal">{stats.best.count}</span>
-              <span className="ghw-chip-label font-mono">best day</span>
-            </span>
-            <span className="ghw-chip ghw-chip-mascot" title={`${plural(stats.week, 'contribution')} in the last 7 days`}>
-              <GhMascot week={stats.week} />
-              <span className="ghw-chip-label font-mono">this week</span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div ref={containerRef} className="ghw-grid">
-        {months.length > 0 && (
-          <div className="ghw-months font-mono" aria-hidden="true">
-            {months.map((m) => (
-              <span key={`${m.col}-${m.label}`} style={{ left: `${(m.col / columns) * 100}%` }}>
-                {m.label}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {days && (
-          <div className="ghw-plot" onPointerLeave={() => setHovered(null)}>
-            <svg
-              viewBox={`0 0 ${width} ${height}`}
-              style={{ width: '100%', height: 'auto', overflow: 'visible' }}
-              role="img"
-              aria-label={
-                data
-                  ? `${data.total.toLocaleString()} GitHub contributions in the last year`
-                  : 'GitHub contribution activity'
-              }
-            >
-              {days.map((day, i) => {
-                const level = bucketIndex(day.count);
-                const col = Math.floor(i / MATRIX_ROWS);
-                const row = i % MATRIX_ROWS;
-                const x = col * spacing + inset;
-                const y = row * spacing + inset;
-                const isToday = data !== null && i === days.length - 1;
-                return (
-                  <g
-                    key={`${day.date}-${i}`}
-                    className="ghw-cell"
-                    style={{ '--d': `${col * 14 + row * 10}ms` } as React.CSSProperties}
-                    onPointerEnter={data ? () => setHovered(i) : undefined}
-                  >
-                    <rect x={x} y={y} width={tile} height={tile} rx={tile * 0.32} fill={CONTRIBUTION_BUCKETS[level].fill} />
-                    {level > 0 && (
-                      <rect
-                        className="ghw-gloss"
-                        x={x + tile * 0.18}
-                        y={y + tile * 0.14}
-                        width={tile * 0.4}
-                        height={tile * 0.18}
-                        rx={tile * 0.09}
-                      />
-                    )}
-                    {isToday && (
-                      <rect
-                        className="ghw-today"
-                        x={x - 1.2}
-                        y={y - 1.2}
-                        width={tile + 2.4}
-                        height={tile + 2.4}
-                        rx={tile * 0.4}
-                      />
-                    )}
-                  </g>
-                );
-              })}
-              {/* Hovered tile is redrawn last so its springy lift sits above its neighbours. */}
-              {hoveredDay && (
-                <g key={`lift-${hovered}`} className="ghw-lift" aria-hidden="true">
-                  <rect
-                    x={hoveredCol * spacing + inset}
-                    y={hoveredRow * spacing + inset}
-                    width={tile}
-                    height={tile}
-                    rx={tile * 0.32}
-                    fill={CONTRIBUTION_BUCKETS[bucketIndex(hoveredDay.count)].fill}
-                  />
-                  {hoveredDay.count > 0 && (
-                    <rect
-                      className="ghw-gloss"
-                      x={hoveredCol * spacing + inset + tile * 0.18}
-                      y={hoveredRow * spacing + inset + tile * 0.14}
-                      width={tile * 0.4}
-                      height={tile * 0.18}
-                      rx={tile * 0.09}
-                    />
-                  )}
-                </g>
-              )}
-            </svg>
-
-            {hoveredDay && (
-              <div
-                key={hovered}
-                className="ghw-bubble"
-                data-align={hoveredCol < 5 ? 'start' : hoveredCol > columns - 6 ? 'end' : 'center'}
-                style={{
-                  left: `${((hoveredCol + 0.5) / columns) * 100}%`,
-                  top: `${(hoveredRow / MATRIX_ROWS) * 100}%`,
-                }}
-                role="status"
-              >
-                <span className="ghw-bubble-count font-cal">
-                  {hoveredDay.count === 0 ? 'no contributions' : plural(hoveredDay.count, 'contribution')}
-                </span>
-                <span className="ghw-bubble-date font-mono">{formatDay(hoveredDay.date)}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="ghw-foot">
-        <span className="ghw-legend font-mono" aria-hidden="true">
-          less
-          {CONTRIBUTION_BUCKETS.map((b) => (
-            <span key={b.min} className="ghw-legend-tile" style={{ background: b.fill }} />
-          ))}
-          more
-        </span>
-        <a
-          href={GITHUB_PROFILE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={playExternalLink}
-          className="ghw-open font-mono"
-        >
-          open profile
-          <ArrowUpRight weight="bold" size={11} />
-        </a>
-      </div>
-    </div>
-  );
-};
-
 function useSectionInView() {
   const [isInView, setIsInView] = useState(false);
   const observerRef = React.useRef<IntersectionObserver | null>(null);
@@ -3154,6 +2806,9 @@ function useSectionInView() {
 }
 
 export default function App() {
+  // Delegated UI sounds for the whole site, blog included; set up once.
+  useEffect(() => initUiSounds(), []);
+
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window === 'undefined') return 'light';
     try {
@@ -3166,6 +2821,8 @@ export default function App() {
   });
   const [showResume, setShowResume] = useState(false);
   const [showBookCall, setShowBookCall] = useState(false);
+  // Stable, so the dialog's focus and scroll-lock effect runs once per open.
+  const closeBookCall = React.useCallback(() => setShowBookCall(false), []);
   const [showGame, setShowGame] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
 
@@ -3275,7 +2932,7 @@ export default function App() {
       />
       <AllProjectsModal isOpen={showAllProjects} onClose={() => setShowAllProjects(false)} projects={WORKS} theme={theme} />
       <ResumeModal isOpen={showResume} onClose={() => setShowResume(false)} theme={theme} />
-      <BookCallModal isOpen={showBookCall} onClose={() => setShowBookCall(false)} theme={theme} />
+      <BookCallModal isOpen={showBookCall} onClose={closeBookCall} />
       <HarvestSnakeModal isOpen={showGame} onClose={() => setShowGame(false)} theme={theme} />
       <IntroTour />
 
@@ -3414,7 +3071,6 @@ export default function App() {
                         href="https://github.com/kellasandyyyy1"
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={playExternalLink}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="github" size={18} />
@@ -3427,7 +3083,6 @@ export default function App() {
                         href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={playExternalLink}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="linkedin" size={18} />
@@ -3437,7 +3092,7 @@ export default function App() {
                         } />
                       </a>
                       <button
-                        onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                        data-sound="primary" onClick={() => setShowBookCall(true)}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase whitespace-nowrap shrink-0 cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="calendar" size={18} />
@@ -3540,7 +3195,6 @@ export default function App() {
                         href={cert.verifyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={playExternalLink}
                         aria-label={`${cert.title}, issued by ${cert.issuer}`}
                         className={`group relative isolate overflow-hidden flex flex-col items-center text-center px-6 py-10 md:py-4 ${getAnimClass(certInView)} ${
                           // Divider between columns only: never on the outside, never when stacked.
@@ -3618,7 +3272,7 @@ export default function App() {
                     {worksView === 'grid' && (
                       <div
                         key="works-grid"
-                        className="works-fade grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 md:gap-x-5 md:gap-y-8"
+                        className="works-fade wk-grid"
                       >
                         {WORKS.map((project) => (
                           <WorkCard key={project.slug} project={project} />
@@ -3658,7 +3312,7 @@ export default function App() {
                 {/* --- GitHub Section --- */}
                 <section id="github" className={`section border-t border-[var(--sand-deep)]`}>
                   <div className="max-w-[640px]">
-                    <GithubSection theme={theme} />
+                    <GithubSection />
                   </div>
                 </section>
               </>
@@ -3666,28 +3320,9 @@ export default function App() {
             {shows('services') && (
               <>
                 {/* --- Services Section --- */}
-                <section id="services" className={`section border-t border-[var(--sand-deep)]`}>
+                <section id="services" className="section sv-section border-t border-[var(--sand-deep)]">
                   <SectionHeading className="section-head" theme={theme}>Services</SectionHeading>
-
-                  {/* A hairline grid: 3 across on desktop, 2 on tablet, 1 on phones.
-                      The cells are information, not links, so nothing pretends to be
-                      clickable; the one real action is the call link underneath. */}
-                  <ul className="sv-grid">
-                    {SERVICES.map((service, index) => (
-                      <motion.li
-                        key={service.title}
-                        className="sv-cell"
-                        initial={{ opacity: 0, y: 8 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: index * 0.05, duration: 0.4 }}
-                      >
-                        <span className="sv-icon" aria-hidden="true">{service.icon}</span>
-                        <h3 className="sv-title">{service.title}</h3>
-                        <p className="sv-desc">{service.description}</p>
-                      </motion.li>
-                    ))}
-                  </ul>
+                  <ServicesDiagram services={SERVICE_FLOW} duotones={SERVICE_DUOTONES} />
 
                   <div className="sv-cta">
                     <p className="sv-cta-text font-cal">have a project in mind?</p>
@@ -3695,7 +3330,7 @@ export default function App() {
                     <button
                       type="button"
                       className="sv-cta-link"
-                      onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                      data-sound="primary" onClick={() => setShowBookCall(true)}
                     >
                       <span className="sv-cta-obj" aria-hidden="true">
                         <NavIcon3D name="calendar" size={22} />
@@ -3735,11 +3370,31 @@ export default function App() {
 
                   <div className="ct-layout">
                   <figure className="ct-art">
-                    <img src="/gif/brooding_recline.gif" alt="Illustration of a figure reclining on a phone call, cigarette in mouth" loading="lazy" />
+                    {/* Same photocopy grain as the hero, tuned for line art: solid ink
+                        below 70 keeps the outlines crisp, 70–200 turns the grey shading
+                        to toner, paper is clear so the section texture shows through,
+                        and the bottom 30% dissolves into specks. Ink follows the
+                        heading colour in either theme. Every GIF frame is processed. */}
+                    <XeroxPortrait
+                      src="/gif/brooding_recline.gif"
+                      alt="Illustration of a figure reclining on a phone call, cigarette in mouth"
+                      aspectRatio={1538 / 1022}
+                      inkColor="var(--text-primary)"
+                      paperColor="transparent"
+                      noiseAmount={30}
+                      thresholdRange={[110, 150]}
+                      solidBelow={70}
+                      paperAbove={200}
+                      grainSize={2}
+                      seed={7}
+                      fadeFrom={0.7}
+                      animate
+                      hoverReseed={false}
+                    />
                   </figure>
 
                   <div className="max-w-[560px] space-y-7">
-                    <h3 className="t-h2 font-sans c-primary">
+                    <h3 className="t-h2 font-cal c-primary">
                       Have a project in mind? Let's talk.
                     </h3>
 
@@ -3755,7 +3410,7 @@ export default function App() {
                     {/* Actions row: text links with icons on left & arrow on right */}
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-3">
                       <button
-                        onClick={() => { playExternalLink(); setShowBookCall(true); }}
+                        data-sound="primary" onClick={() => setShowBookCall(true)}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase cursor-pointer group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="calendar" size={18} />
@@ -3769,7 +3424,6 @@ export default function App() {
                         href="https://github.com/kellasandyyyy1"
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={playExternalLink}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="github" size={18} />
@@ -3783,7 +3437,6 @@ export default function App() {
                         href="https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4"
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={playExternalLink}
                         className={`transition-colors inline-flex items-center gap-2 t-mono font-mono lowercase group text-[var(--ink-body)] hover:text-[var(--accent-ink)]`}
                       >
                         <NavIcon3D name="linkedin" size={18} />

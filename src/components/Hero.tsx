@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { NavIcon3D } from './NavIcon3D';
-import { playExternalLink, playNavTick } from '../lib/sound';
+import { XeroxPortrait } from './XeroxPortrait';
+import { HeroMosaicIntro } from './HeroMosaicIntro';
+import { beginHeroIntro, endHeroIntro } from '../lib/heroIntro';
 
 /** The 3D object beside each hero link; it lifts and tips when the link is hovered. */
 function Key({ children }: { children: React.ReactNode }) {
@@ -48,79 +50,84 @@ function PhMap() {
   );
 }
 
-/**
- * Paper-crumple stages for the photo's opening unfold, mildest first. Each
- * displaces the photo along turbulence noise and shades the same noise as fold
- * relief. Two seeds per stage, so consecutive held frames "boil" like paper
- * shot frame by frame.
- */
-const CRUMPLE_STAGES = [
-  { stage: 1, scale: 4, relief: 1.2 },
-  { stage: 2, scale: 10, relief: 2 },
-  { stage: 3, scale: 18, relief: 3 },
-  { stage: 4, scale: 28, relief: 4 },
-];
+// Its own key: the earlier tile-portrait version used "hero-mosaic-played",
+// and sharing it made the curtain skip for anyone who'd seen that one.
+const INTRO_SESSION_KEY = 'hero-curtain-played';
 
-function CrumpleFilters() {
-  return (
-    <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
-      {CRUMPLE_STAGES.flatMap(({ stage, scale, relief }) =>
-        (['a', 'b'] as const).map((variant, i) => (
-          <filter
-            key={`${stage}${variant}`}
-            id={`hx-crumple-${stage}${variant}`}
-            x="-10%"
-            y="-10%"
-            width="120%"
-            height="120%"
-            colorInterpolationFilters="sRGB"
-          >
-            {/* Two octaves: enough fold detail, and noticeably cheaper per frame than three. */}
-            <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves={2} seed={stage * 7 + i * 3} result="paper" />
-            <feDisplacementMap in="SourceGraphic" in2="paper" scale={scale} xChannelSelector="R" yChannelSelector="G" result="crumpled" />
-            <feDiffuseLighting in="paper" surfaceScale={relief} lightingColor="#ffffff" result="folds">
-              <feDistantLight azimuth={225} elevation={58} />
-            </feDiffuseLighting>
-            <feComposite in="folds" in2="crumpled" operator="in" result="shaded" />
-            <feBlend in="shaded" in2="crumpled" mode="multiply" />
-          </filter>
-        ))
-      )}
-    </svg>
-  );
+/**
+ * The mosaic curtain plays once per session, and never with reduced motion.
+ * `?intro` in the URL forces it, for checking it without clearing storage.
+ */
+function shouldPlayIntro() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  if (new URLSearchParams(window.location.search).has('intro')) return true;
+  try {
+    return sessionStorage.getItem(INTRO_SESSION_KEY) !== '1';
+  } catch {
+    // Storage blocked: it plays, and just plays again next load.
+    return true;
+  }
 }
 
 export function Hero({ onBookCall }: { onBookCall: () => void }) {
+  const photoRef = React.useRef<HTMLDivElement>(null);
+  const [portraitUrl, setPortraitUrl] = React.useState<string | null>(null);
+  // Decided while rendering, before any effect, so the intro tour can't start over it.
+  const [intro, setIntro] = React.useState(() => {
+    const play = shouldPlayIntro();
+    if (play) beginHeroIntro();
+    return play;
+  });
+  const finishIntro = React.useCallback(() => {
+    setIntro(false);
+    endHeroIntro();
+  }, []);
+  React.useEffect(() => {
+    // Marked here, not while rendering: StrictMode runs initializers twice in dev.
+    if (intro) {
+      beginHeroIntro();
+      try {
+        sessionStorage.setItem(INTRO_SESSION_KEY, '1');
+      } catch {
+        // Storage blocked: fine.
+      }
+    }
+    return () => endHeroIntro();
+    // Only on mount.
+  }, []);
 
   return (
     <section className="section hx">
+      {/* Soft halftone over the corner glow (the glow itself is .hx::before/::after). */}
+      <span className="hx-dots" aria-hidden="true" />
       <div className="hx-top">
-        <CrumpleFilters />
-        {/* Opens as a crumpled paper ball and unfolds on held frames. */}
-        <figure className="hx-window hx-crumple" style={{ '--d': '150ms' } as React.CSSProperties}>
+        <figure className="hx-window">
           <div className="hx-titlebar" aria-hidden="true">
             <span className="hx-closebox" />
             <span className="hx-stripes" />
           </div>
-          <div className="hx-photo">
-            {/* Soft black-and-white solarize: tones stay natural through the midtones
-                (the face) and only the brightest highlights (the wall) fold back to gray. */}
-            <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
-              <filter id="hx-solarize" colorInterpolationFilters="sRGB">
-                <feColorMatrix type="saturate" values="0" />
-                <feComponentTransfer>
-                  <feFuncR type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
-                  <feFuncG type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
-                  <feFuncB type="table" tableValues="0 0.12 0.25 0.38 0.5 0.62 0.72 0.62 0.34" />
-                </feComponentTransfer>
-              </filter>
-            </svg>
-            <img
+          <div ref={photoRef} className="hx-photo">
+            {/* Two-colour photocopy of the portrait in the site's moss and sand,
+                tuned so the face reads at a glance. With only two colours, noise
+                plus a random threshold is what carries the in-between tones: a
+                wide noise/threshold band makes ink density track the photo's
+                real shading (so cheeks, nose and jaw keep their form), fine
+                grain lets that dither blend into tone at display size, and the
+                sharpen pass keeps eyes, brows and mouth crisp. A narrow band
+                would posterise the face into a stencil. Focus matches the old
+                object-position. */}
+            <XeroxPortrait
               src="/img/drei.png"
               alt="Kellas Andrei"
-              onError={(e) => {
-                (e.target as HTMLElement).style.visibility = 'hidden';
-              }}
+              focus={[0.5, 0.2]}
+              inkColor="#2F4A2B"
+              paperColor="#F1EBDC"
+              contrast={[20, 235]}
+              noiseAmount={45}
+              thresholdRange={[70, 185]}
+              grainSize={1}
+              sharpen={1.5}
+              onRendered={setPortraitUrl}
             />
           </div>
         </figure>
@@ -138,7 +145,7 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
             for everyone.
           </p>
           <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
-            <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" onClick={playExternalLink} data-tour="hero-social">
+            <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" data-tour="hero-social">
               <Key><NavIcon3D name="github" size={22} /></Key>
               github <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
@@ -147,17 +154,16 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               data-tour="hero-social"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={playExternalLink}
             >
               <Key><NavIcon3D name="linkedin" size={22} /></Key>
               linkedin <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             {/* Blog lives on its own route and is intentionally absent from the nav. */}
-            <Link to="/blog" onClick={playNavTick}>
+            <Link to="/blog">
               <Key><NavIcon3D name="blog" size={22} /></Key>
               blog <span className="hx-arrow" aria-hidden="true">↗</span>
             </Link>
-            <button type="button" data-tour="hero-book" onClick={() => { playExternalLink(); onBookCall(); }}>
+            <button type="button" data-tour="hero-book" data-sound="primary" onClick={onBookCall}>
               <Key><NavIcon3D name="calendar" size={22} /></Key>
               book a call <span className="hx-arrow" aria-hidden="true">↗</span>
             </button>
@@ -186,6 +192,15 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
           </dd>
         </div>
       </dl>
+
+      {/* Last child on purpose: see HeroMosaicIntro on ref order. */}
+      {intro && (
+        <HeroMosaicIntro
+          photoRef={photoRef}
+          portraitUrl={portraitUrl}
+          onDone={finishIntro}
+        />
+      )}
     </section>
   );
 }

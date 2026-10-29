@@ -1,20 +1,26 @@
 /**
- * Synthesized UI sounds — no audio files, everything generated with Web Audio.
+ * Tactile UI sounds, synthesized with Web Audio — no audio files.
+ *
+ * Palette: a typewriter-key hover tick, a small wooden "tok" for clicks, a soft
+ * glockenspiel ping under primary buttons, a brass bell for external links,
+ * and a rotary-switch clack for toggles. Every recipe is a named function so
+ * it can be tuned, or swapped for a CC0 sample, behind the same play(name).
  *
  * Design constraints:
- *  - The AudioContext is created lazily on the first play call, never on import,
- *    because browsers block audio until a user gesture.
- *  - Every function is fire-and-forget and swallows its own errors. Audio must
- *    never throw into a click handler or block navigation.
- *  - Nodes are disconnected on 'ended' so rapid repeated clicks don't leak.
+ *  - One AudioContext, created on the first user gesture (pointerdown/keydown),
+ *    never on import or hover: browsers block audio before a gesture, and
+ *    creating it earlier logs a console warning.
+ *  - All sounds run through a master gain (0.8) and a gentle 9kHz lowpass.
+ *  - Every play is humanized (pitch ±3%, volume ±10%) and capped at 6 voices.
+ *  - Everything is fire-and-forget and swallows its own errors. Audio must
+ *    never throw into an interaction or block navigation.
  */
 
 const MUTE_STORAGE_KEY = 'portfolio-sound-muted';
 
-type MuteListener = (muted: boolean) => void;
+// --- Enabled state: the site's existing sound toggle --------------------------
 
-let audioContext: AudioContext | null = null;
-let contextUnavailable = false;
+type MuteListener = (muted: boolean) => void;
 const listeners = new Set<MuteListener>();
 
 function readStoredMute(): boolean {
@@ -30,6 +36,7 @@ function readStoredMute(): boolean {
 let muted = readStoredMute();
 
 export const isMuted = () => muted;
+export const isEnabled = () => !muted;
 
 export function setMuted(next: boolean) {
   muted = next;
@@ -40,6 +47,8 @@ export function setMuted(next: boolean) {
   }
   listeners.forEach((listener) => listener(next));
 }
+
+export const setEnabled = (enabled: boolean) => setMuted(!enabled);
 
 export const toggleMuted = () => {
   setMuted(!muted);
@@ -52,116 +61,207 @@ export function subscribeMuted(listener: MuteListener) {
   return () => listeners.delete(listener);
 }
 
+// --- Audio graph --------------------------------------------------------------
+
+let ctx: AudioContext | null = null;
+let input: GainNode | null = null;
+let noise: AudioBuffer | null = null;
+let unavailable = false;
+
 /**
- * Returns a running AudioContext, creating it on first use and resuming it if
- * the autoplay policy started it suspended. Returns null if audio is
- * unavailable for any reason, which makes every play function a no-op.
+ * Creates the shared context and master chain. Called only from a user
+ * gesture; before that, getContext() returns null and every play is a no-op.
  */
-function getContext(): AudioContext | null {
-  if (contextUnavailable) return null;
-
+function createContext() {
+  if (ctx || unavailable) return;
   try {
-    if (!audioContext) {
-      const Ctor = window.AudioContext ?? (window as unknown as {
-        webkitAudioContext?: typeof AudioContext;
-      }).webkitAudioContext;
-      if (!Ctor) {
-        contextUnavailable = true;
-        return null;
-      }
-      audioContext = new Ctor();
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) {
+      unavailable = true;
+      return;
     }
+    ctx = new Ctor();
 
-    // Chrome/Safari start the context suspended until a gesture. This runs as
-    // part of the first play call rather than a separate init step.
-    if (audioContext.state === 'suspended') {
-      void audioContext.resume().catch(() => {});
-    }
+    const master = ctx.createGain();
+    master.gain.value = 0.8;
+    const soften = ctx.createBiquadFilter();
+    soften.type = 'lowpass';
+    soften.frequency.value = 9000;
+    soften.Q.value = 0.5;
+    master.connect(soften).connect(ctx.destination);
+    input = master;
 
-    return audioContext;
+    // One shared 50ms noise buffer; each sound plays a slice of it.
+    const length = Math.ceil(ctx.sampleRate * 0.05);
+    noise = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = noise.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
   } catch {
-    contextUnavailable = true;
-    return null;
+    unavailable = true;
+    ctx = null;
   }
 }
 
-interface ToneOptions {
-  type: OscillatorType;
-  freq: number;
-  /** Optional pitch bend target, reached at the end of the tone. */
-  bendTo?: number;
-  duration: number;
-  peak: number;
-  attack: number;
-  /** Delay before this tone starts, for multi-note sounds. */
-  offset?: number;
-}
-
-function tone(ctx: AudioContext, opts: ToneOptions) {
-  const { type, freq, bendTo, duration, peak, attack, offset = 0 } = opts;
-  const start = ctx.currentTime + offset;
-  const end = start + duration;
-
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, start);
-  if (bendTo !== undefined) {
-    // exponentialRamp cannot cross or reach zero, and both endpoints are
-    // audible frequencies here, so this is safe.
-    osc.frequency.exponentialRampToValueAtTime(bendTo, end);
+/** Unlocks audio on the first gesture; later gestures just resume if needed. */
+export function unlockAudio() {
+  createContext();
+  if (ctx && ctx.state === 'suspended' && document.visibilityState === 'visible') {
+    void ctx.resume().catch(() => {});
   }
-
-  // Ramp from a tiny non-zero floor: exponential ramps to exactly 0 are a
-  // no-op, which is what produces the abrupt cutoff pop.
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(peak, start + attack);
-  gain.gain.exponentialRampToValueAtTime(0.0001, end);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.addEventListener('ended', () => {
-    osc.disconnect();
-    gain.disconnect();
-  });
-
-  osc.start(start);
-  osc.stop(end);
 }
 
-/** Wraps a sound so mute, missing context, and any audio error are all no-ops. */
-function sound(render: (ctx: AudioContext) => void) {
-  return () => {
-    if (muted) return;
-    const ctx = getContext();
-    if (!ctx) return;
+/** Suspend while the tab is hidden, resume on return. */
+export function syncWithVisibility() {
+  if (!ctx) return;
+  if (document.visibilityState === 'hidden') void ctx.suspend().catch(() => {});
+  else void ctx.resume().catch(() => {});
+}
+
+// --- Voices: polyphony cap ----------------------------------------------------
+
+const MAX_VOICES = 6;
+
+interface Voice {
+  out: GainNode;
+  nodes: AudioNode[];
+  sources: AudioScheduledSourceNode[];
+}
+
+const voices: Voice[] = [];
+
+function release(voice: Voice) {
+  const i = voices.indexOf(voice);
+  if (i !== -1) voices.splice(i, 1);
+  voice.sources.forEach((s) => {
     try {
-      render(ctx);
+      s.stop();
     } catch {
-      // Never let audio break an interaction.
+      // Already stopped.
     }
-  };
+  });
+  voice.nodes.forEach((n) => n.disconnect());
 }
 
-/** Nav link click — barely audible, felt more than heard. */
-export const playNavTick = sound((ctx) =>
-  tone(ctx, { type: 'square', freq: 2000, duration: 0.028, peak: 0.04, attack: 0.002 })
-);
+/** Starts a voice whose output is humanized in volume; drops the oldest past the cap. */
+function startVoice(c: AudioContext, volume: number, duration: number): Voice {
+  if (voices.length >= MAX_VOICES) release(voices[0]);
+  const out = c.createGain();
+  out.gain.value = volume * jitter(0.1);
+  out.connect(input!);
+  const voice: Voice = { out, nodes: [out], sources: [] };
+  voices.push(voice);
+  window.setTimeout(() => release(voice), (duration + 0.05) * 1000);
+  return voice;
+}
 
-/** Active section change — soft downward pitch bend. */
-export const playTransition = sound((ctx) =>
-  tone(ctx, { type: 'sine', freq: 500, bendTo: 350, duration: 0.09, peak: 0.06, attack: 0.005 })
-);
+/** Random factor of 1 ± amount. */
+const jitter = (amount: number) => 1 + (Math.random() * 2 - 1) * amount;
 
-/** Outbound link — two-note upward chirp. */
-export const playExternalLink = sound((ctx) => {
-  tone(ctx, { type: 'sine', freq: 600, duration: 0.015, peak: 0.05, attack: 0.002 });
-  tone(ctx, { type: 'sine', freq: 900, duration: 0.015, peak: 0.05, attack: 0.002, offset: 0.016 });
-});
+/** Sine partial with a short attack and an exponential decay. */
+function partial(c: AudioContext, v: Voice, freq: number, gain: number, at: number, attack: number, decay: number) {
+  const osc = c.createOscillator();
+  const env = c.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, at);
+  // Ramp from a tiny floor: exponential ramps can't start or end at exactly 0.
+  env.gain.setValueAtTime(0.0001, at);
+  env.gain.exponentialRampToValueAtTime(gain, at + attack);
+  env.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
+  osc.connect(env).connect(v.out);
+  osc.start(at);
+  osc.stop(at + attack + decay + 0.01);
+  v.nodes.push(osc, env);
+  v.sources.push(osc);
+  return osc;
+}
 
-/** Command palette open — crisper than the nav tick so the two are distinct. */
-export const playPaletteOpen = sound((ctx) =>
-  tone(ctx, { type: 'square', freq: 2400, duration: 0.015, peak: 0.05, attack: 0.001 })
-);
+/** Filtered slice of the shared noise buffer. */
+function noiseBurst(c: AudioContext, v: Voice, filter: BiquadFilterType, freq: number, q: number, gain: number, at: number, length: number) {
+  const src = c.createBufferSource();
+  src.buffer = noise;
+  const bp = c.createBiquadFilter();
+  bp.type = filter;
+  bp.frequency.value = freq;
+  bp.Q.value = q;
+  const env = c.createGain();
+  env.gain.setValueAtTime(gain, at);
+  env.gain.exponentialRampToValueAtTime(0.0001, at + length);
+  src.connect(bp).connect(env).connect(v.out);
+  src.start(at, Math.random() * 0.03, length + 0.005);
+  v.nodes.push(src, bp, env);
+  v.sources.push(src);
+}
+
+// --- Recipes ------------------------------------------------------------------
+
+/** Typewriter key barely touched: 6ms bandpassed noise + a 2.4kHz blip. */
+function hoverTick(c: AudioContext, at: number) {
+  const v = startVoice(c, 0.06, 0.03);
+  const p = jitter(0.03);
+  noiseBurst(c, v, 'bandpass', 3500 * p, 4, 1, at, 0.006);
+  partial(c, v, 2400 * p, 0.5, at, 0.001, 0.01);
+}
+
+/** Small wooden block "tok": 950→550Hz sine sweep + a 4ms highpassed transient. */
+function woodClick(c: AudioContext, at: number, pitch = 1, volume = 0.18) {
+  const v = startVoice(c, volume, 0.06);
+  const p = jitter(0.03) * pitch;
+  const osc = partial(c, v, 950 * p, 1, at, 0.002, 0.04);
+  osc.frequency.exponentialRampToValueAtTime(550 * p, at + 0.04);
+  noiseBurst(c, v, 'highpass', 2000, 0.7, 0.6, at, 0.004);
+}
+
+const PENTATONIC_C6 = [1046.5, 1174.66, 1318.51, 1567.98, 1760];
+
+/** Soft glockenspiel: a random C-major pentatonic note + an inharmonic 2.76× partial. */
+function glockPing(c: AudioContext, at: number) {
+  const v = startVoice(c, 0.08, 0.4);
+  const f = PENTATONIC_C6[Math.floor(Math.random() * PENTATONIC_C6.length)] * jitter(0.03);
+  partial(c, v, f, 1, at, 0.002, 0.35);
+  partial(c, v, f * 2.76, 0.3, at, 0.002, 0.2);
+}
+
+/** Small brass bell: C7 + a 4.2× partial, 2ms attack, 450ms ring. */
+function bellDing(c: AudioContext, at: number) {
+  const v = startVoice(c, 0.1, 0.5);
+  const f = 2093 * jitter(0.03);
+  partial(c, v, f, 1, at, 0.002, 0.45);
+  partial(c, v, f * 4.2, 0.2, at, 0.002, 0.25);
+}
+
+/** Rotary switch: two wood ticks 45ms apart, the second 15% lower. */
+function switchClack(c: AudioContext, at: number) {
+  woodClick(c, at, 1, 0.16);
+  woodClick(c, at + 0.045, 0.85, 0.16);
+}
+
+const RECIPES = {
+  tick: hoverTick,
+  wood: (c: AudioContext, at: number) => woodClick(c, at),
+  glock: glockPing,
+  bell: bellDing,
+  switch: switchClack,
+  primary: (c: AudioContext, at: number) => {
+    woodClick(c, at);
+    glockPing(c, at + 0.01);
+  },
+} as const;
+
+export type SoundName = keyof typeof RECIPES;
+export const SOUND_NAMES = Object.keys(RECIPES) as SoundName[];
+
+/**
+ * Plays a sound if enabled and audio is unlocked; otherwise does nothing. A
+ * context still resuming from the first gesture is fine: scheduled nodes start
+ * as soon as it runs, so the very first click isn't lost.
+ */
+export function play(name: SoundName) {
+  if (muted || !ctx || !input) return;
+  try {
+    RECIPES[name](ctx, ctx.currentTime + 0.002);
+  } catch {
+    // Never let audio break an interaction.
+  }
+}
