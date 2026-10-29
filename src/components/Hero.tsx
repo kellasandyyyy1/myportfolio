@@ -76,10 +76,11 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               inkColor="#2F4A2B"
               paperColor="#F1EBDC"
               contrast={[20, 235]}
-              noiseAmount={45}
+              noiseAmount={32}
               thresholdRange={[70, 185]}
               grainSize={1}
-              sharpen={1.5}
+              sharpen={2}
+              speckRate={0.0012}
             />
           </div>
         </figure>
