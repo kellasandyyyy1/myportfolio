@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { whenHeroIntroDone } from '../lib/heroIntro';
 
 /**
  * First-visit intro tour. A simulated macOS cursor (or, on touch, a soft tap
@@ -621,10 +620,7 @@ export function IntroTour() {
     if (location.pathname !== '/' || location.hash) return;
     let cancelled = false;
     const mountedAt = performance.now();
-    const go = async () => {
-      // The hero portrait assembles itself first; the tour never starts over it.
-      await whenHeroIntroDone();
-      if (cancelled) return;
+    const go = () => {
       const heroDone = Math.max(0, 1100 - (performance.now() - mountedAt));
       const id = window.setTimeout(() => {
         if (cancelled || window.scrollY > 40) return; // the visitor is already exploring

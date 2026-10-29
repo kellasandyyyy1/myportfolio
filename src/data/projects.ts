@@ -108,7 +108,7 @@ export const WORKS: WorkProject[] = [
     title: 'Media Kit Website',
     tags: ['React', 'TypeScript', 'Tailwind CSS', 'Framer'],
     cover: '/img/jnb.PNG',
-    liveUrl: 'https://issahmediakit.netlify.app',
+    liveUrl: 'https://iszcreative.work',
     // TODO: repoUrl, role, year
     summary: 'A premium, responsive media kit website designed to showcase brand metrics, creator statistics, and press assets with clean modern aesthetics.',
     gallery: ['/img/jbn.PNG'],
@@ -119,7 +119,7 @@ export const WORKS: WorkProject[] = [
     title: 'Climex dashboard',
     tags: ['Typescript', 'NextJS', 'Tailwind CSS', 'WebSocket'],
     cover: '/img/cl1.PNG',
-    liveUrl: 'https://climexx.kelas.site',
+    liveUrl: 'https://climex.kelas.site',
     // TODO: repoUrl, role, year
     summary: 'Crypto, weather, currency, and air quality updated in real time, in one view.',
     gallery: ['/img/cl2.PNG'],

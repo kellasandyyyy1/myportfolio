@@ -2,8 +2,6 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { NavIcon3D } from './NavIcon3D';
 import { XeroxPortrait } from './XeroxPortrait';
-import { HeroMosaicIntro } from './HeroMosaicIntro';
-import { beginHeroIntro, endHeroIntro } from '../lib/heroIntro';
 
 /** The 3D object beside each hero link; it lifts and tips when the link is hovered. */
 function Key({ children }: { children: React.ReactNode }) {
@@ -50,52 +48,7 @@ function PhMap() {
   );
 }
 
-// Its own key: the earlier tile-portrait version used "hero-mosaic-played",
-// and sharing it made the curtain skip for anyone who'd seen that one.
-const INTRO_SESSION_KEY = 'hero-curtain-played';
-
-/**
- * The mosaic curtain plays once per session, and never with reduced motion.
- * `?intro` in the URL forces it, for checking it without clearing storage.
- */
-function shouldPlayIntro() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-  if (new URLSearchParams(window.location.search).has('intro')) return true;
-  try {
-    return sessionStorage.getItem(INTRO_SESSION_KEY) !== '1';
-  } catch {
-    // Storage blocked: it plays, and just plays again next load.
-    return true;
-  }
-}
-
 export function Hero({ onBookCall }: { onBookCall: () => void }) {
-  const photoRef = React.useRef<HTMLDivElement>(null);
-  const [portraitUrl, setPortraitUrl] = React.useState<string | null>(null);
-  // Decided while rendering, before any effect, so the intro tour can't start over it.
-  const [intro, setIntro] = React.useState(() => {
-    const play = shouldPlayIntro();
-    if (play) beginHeroIntro();
-    return play;
-  });
-  const finishIntro = React.useCallback(() => {
-    setIntro(false);
-    endHeroIntro();
-  }, []);
-  React.useEffect(() => {
-    // Marked here, not while rendering: StrictMode runs initializers twice in dev.
-    if (intro) {
-      beginHeroIntro();
-      try {
-        sessionStorage.setItem(INTRO_SESSION_KEY, '1');
-      } catch {
-        // Storage blocked: fine.
-      }
-    }
-    return () => endHeroIntro();
-    // Only on mount.
-  }, []);
-
   return (
     <section className="section hx">
       {/* Soft halftone over the corner glow (the glow itself is .hx::before/::after). */}
@@ -106,7 +59,7 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
             <span className="hx-closebox" />
             <span className="hx-stripes" />
           </div>
-          <div ref={photoRef} className="hx-photo">
+          <div className="hx-photo">
             {/* Two-colour photocopy of the portrait in the site's moss and sand,
                 tuned so the face reads at a glance. With only two colours, noise
                 plus a random threshold is what carries the in-between tones: a
@@ -127,7 +80,6 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               thresholdRange={[70, 185]}
               grainSize={1}
               sharpen={1.5}
-              onRendered={setPortraitUrl}
             />
           </div>
         </figure>
@@ -192,15 +144,6 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
           </dd>
         </div>
       </dl>
-
-      {/* Last child on purpose: see HeroMosaicIntro on ref order. */}
-      {intro && (
-        <HeroMosaicIntro
-          photoRef={photoRef}
-          portraitUrl={portraitUrl}
-          onDone={finishIntro}
-        />
-      )}
     </section>
   );
 }

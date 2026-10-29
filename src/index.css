@@ -1281,7 +1281,7 @@ footer {
   box-shadow: var(--shadow-warm);
 }
 
-/* Fine fibre grain, shared by the page sheet below and the mosaic tiles. */
+/* Fine fibre grain, shared by the page sheet below and the hero glow. */
 :root {
   --paper-grain-fine: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27240%27%20height%3D%27240%27%3E%3Cfilter%20id%3D%27g%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.9%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27saturate%27%20values%3D%270%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23g)%27%2F%3E%3C%2Fsvg%3E");
 }
@@ -2138,50 +2138,6 @@ span.tracking-\[0\.4em\] {
 }
 
 .xerox.is-broken .xerox-src { visibility: hidden; }
-
-/* --- Hero mosaic curtain (HeroMosaicIntro.tsx) ---
-   Opening only: ink-coloured paper tiles cover the whole hero and flip away
-   on hard 30fps cuts, then the overlay is removed. Revealed tiles are clear,
-   keeping a 1px seam in the page colour so the grid reads as cut paper. No
-   transitions anywhere here: every change is a cut. */
-.hxm {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  /* One composited layer for all the tiles. */
-  will-change: transform;
-}
-
-.hxm-tile {
-  position: absolute;
-  outline: 1px solid var(--bg-page);
-  outline-offset: -0.5px;
-  background-repeat: no-repeat;
-}
-
-.hxm-tile.is-accent {
-  background-color: var(--ink);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
-}
-
-/* Paper feel on the tiles: the site's own fine grain, faint. One layer over
-   the whole curtain, not one per tile: the grain is an SVG noise filter, and
-   ~200 copies repainting every frame starved the animation of frames. */
-.hxm::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: var(--paper-grain-fine);
-  background-size: 240px 240px;
-  opacity: 0.05;
-  pointer-events: none;
-}
-
-/* Mismatched collage piece: a stray patch of the portrait, briefly. */
-.hxm-tile.is-frag {
-  background-image: var(--hxm-img);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
-}
 
 /* --- Intro copy --- */
 .hx-name {
