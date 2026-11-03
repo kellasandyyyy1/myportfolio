@@ -47,6 +47,23 @@ export const DEFAULT_DUOTONE: Duotone = { ink: '#1C1B18', paper: '#ECE8DF' };
 // site already had. repoUrl, role and year never existed: add them when ready.
 export const WORKS: WorkProject[] = [
   {
+    slug: 'iszacycle',
+    duotone: { ink: '#8A1E45', paper: '#F6CFD8' }, // raspberry / pale pink
+    // Very light UI screenshot (almost all near-white): levels fitted to its
+    // bright range so the dashboard's structure prints instead of a blank card.
+    ditherBlack: 170,
+    ditherWhite: 252,
+    title: 'Iszacycle',
+    // Stack read from the live site (Next.js build, Tailwind classes).
+    tags: ['Next.js', 'Tailwind CSS'],
+    cover: '/img/iz1.png',
+    liveUrl: 'https://iszacycle.kelas.site',
+    // TODO: repoUrl, role, year
+    summary: 'web app tracker for regulation and moods designed for women',
+    // Screenshots from the live app: welcome, calendar, training plan.
+    gallery: ['/img/iz2.png', '/img/iz3.png', '/img/iz4.png'],
+  },
+  {
     slug: 'yappr',
     duotone: { ink: '#7A1F14', paper: '#8FC1DD' }, // oxblood / powder blue
     // Dark UI screenshot: levels fitted to its range, inverted to print as ink on paper.
