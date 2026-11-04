@@ -22,6 +22,7 @@ import { WalkingCat } from './components/WalkingCat';
 import { NavIcon3D, type NavIcon3DName } from './components/NavIcon3D';
 import { IntroTour, replayIntroTour } from './components/IntroTour';
 import { Hero } from './components/Hero';
+import { NotFound404 } from './components/NotFound404';
 import {
   GithubLogo,
   GithubLogo as Github,
@@ -658,12 +659,13 @@ const NAV_SECTION_IDS: Record<string, string> = {
 };
 
 /**
- * View for a path. A nav key shows that section alone; "/" (and anything
- * unknown) is "home", the whole site as one scrollable page from the hero.
+ * View for a path. A nav key shows that section alone; "/" is "home", the
+ * whole site as one scrollable page from the hero. Anything else is the 404.
  */
 const viewForPath = (pathname: string) => {
   const key = pathname.replace(/^\//, '').split('/')[0];
-  return key in NAV_SECTION_IDS ? key : 'home';
+  if (!key) return 'home';
+  return key in NAV_SECTION_IDS ? key : 'notfound';
 };
 
 /** Back to home atop every view but About. Outlined like the grid/list switch, so it reads as a button. */
@@ -1795,22 +1797,6 @@ const ProjectPage: React.FC<{ project: WorkProject }> = ({ project }) => {
   );
 };
 
-/** Unknown /work/:slug. */
-const NotFoundPage: React.FC = () => {
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, []);
-  useDocumentMeta({ title: 'Not found — Kellas Andrei' });
-  return (
-    <section className="section pp">
-      <BackToWorks />
-      <header className="pp-head">
-        <h1 className="pp-title">page not found</h1>
-      </header>
-      <p className="pp-summary t-lead">There's nothing at this address.</p>
-    </section>
-  );
-};
 
 /**
  * Grid/list switch for the works section: a two-option segmented control. Each
@@ -2941,7 +2927,9 @@ export default function App() {
           {workMatch ? (
             findWork(workMatch.params.slug)
               ? <ProjectPage project={findWork(workMatch.params.slug)!} />
-              : <NotFoundPage />
+              : <NotFound404 />
+          ) : view === 'notfound' ? (
+            <NotFound404 />
           ) : (
           <>
           {/* Each nav key is its own view; home shows them all in one page.
