@@ -3,6 +3,57 @@ import { Link } from 'react-router-dom';
 import { NavIcon3D } from './NavIcon3D';
 import { XeroxPortrait } from './XeroxPortrait';
 
+/**
+ * Classic pixel arrow pointer, as on early Apple screens: white with a one-pixel
+ * black outline. B = outline, W = fill, anything else is transparent.
+ */
+const ARROW_PIXELS = [
+  'B',
+  'BB',
+  'BWB',
+  'BWWB',
+  'BWWWB',
+  'BWWWWB',
+  'BWWWWWB',
+  'BWWWWWWB',
+  'BWWWWWWWB',
+  'BWWWWWWWWB',
+  'BWWWWWBBBBB',
+  'BWWBWWB',
+  'BWB.BWWB',
+  'BB..BWWB',
+  'B....BWWB',
+  '.....BWWB',
+  '......BB',
+];
+
+function PixelArrow() {
+  return (
+    <span className="hx-pointer" aria-hidden="true">
+      <svg viewBox="0 0 11 17" width="16.5" height="25.5" shapeRendering="crispEdges">
+        {ARROW_PIXELS.flatMap((row, y) =>
+          [...row].map((p, x) =>
+            p === 'B' || p === 'W' ? (
+              <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={p === 'B' ? '#000' : '#fff'} />
+            ) : null,
+          ),
+        )}
+      </svg>
+    </span>
+  );
+}
+
+/** A word or phrase in the intro set as a pastel tag, like a prompt builder's tokens. */
+type ChipColour = 'pink' | 'green' | 'yellow' | 'grey' | 'lilac' | 'blue' | 'red' | 'dashed';
+function Chip({ c, pointer, children }: { c: ChipColour; pointer?: boolean; children: React.ReactNode }) {
+  return (
+    <span className={`hx-chip${pointer ? ' has-pointer' : ''}`} data-c={c}>
+      {children}
+      {pointer && <PixelArrow />}
+    </span>
+  );
+}
+
 /** The 3D object beside each hero link; it lifts and tips when the link is hovered. */
 function Key({ children }: { children: React.ReactNode }) {
   return (
@@ -88,14 +139,16 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
         <div className="hx-intro">
           <h1 className="hx-name hx-in" data-tour="hero-name" style={{ '--d': '120ms' } as React.CSSProperties}>Kellas Andrei</h1>
           <p className="hx-copy hx-in" style={{ '--d': '190ms' } as React.CSSProperties}>
-            I'm a designer and fullstack web developer, so the thing you see and the thing that runs
-            it come from the same head. I build things meant to survive real traffic, not just the
-            screenshot that ends up in the pitch deck.
+            I'm a <Chip c="pink" pointer>designer</Chip> and <Chip c="green" pointer>fullstack web developer</Chip>, so
+            the <Chip c="dashed">thing you see</Chip> and the <Chip c="dashed">thing that runs it</Chip> come
+            from the same head. I build things meant to survive <Chip c="yellow">real traffic</Chip>, not
+            just the screenshot that ends up in the <Chip c="grey">pitch deck</Chip>.
           </p>
           <p className="hx-copy hx-in" style={{ '--d': '260ms' } as React.CSSProperties}>
-            I work across the whole stack, from the database to the interface, and I leave every
-            codebase a little cleaner than I found it. Fewer surprises, fewer 2am fixes, more sleep
-            for everyone.
+            I work across the whole stack, from <Chip c="lilac">the database</Chip> to{' '}
+            <Chip c="blue">the interface</Chip>, and I leave every codebase{' '}
+            <Chip c="green">a little cleaner</Chip> than I found it. Fewer surprises,
+            fewer <Chip c="red">2am fixes</Chip>, <Chip c="lilac">more sleep</Chip> for everyone.
           </p>
           <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
             <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" data-tour="hero-social">

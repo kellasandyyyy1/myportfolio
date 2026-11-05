@@ -2155,9 +2155,62 @@ span.tracking-\[0\.4em\] {
   max-width: 38ch;
   font-family: var(--font-geist);
   font-size: 15px;
-  line-height: 1.65;
+  line-height: 2.05; /* room for the tags to sit on each line without colliding */
   color: var(--hx-muted);
 }
+
+/* Intro tags: pastel tokens with a darker hairline, like a prompt builder.
+   Ink stays dark on the pastels in both themes so they always read. */
+.hx-chip {
+  --chip-bg: #ECEAE4;
+  --chip-line: #D6D2C8;
+  display: inline;
+  padding: 3px 8px;
+  margin: 0 1px;
+  border-radius: 8px;
+  border: 1px solid var(--chip-line);
+  background: var(--chip-bg);
+  color: #1C1B18;
+  font-weight: 500;
+  white-space: nowrap;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.hx-chip[data-c='pink']   { --chip-bg: #F9D3E3; --chip-line: #EDB3CB; }
+.hx-chip[data-c='green']  { --chip-bg: #DDF0C8; --chip-line: #BFDDA2; }
+.hx-chip[data-c='yellow'] { --chip-bg: #FBE7B5; --chip-line: #EDCF85; }
+.hx-chip[data-c='grey']   { --chip-bg: #E6E4DF; --chip-line: #CFCCC4; }
+.hx-chip[data-c='lilac']  { --chip-bg: #DCD3F6; --chip-line: #C2B5EC; }
+.hx-chip[data-c='blue']   { --chip-bg: #D3E6F7; --chip-line: #B2D0EC; }
+.hx-chip[data-c='red']    { --chip-bg: #F9D0D0; --chip-line: #EDAEAE; }
+.hx-chip[data-c='dashed'] {
+  --chip-bg: transparent;
+  --chip-line: color-mix(in srgb, var(--hx-ink) 45%, transparent);
+  border-style: dashed;
+  color: var(--hx-ink);
+}
+.hx-chip:hover {
+  border-color: color-mix(in srgb, #1C1B18 45%, var(--chip-line));
+  box-shadow: 0 1px 0 color-mix(in srgb, #1C1B18 18%, transparent);
+}
+.hx-chip[data-c='dashed']:hover { border-color: var(--hx-ink); box-shadow: none; }
+.hx-chip { display: inline-block; line-height: 1.5; transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease; }
+/* The two highlight tags each have a still, classic pixel arrow resting on them. */
+.hx-chip.has-pointer {
+  position: relative;
+  border-color: color-mix(in srgb, #1C1B18 35%, var(--chip-line));
+}
+.hx-pointer {
+  position: absolute;
+  right: -6px;
+  bottom: -14px;
+  z-index: 2;
+  pointer-events: none;
+  line-height: 0;
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.25));
+}
+.hx-pointer svg { display: block; image-rendering: pixelated; }
 
 .hx-links {
   display: flex;
