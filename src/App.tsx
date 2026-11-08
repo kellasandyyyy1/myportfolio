@@ -64,6 +64,9 @@ import {
   Cpu,
   Lightning as Zap,
   FigmaLogo,
+  PaintBrushBroad,
+  Browsers,
+  Database as DatabaseIcon,
 } from '@phosphor-icons/react';
 
 // --- Types ---
@@ -1247,7 +1250,7 @@ const SectionHeading = ({
   return (
     <div className={className}>
       <h2
-        className={`t-h2 c-primary font-cal lowercase ${animClass}`}
+        className={`t-h2 c-primary font-header lowercase ${animClass}`}
         style={isInView !== undefined ? { animationDelay: `${baseDelay}ms` } : undefined}
       >
         {textVal}
@@ -2493,6 +2496,9 @@ type LayerId = 'ui' | 'frontend' | 'api';
 interface ApproachStage {
   id: LayerId;
   tag: string;
+  /** Icon tile: same pastel as the layer's panel in the diagram. */
+  Icon: React.ComponentType<{ size?: number; weight?: 'regular' | 'bold' | 'duotone' | 'fill' }>;
+  tint: string;
   detailLabel: string;
   detailDesc: string;
 }
@@ -2502,18 +2508,24 @@ const APPROACH_STAGES: ApproachStage[] = [
   {
     id: 'ui',
     tag: 'interface',
+    Icon: PaintBrushBroad,
+    tint: '#F2C4BE',
     detailLabel: 'ui and interaction design',
     detailDesc: 'design systems, micro-interactions, intuitive interfaces',
   },
   {
     id: 'frontend',
     tag: 'client',
+    Icon: Browsers,
+    tint: '#F3DC92',
     detailLabel: 'frontend architecture',
     detailDesc: 'scalable react apps, state management, responsive performance',
   },
   {
     id: 'api',
     tag: 'server',
+    Icon: DatabaseIcon,
+    tint: '#B9D4E4',
     detailLabel: 'api and backend design',
     detailDesc: 'rest apis, node.js microservices, cloud db integrations',
   },
@@ -2733,22 +2745,25 @@ const ApproachSection: React.FC<{ theme: 'dark' | 'light'; isInView: boolean }> 
               style={{ animationDelay: `${240 + i * 60}ms` }}
               onMouseEnter={() => setActive(stage.id)}
             >
-              <span className="ad-row-tag font-mono">{stage.tag}</span>
+              <span className="ad-row-icon" style={{ '--ad-tint': stage.tint } as React.CSSProperties} aria-hidden="true">
+                <stage.Icon size={20} weight="duotone" />
+              </span>
               <div className="min-w-0">
-                <h3 className="t-h3 font-sans c-primary">{stage.detailLabel}</h3>
-                <p className="t-body font-sans c-secondary mt-1 max-w-[420px] break-words">
-                  {stage.detailDesc}
-                </p>
+                <div className="ad-row-head">
+                  <h3 className="ad-row-title">{stage.detailLabel}</h3>
+                  <span className="ad-row-tag">{stage.tag}</span>
+                </div>
+                <p className="ad-row-desc break-words">{stage.detailDesc}</p>
               </div>
             </li>
           ))}
         </ul>
 
         <p
-          className={`t-label font-mono c-tertiary mt-8 ${animClass}`}
+          className={`ad-foot ${animClass}`}
           style={{ animationDelay: '440ms' }}
         >
-          design → build → ship, in that order
+          Design → build → ship, in that order
         </p>
       </div>
 
@@ -2958,7 +2973,7 @@ export default function App() {
                 {/* --- How I Think Section --- */}
                 <section id="process" className={`section border-t border-[var(--sand-deep)]`}>
                   <div className="section-head">
-                    <h2 className="t-h2 c-primary font-cal lowercase">
+                    <h2 className="t-h2 c-primary font-header lowercase">
                       how i think
                     </h2>
                   </div>
@@ -3161,7 +3176,7 @@ export default function App() {
                   <div className="section-head flex items-start justify-between gap-8">
                     <div className="min-w-0">
                       <h2
-                        className={`t-h2 c-primary font-cal lowercase ${getAnimClass(certInView)}`}
+                        className={`t-h2 c-primary font-header lowercase ${getAnimClass(certInView)}`}
                         style={{ animationDelay: '80ms' }}
                       >
                         certifications
@@ -3233,7 +3248,7 @@ export default function App() {
                           the 01—08 page indicator, which is unrelated and stays far
                           right on its own. */}
                       <div className="flex items-center gap-3 md:gap-4">
-                        <h2 className="t-h2 c-primary font-cal lowercase">
+                        <h2 className="t-h2 c-primary font-header lowercase">
                           my works
                         </h2>
                         <WorksViewToggle
@@ -3334,7 +3349,7 @@ export default function App() {
                 {/* --- Resources Section --- */}
                 <section id="resources" className={`section border-t border-[var(--sand-deep)]`}>
                   <div className="section-head">
-                    <h2 className="t-h2 c-primary font-cal lowercase">
+                    <h2 className="t-h2 c-primary font-header lowercase">
                       resources
                     </h2>
                     <p className="t-lead font-sans c-secondary">
@@ -3382,7 +3397,7 @@ export default function App() {
                   </figure>
 
                   <div className="max-w-[560px] space-y-7">
-                    <h3 className="t-h2 font-cal c-primary">
+                    <h3 className="t-h2 font-header c-primary">
                       Have a project in mind? Let's talk.
                     </h3>
 

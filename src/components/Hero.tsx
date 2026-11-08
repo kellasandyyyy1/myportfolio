@@ -152,7 +152,7 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
           </p>
           <nav className="hx-links hx-in" aria-label="Links" style={{ '--d': '330ms' } as React.CSSProperties}>
             <a href="https://github.com/kellasandyyyy1" target="_blank" rel="noopener noreferrer" data-tour="hero-social">
-              <Key><NavIcon3D name="github" size={22} /></Key>
+              <Key><NavIcon3D name="github" size={24} /></Key>
               github <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             <a
@@ -161,16 +161,16 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Key><NavIcon3D name="linkedin" size={22} /></Key>
+              <Key><NavIcon3D name="linkedin" size={24} /></Key>
               linkedin <span className="hx-arrow" aria-hidden="true">↗</span>
             </a>
             {/* Blog lives on its own route and is intentionally absent from the nav. */}
             <Link to="/blog">
-              <Key><NavIcon3D name="blog" size={22} /></Key>
+              <Key><NavIcon3D name="blog" size={24} /></Key>
               blog <span className="hx-arrow" aria-hidden="true">↗</span>
             </Link>
             <button type="button" data-tour="hero-book" data-sound="primary" onClick={onBookCall}>
-              <Key><NavIcon3D name="calendar" size={22} /></Key>
+              <Key><NavIcon3D name="calendar" size={24} /></Key>
               book a call <span className="hx-arrow" aria-hidden="true">↗</span>
             </button>
           </nav>

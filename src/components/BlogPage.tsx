@@ -105,7 +105,7 @@ const BlogPage = ({
       </header>
 
       <main className="px-5 md:px-12 py-14 md:py-20 max-w-[720px] mx-auto">
-        <h1 className={`text-[26px] sm:text-[32px] font-cal font-medium leading-none lowercase text-[var(--ink)]`}>
+        <h1 className={`text-[26px] sm:text-[32px] font-header leading-none lowercase text-[var(--ink)]`}>
           notes
         </h1>
         <p className={`text-[14px] md:text-[15px] font-sans leading-[1.6] max-w-[480px] mt-3 text-[var(--ink-body)]`}>
