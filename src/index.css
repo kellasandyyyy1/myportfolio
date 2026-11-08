@@ -123,9 +123,9 @@
   --taghover-border: var(--moss);
   --sidebar-bg: var(--cream);
   --sb-accent: var(--moss);
-  --sb-pill: var(--sage-soft);
-  --sb-pill-border: var(--selected-border);
-  --sb-hover: color-mix(in srgb, var(--sage-soft) 55%, transparent);
+  --sb-pill: #FFFDF7;
+  --sb-pill-border: transparent;
+  --sb-hover: color-mix(in srgb, var(--ink) 5%, transparent);
   --sb-ink: var(--ink);
   --sb-active-ink: var(--moss);
   --dot-color: var(--sage);
@@ -230,9 +230,9 @@
   --taghover-border: var(--sand-deep);
   --sidebar-bg: var(--sand);
   --sb-accent: var(--sage);
-  --sb-pill: var(--sand-deep);
+  --sb-pill: color-mix(in srgb, var(--ink) 11%, var(--sand));
   --sb-pill-border: transparent;
-  --sb-hover: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+  --sb-hover: color-mix(in srgb, var(--ink) 6%, transparent);
   --sb-ink: color-mix(in srgb, var(--ink) 75%, transparent);
   --sb-active-ink: var(--ink);
   --dot-color: var(--ink);
@@ -344,9 +344,9 @@
     --taghover-border: var(--sand-deep);
     --sidebar-bg: var(--sand);
     --sb-accent: var(--sage);
-    --sb-pill: var(--sand-deep);
+    --sb-pill: color-mix(in srgb, var(--ink) 11%, var(--sand));
     --sb-pill-border: transparent;
-    --sb-hover: color-mix(in srgb, var(--sand-deep) 50%, transparent);
+    --sb-hover: color-mix(in srgb, var(--ink) 6%, transparent);
     --sb-ink: color-mix(in srgb, var(--ink) 75%, transparent);
     --sb-active-ink: var(--ink);
     --dot-color: var(--ink);
@@ -1524,181 +1524,6 @@ span.tracking-\[0\.4em\] {
   animation-play-state: paused;
 }
 
-/* ===== SIDEBAR FOOTER: ICON ROW + THEME PILL =====
- * Scoped under .sidebar-footer so these beat the global `a[href^="mailto:"]:hover`
- * CTA rule above, which would otherwise fill the email icon solid.
- */
-/* ===== DESKTOP SIDEBAR NAV =====
- * Inactive rows sit at the secondary text colour so the whole map is readable
- * at a glance; the active row gets a shared pill (Motion layoutId) with an
- * accent bar that slides between rows as the scroll spy moves.
- */
-:root .sb-link { color: var(--sb-ink); }
-:root .sb-link.is-active { color: var(--sb-active-ink); }
-
-.sb-identity {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 4px 0;
-}
-
-.sb-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  object-fit: cover;
-  flex-shrink: 0;
-  filter: grayscale(1) contrast(1.2) var(--img-dim);
-  border: 0.5px solid var(--sb-pill-border);
-}
-
-.sb-group-label {
-  display: block;
-  padding: 0 10px;
-  margin: 24px 0 8px;
-}
-
-.sb-link {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 8px;
-  font-family: Geist, system-ui, sans-serif;
-  font-size: var(--fs-small);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 160ms ease, background-color 160ms ease;
-}
-
-/* 3D object icons: muted at rest, full colour and a small lift on hover and
-   when active. The contact shadow spreads as the object rises. */
-.sb-icon {
-  flex-shrink: 0;
-  display: inline-flex;
-  width: 22px;
-  height: 22px;
-  margin-left: -2px;
-}
-
-.sb-icon .ni3d {
-  filter: saturate(0.55) brightness(0.8);
-  transform-origin: 50% 80%;
-  transition: filter 220ms ease, transform 280ms cubic-bezier(.34, 1.56, .64, 1);
-}
-
-.sb-icon .ni3d-shadow {
-  transform-origin: 12px 21.6px;
-  transition: transform 280ms cubic-bezier(.34, 1.56, .64, 1), opacity 220ms ease;
-}
-
-:root .sb-icon .ni3d { filter: saturate(0.7) brightness(0.98); }
-
-.sb-link.is-active .sb-icon .ni3d { filter: none; transform: translateY(-1px); }
-
-@media (hover: hover) {
-  .sb-link:hover .sb-icon .ni3d {
-    filter: none;
-    transform: translateY(-2px) rotate(-6deg) scale(1.08);
-  }
-  .sb-link:hover .sb-icon .ni3d-shadow { transform: scale(0.8); opacity: 0.7; }
-}
-
-.sb-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: transform 200ms cubic-bezier(.2, .7, .2, 1);
-}
-
-@media (hover: hover) {
-  .sb-link:not(.is-active):hover {
-    color: var(--text-primary);
-    background-color: var(--sb-hover);
-  }
-  .sb-link:not(.is-active):hover .sb-icon { color: var(--text-primary); }
-  .sb-link:not(.is-active):hover .sb-label { transform: translateX(2px); }
-}
-
-.sb-link.is-active { color: var(--text-primary); font-weight: 500; }
-.sb-link.is-active .sb-icon { color: var(--sb-accent); }
-
-.sb-pill {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 8px;
-  background: var(--sb-pill);
-  border: 0.5px solid var(--sb-pill-border);
-}
-
-:root .sb-pill { box-shadow: inset 0 0 0 var(--selected-ring-w) var(--sage); }
-:root .sb-pill-bar { box-shadow: none; }
-
-.sb-pill-bar {
-  position: absolute;
-  left: -1px;
-  top: 9px;
-  bottom: 9px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--sb-accent);
-  box-shadow: 0 0 10px var(--sb-accent);
-}
-
-.sb-link:focus-visible {
-  outline: 2px solid var(--sb-accent);
-  outline-offset: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sb-label { transition: none; }
-  .sb-link:not(.is-active):hover .sb-label { transform: none; }
-  .sb-link .sb-icon .ni3d,
-  .sb-link:hover .sb-icon .ni3d,
-  .sb-link:hover .sb-icon .ni3d-shadow { transform: none; }
-}
-
-.sidebar-footer .sidebar-icon-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  background-color: transparent;
-  box-shadow: none;
-  transition: color 200ms ease, background-color 200ms ease;
-}
-
-/* Touch devices report no hover; the guard stops a tap leaving the fill stuck on. */
-@media (hover: hover) {
-  .sidebar-footer .sidebar-icon-btn:hover {
-    color: #f5f5f5;
-    background-color: #18181b;
-    box-shadow: none;
-  }
-
-  :root .sidebar-footer .sidebar-icon-btn:hover {
-    color: var(--accent-ink);
-    background-color: var(--hover-fill);
-    border-color: var(--iconbtn-hover-border);
-  }
-}
-
-.sidebar-footer .sidebar-icon-btn:focus-visible {
-  outline: 1px solid var(--sage);
-  outline-offset: 1px;
-}
-
-:root .sidebar-footer .sidebar-icon-btn:focus-visible { outline-color: var(--sage); }
-
 /* ===== MOBILE MENU (full-screen, <768px) ===== */
 .mobile-menu {
   position: fixed;
@@ -2721,19 +2546,6 @@ span.tracking-\[0\.4em\] {
 :root .ni3d .ni-tone { fill: var(--ni-tone); }
 :root .ni3d .ni-tone-soft { fill: var(--ni-tone-soft); }
 :root .ni3d .ni-spark { fill: var(--ni-spark); }
-:root .sb-icon .ni3d { filter: none; opacity: var(--ni-opacity); }
-/* Active nav icon: full strength, in the active tones (identical to resting in light). */
-:root .sb-link.is-active .ni3d {
-  opacity: 1;
-  --ni-light: var(--ni-on-light);
-  --ni-base: var(--ni-on-base);
-  --ni-side: var(--ni-on-side);
-  --ni-accent: var(--ni-on-side);
-  --ni-tone: var(--ni-on-base);
-  --ni-tone-soft: var(--ni-on-light);
-  --ni-pin: var(--ni-on-base);
-}
-
 /* Modal backdrops: a soft sand veil instead of a black wash. */
 :root .scrim { background-color: color-mix(in srgb, var(--sand-deep) 70%, transparent); }
 
@@ -3660,13 +3472,6 @@ span.tracking-\[0\.4em\] {
 :root .xp-stack-label,
 :root .xp-tenure,
 :root .ad-row-tag { color: var(--ink-label); }
-
-/* Sidebar footer icon buttons: a sand tile with a hairline in light. */
-:root .sidebar-footer .sidebar-icon-btn {
-  background-color: var(--iconbtn-bg);
-  border: 1px solid var(--iconbtn-border);
-  color: var(--iconbtn-ink);
-}
 
 /* Secondary button: moss outline, 1.5px in light via an inset ring. */
 :root .btn2 {
@@ -4700,158 +4505,6 @@ span.tracking-\[0\.4em\] {
   .rs-stage { transition: none; }
 }
 
-/* ===== SIDEBAR FOOTER =====
- * "connect" and "preferences", each labelled like the nav groups. Rows share
- * the nav links' height and hover fill; sound is a real switch, theme a
- * two-option control with a sliding tile. */
-.sf {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sf-label {
-  display: block;
-  margin: 10px 0 4px;
-  padding: 0 10px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-label);
-}
-
-.sf-label:first-child { margin-top: 2px; }
-
-.sf-links {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sf-link,
-.sf-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  height: 32px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  font-family: Geist, system-ui, sans-serif;
-  font-size: var(--fs-small);
-  color: var(--sb-ink);
-  text-align: left;
-  cursor: pointer;
-  transition: color 160ms ease, background-color 160ms ease;
-}
-
-@media (hover: hover) {
-  .sf-link:hover,
-  .sf-row:hover {
-    color: var(--text-primary);
-    background-color: var(--sb-hover);
-  }
-}
-
-.sf-arrow {
-  margin-left: auto;
-  color: var(--arrow-ink);
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms ease;
-}
-
-.sf-link:hover .sf-arrow { color: var(--accent-ink); transform: translate(2px, -2px); }
-
-/* Sound switch */
-.sf-switch {
-  position: relative;
-  flex: none;
-  width: 28px;
-  height: 16px;
-  margin-left: auto;
-  border-radius: 999px;
-  background: var(--sand-deep);
-  transition: background-color 220ms ease;
-}
-
-.sf-switch i {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--bg-page);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sf-row[aria-checked='true'] .sf-switch { background: var(--moss); }
-.sf-row[aria-checked='true'] .sf-switch i { transform: translateX(12px); }
-
-/* Theme choice */
-.sf-theme {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin-top: 6px;
-  padding: 3px;
-  border: 1px solid var(--sand-deep);
-  border-radius: 8px;
-}
-
-.sf-theme-thumb {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  border: 1px solid var(--sand-deep);
-  border-radius: 6px;
-  background: var(--sand);
-  box-shadow: var(--shadow-warm-soft);
-  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sf-theme[data-mode-choice='dark'] .sf-theme-thumb { transform: translateX(100%); }
-
-.sf-theme-opt {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 28px;
-  border: 0;
-  background: none;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ink-muted);
-  cursor: pointer;
-  transition: color 200ms ease;
-}
-
-.sf-theme-opt[aria-pressed='true'] { color: var(--text-primary); cursor: default; }
-.sf-theme-opt:hover { color: var(--text-primary); }
-
-.sf-link:focus-visible,
-.sf-row:focus-visible,
-.sf-theme-opt:focus-visible {
-  outline: 2px solid var(--sage);
-  outline-offset: 1px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sf-arrow,
-  .sf-switch,
-  .sf-switch i,
-  .sf-theme-thumb { transition: none; }
-}
-
 /* ===== WORKS LIST VIEW =====
  * Same language as the resources list: ruled rows, name over a one-line
  * summary, quiet tags and the live link on the right. Rows rise in with a
@@ -5153,22 +4806,18 @@ span.tracking-\[0\.4em\] {
 }
 
 /* Simulated hovers mirror the real hover styles; nothing is actually hovered. */
-.sb-link[data-tour-active]:not(.is-active) {
-  color: var(--text-primary);
-  background-color: var(--sb-hover);
+.di-link[data-tour-active]:not(.is-active) {
+  color: var(--di-ink-strong);
+  background-color: var(--di-hover);
 }
-.sb-link[data-tour-active] .sb-label { transform: translateX(2px); }
-.sb-link[data-tour-active] .ni3d,
 :root .hx-links [data-tour-active] .ni3d { filter: none; transform: translateY(-2px) rotate(-6deg) scale(1.08); }
 :root .hx-links [data-tour-active] { color: var(--hx-ink); }
 :root .hx-links [data-tour-active] .hx-arrow { color: var(--hx-ink); transform: translate(2px, -2px); }
 
-/* Theme preview: the thumb slides across and back without changing the theme. */
-.sf-theme[data-mode-choice='light'][data-tour-flip] .sf-theme-thumb { transform: translateX(100%); }
-.sf-theme[data-mode-choice='dark'][data-tour-flip] .sf-theme-thumb { transform: translateX(0); }
+/* Theme preview: the island's theme glyph spins round without changing the theme. */
+.di-icon[data-tour-flip] .di-icon-glyph { transform: rotate(180deg); transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1); }
 
 /* "replay intro" links */
-.sf-replay,
 .mobile-menu-replay {
   align-self: flex-start;
   margin-top: 8px;
@@ -5186,15 +4835,12 @@ span.tracking-\[0\.4em\] {
 }
 
 .mobile-menu-replay { padding: 0; }
-.sf-replay:hover,
 .mobile-menu-replay:hover { color: var(--accent-ink); }
-.sf-replay:focus-visible,
 .mobile-menu-replay:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
 
 /* Tour hovers fade in and out instead of snapping. The real hover styles keep
    their own timing; these only apply while the tour drives the state. */
-.it-tour-on .sb-link,
-.it-tour-on .sb-label,
+.it-tour-on .di-link,
 .it-tour-on .hx-links a,
 .it-tour-on .hx-links button,
 .it-tour-on .hx-arrow {
@@ -5204,7 +4850,6 @@ span.tracking-\[0\.4em\] {
     transform 300ms cubic-bezier(0.22, 0.8, 0.24, 1);
 }
 
-.it-tour-on .sb-link .ni3d,
 .it-tour-on .hx-links .ni3d {
   transition: transform 340ms cubic-bezier(0.22, 0.8, 0.24, 1), filter 240ms ease;
 }
@@ -5429,145 +5074,573 @@ span.tracking-\[0\.4em\] {
   .gpc-handle { transition: none; }
 }
 
-/* ===== Collapsible desktop sidebar =====
-   The rail narrows to an icon column. Icons never move: the aside's padding
-   and each row's left padding stay fixed, so only the width animates and text
-   fades out of the clipped edge. The page reflows with it because <main> is
-   flex: 1 beside the aside. */
-.sb {
-  --sb-ease: cubic-bezier(0.32, 0.72, 0, 1);
-  width: 210px;
-  overflow-x: hidden;
-  transition:
-    width 380ms var(--sb-ease),
-    background-color 200ms ease,
-    border-color 200ms ease;
+/* ===== DESKTOP ISLAND (DesktopIsland.tsx) =====
+   Desktop nav as a floating Dynamic Island, top centre. Black in both
+   themes, like the real one: expanded at the top of a page, compact
+   (avatar + current section) once scrolled, springing open on hover or
+   focus. "More" pops a matching panel out of its right end. */
+.di-wrap {
+  --di-bg: #0E0F0C;
+  --di-ink: rgb(240 233 217 / 0.66);
+  --di-ink-strong: #F7F2E6;
+  --di-hover: rgb(255 255 255 / 0.08);
+  --di-active: rgb(255 255 255 / 0.15);
+  --di-ring: rgb(255 255 255 / 0.07);
+  /* Sage, the site's green, lifted for contrast on black. Music + live dot. */
+  --di-accent: #8FBF6F;
+  --di-shadow:
+    0 0 0 1px var(--di-ring),
+    0 10px 30px -10px rgb(0 0 0 / 0.45),
+    0 2px 6px rgb(0 0 0 / 0.18);
+  position: fixed;
+  top: 14px;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.sb[data-collapsed='true'] { width: 68px; }
+.di-anchor {
+  position: relative;
+  pointer-events: auto;
+}
 
-.sb-identity { position: relative; }
-
-/* Profile link home. Bleeds 4px past the row so its hover tile frames the
-   avatar without shifting it. */
-.sb-home {
+.di {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-  margin: -4px;
-  padding: 4px;
-  border-radius: 10px;
-  transition: background-color 160ms ease;
-}
-
-@media (hover: hover) {
-  .sb-home:hover { background: var(--sb-hover); }
-}
-
-.sb-home:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 1px; }
-
-.sb-name { flex: 1; }
-
-/* Text that leaves when collapsed. On the way out it fades fast and first; on
-   the way back it waits for the width to open so it never wraps or squeezes. */
-.sb :is(.sb-name, .sb-group-text, .sf-label, .sf-text, .sf-theme-opt span, .sf-replay) {
-  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, color 200ms ease;
-}
-.sb .sb-label {
-  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, transform 200ms cubic-bezier(.2, .7, .2, 1);
-}
-.sb .sf-arrow {
-  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, transform 300ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms ease;
-}
-.sb .sf-switch {
-  transition: opacity 220ms ease 140ms, visibility 0s linear 0s, background-color 220ms ease;
-}
-
-.sb[data-collapsed='true'] :is(.sb-name, .sb-label, .sb-group-text, .sf-label, .sf-text, .sf-arrow, .sf-switch, .sf-theme-opt span, .sf-replay) {
-  opacity: 0;
-  visibility: hidden;
-  transition-duration: 120ms, 0s;
-  transition-delay: 0s, 120ms;
-}
-
-.sf-link,
-.sf-row {
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  padding: 5px;
+  background: var(--di-bg);
+  color: var(--di-ink);
+  box-shadow: var(--di-shadow);
+  font-family: var(--font-sans);
   overflow: hidden;
+  will-change: transform;
+}
+
+.di-lead,
+.di-trail {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.di-home {
+  display: block;
+  border-radius: 999px;
+  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.di-home:hover { transform: scale(1.06); }
+
+.di-avatar {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.15);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+
+/* Expanded: the sections as text links. */
+.di-nav {
+  display: flex;
+  align-items: center;
+  gap: 1px;
   white-space: nowrap;
 }
 
-/* Section break: the ENGAGE label hands its slot to a short rule. */
-.sb-group-label { position: relative; }
-.sb-group-label::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 10px;
-  width: 16px;
-  height: 1px;
-  background: var(--sand-deep);
-  opacity: 0;
-  transition: opacity 200ms ease;
+.di-link {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--di-ink);
+  text-decoration: none;
+  transition: color 180ms ease, background-color 200ms ease;
 }
-.sb[data-collapsed='true'] .sb-group-label::before { opacity: 1; transition-delay: 160ms; }
 
-/* Toggle button */
-.sb-toggle {
+.di-link:hover { color: var(--di-ink-strong); }
+:root .di-link.is-active { color: var(--di-ink-strong); }
+
+.di-link-text { position: relative; }
+
+.di-hover,
+.di-active {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+}
+
+.di-hover { z-index: -2; background: var(--di-hover); }
+.di-active {
+  z-index: -1;
+  background: var(--di-active);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+}
+
+.di-sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: rgb(255 255 255 / 0.14);
+}
+
+/* Compact: what you're looking at, with a live dot. */
+.di-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px 0 6px;
+  white-space: nowrap;
+}
+
+.di-now-icon { display: inline-flex; }
+
+.di-now-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--di-ink-strong);
+}
+
+.di-now-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--di-accent);
+  box-shadow: 0 0 0 0 rgb(143 191 111 / 0.6);
+  animation: di-live 2.4s ease-out infinite;
+}
+
+@keyframes di-live {
+  0% { box-shadow: 0 0 0 0 rgb(143 191 111 / 0.55); }
+  70%, 100% { box-shadow: 0 0 0 7px rgb(143 191 111 / 0); }
+}
+
+/* Round icon buttons at the end: theme and more. */
+.di-icon {
   display: grid;
   place-items: center;
-  flex: none;
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--ink-muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--di-ink);
   cursor: pointer;
-  transition: color 160ms ease, background-color 160ms ease, opacity 200ms ease;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
-.sb-toggle:hover { color: var(--text-primary); background: var(--sb-hover); }
-.sb-toggle:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 1px; }
+.di-icon:hover { background: var(--di-hover); color: var(--di-ink-strong); }
+.di-icon.is-on { background: var(--di-active); color: var(--di-ink-strong); }
+.di-icon-glyph { display: grid; place-items: center; }
 
-.sb-avatar { transition: opacity 200ms ease; }
-
-/* Collapsed: the toggle sits on the avatar and swaps in on hover or focus. */
-.sb[data-collapsed='true'] .sb-toggle {
+/* Panel: grows out of the island's right end. */
+.di-panel {
   position: absolute;
-  top: 4px;
-  left: 6px;
-  margin: 0;
-  opacity: 0;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 264px;
+  padding: 8px;
+  border-radius: 24px;
+  background: var(--di-bg);
+  color: var(--di-ink-strong);
+  box-shadow: var(--di-shadow);
+  font-family: var(--font-sans);
 }
-.sb[data-collapsed='true'] .sb-identity:hover .sb-toggle,
-.sb[data-collapsed='true'] .sb-toggle:focus-visible { opacity: 1; }
-.sb[data-collapsed='true'] .sb-identity:hover .sb-avatar,
-.sb[data-collapsed='true'] .sb-identity:has(.sb-toggle:focus-visible) .sb-avatar { opacity: 0; }
 
-/* Theme choice stacks vertically so both options still fit the rail. */
-.sb[data-collapsed='true'] .sf-theme { grid-template-columns: 1fr; }
-.sb[data-collapsed='true'] .sf-theme-opt { gap: 0; }
-.sb[data-collapsed='true'] .sf-theme-opt span { display: none; }
-.sb[data-collapsed='true'] .sf-theme-thumb {
-  right: 3px;
-  bottom: auto;
-  width: auto;
-  height: calc(50% - 3px);
+.di-panel-label {
+  display: block;
+  padding: 8px 10px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(240 233 217 / 0.45);
 }
-.sb[data-collapsed='true'] .sf-theme[data-mode-choice='dark'] .sf-theme-thumb { transform: translateY(100%); }
-.sb[data-collapsed='true'] .sf-theme[data-mode-choice='light'][data-tour-flip] .sf-theme-thumb { transform: translateY(100%); }
-.sb[data-collapsed='true'] .sf-theme[data-mode-choice='dark'][data-tour-flip] .sf-theme-thumb { transform: translateY(0); }
+
+.di-panel-list {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.di-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--di-ink-strong);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.di-row:hover { background: var(--di-hover); }
+
+.di-row-arrow {
+  margin-left: auto;
+  opacity: 0.45;
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 160ms ease;
+}
+
+.di-row:hover .di-row-arrow { opacity: 0.9; transform: translate(2px, -2px); }
+
+/* iOS switch */
+.di-switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 22px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  transition: background-color 240ms ease;
+}
+
+.di-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.3);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.di-row[aria-checked='true'] .di-switch { background: #6FA35A; }
+.di-row[aria-checked='true'] .di-switch i { transform: translateX(14px); }
+
+/* Segmented theme control */
+.di-seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 6px 4px 2px;
+  padding: 2px;
+  border-radius: 11px;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.di-seg-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.di-seg[data-mode-choice='dark'] .di-seg-thumb { transform: translateX(100%); }
+
+.di-seg button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--di-ink);
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.di-seg button[aria-pressed='true'] { color: var(--di-ink-strong); cursor: default; }
+
+.di-replay {
+  display: block;
+  margin: 8px 10px 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: rgb(240 233 217 / 0.5);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.di-replay:hover { color: var(--di-ink-strong); }
+
+.di-wrap :is(a, button):focus-visible {
+  outline: 2px solid #B7CFA6;
+  outline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .sb,
-  .sb :is(.sb-name, .sb-label, .sb-group-text, .sf-label, .sf-text, .sf-arrow, .sf-switch, .sf-theme-opt span, .sf-replay),
-  .sb-group-label::before,
-  .sb-toggle,
-  .sb-avatar { transition: none; }
+  .di-now-dot { animation: none; }
+  .di-home,
+  .di-row-arrow,
+  .di-switch i,
+  .di-seg-thumb { transition: none; }
+}
+
+
+/* Each link sits in a slot so it can fade in on its own beat. */
+.di-link-slot { display: inline-flex; }
+
+/* Live activity: artwork left, bars right, like a song in the real island. */
+.di-now-art {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.15);
+}
+
+
+.di-icon.is-playing { color: var(--di-accent); }
+.di-icon-eq { height: 14px; }
+
+/* Apple Music's playing indicator. Bars rest low when paused. */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.eq i {
+  width: 3px;
+  height: 30%;
+  border-radius: 1px;
+  background: currentColor;
+  transition: height 300ms ease;
+}
+
+.eq.is-playing i { animation: eq-bounce 900ms ease-in-out infinite alternate; }
+.eq.is-playing i:nth-child(2) { animation-duration: 700ms; animation-delay: -300ms; }
+.eq.is-playing i:nth-child(3) { animation-duration: 1000ms; animation-delay: -600ms; }
+.eq.is-playing i:nth-child(4) { animation-duration: 800ms; animation-delay: -150ms; }
+
+@keyframes eq-bounce {
+  0% { height: 22%; }
+  50% { height: 100%; }
+  100% { height: 45%; }
+}
+
+
+/* ---- Now Playing (NowPlaying.tsx) ----
+   Compact, like the expanded Dynamic Island player: artwork and titles on
+   one line, a thin scrubber with times either side, one row of controls. */
+.di-panel.di-panel-music {
+  width: 300px;
+  padding: 0;
+  border-radius: 26px;
+}
+
+.np {
+  padding: 14px 16px 10px;
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+.np-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.np-art {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px -4px rgb(0 0 0 / 0.6), 0 0 0 0.5px rgb(255 255 255 / 0.12);
+  user-select: none;
+}
+
+.np-meta { flex: 1; min-width: 0; }
+
+.np-title,
+.np-artist {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.np-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.np-artist {
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.55);
+}
+
+.np-eq { flex: none; color: var(--di-accent); }
+
+/* Scrubber: a thin bar that thickens under the pointer, no thumb. */
+.np-scrub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.np-time {
+  flex: none;
+  min-width: 30px;
+  font-family: var(--font-geist);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgb(255 255 255 / 0.5);
+}
+
+.np-time:last-child { text-align: right; }
+
+.np input[type='range'] {
+  --h: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.np input[type='range']:disabled { cursor: default; opacity: 0.5; }
+
+.np input[type='range']::-webkit-slider-runnable-track {
+  height: var(--h);
+  border-radius: 999px;
+  background: linear-gradient(to right, rgb(255 255 255 / 0.85) var(--p), rgb(255 255 255 / 0.2) var(--p));
+  transition: height 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.np input[type='range']::-moz-range-track {
+  height: var(--h);
+  border-radius: 999px;
+  background: linear-gradient(to right, rgb(255 255 255 / 0.85) var(--p), rgb(255 255 255 / 0.2) var(--p));
+}
+
+.np input[type='range']::-webkit-slider-thumb {
+  width: 0;
+  height: 0;
+  border: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.np input[type='range']::-moz-range-thumb { width: 0; height: 0; border: 0; }
+
+.np input[type='range']:hover:not(:disabled),
+.np input[type='range']:active:not(:disabled),
+.np input[type='range']:focus-visible { --h: 7px; }
+
+.np input[type='range']:focus-visible { outline: none; }
+.np input[type='range']:focus-visible::-webkit-slider-runnable-track { box-shadow: 0 0 0 2px #B7CFA6; }
+
+/* Controls: repeat · back · play · forward · open, evenly spread. */
+.np-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.np-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.np-btn:hover:not(:disabled) { background: rgb(255 255 255 / 0.1); }
+.np-btn:disabled { opacity: 0.35; cursor: default; }
+.np-side { color: rgb(255 255 255 / 0.5); }
+.np-side:hover { color: #fff; }
+.np-side.is-on { color: var(--di-accent); }
+.np-play { width: 44px; height: 44px; }
+
+.np-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgb(255 255 255 / 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: np-spin 800ms linear infinite;
+}
+
+@keyframes np-spin { to { transform: rotate(360deg); } }
+
+.np-error {
+  margin: 12px 0 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.np-error a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+
+.np :is(button, a):focus-visible {
+  outline: 2px solid #B7CFA6;
+  outline-offset: 2px;
+}
+
+/* The YouTube iframe lives offscreen; the card above is its interface. */
+.yt-audio-host {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq.is-playing i { animation: none; height: 70%; }
+  .np input[type='range']::-webkit-slider-runnable-track { transition: none; }
 }
 
 /* ===== Views =====

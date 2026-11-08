@@ -21,6 +21,7 @@ import { InteractiveProfile } from './components/InteractiveProfile';
 import { WalkingCat } from './components/WalkingCat';
 import { NavIcon3D, type NavIcon3DName } from './components/NavIcon3D';
 import { IntroTour, replayIntroTour } from './components/IntroTour';
+import { DesktopIsland } from './components/DesktopIsland';
 import { Hero } from './components/Hero';
 import { NotFound404 } from './components/NotFound404';
 import {
@@ -924,27 +925,6 @@ const SidebarNavigation = ({
   // Stable so the menu's lock/trap effect doesn't re-run on every render.
   const closeMenu = React.useCallback(() => setIsOpen(false), []);
 
-  // Desktop rail mode. Read synchronously so a remembered choice paints
-  // collapsed on first frame instead of animating shut on load.
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem('sb-collapsed') === '1'; } catch { return false; }
-  });
-  const toggleCollapsed = React.useCallback(() => {
-    setCollapsed((c) => !c);
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem('sb-collapsed', collapsed ? '1' : '0'); } catch { /* private mode */ }
-  }, [collapsed]);
-  // "[" toggles the rail, as in Linear and Figma. Ignored while typing.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '[' || e.metaKey || e.ctrlKey || e.altKey) return;
-      if ((e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      toggleCollapsed();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [toggleCollapsed]);
   const handleMobileNavigate = (id: string) => {
     setIsOpen(false);
     // Tapping the view you're already on doesn't change the route; take it
@@ -992,162 +972,28 @@ const SidebarNavigation = ({
   // Router match drives the active state. On home (`/`) no section is active.
   const isLinkActive = (id: string, isActive: boolean) => isActive || activeSection === id;
 
-  const renderDesktopNavLink = (link: { id: string; name: string; href: string; icon: React.ReactNode }) => (
-    <NavLink
-      key={link.id}
-      to={`/${link.id}`}
-      aria-label={link.name}
-      title={collapsed ? link.name : undefined}
-      data-tour={link.id === 'work' ? 'sb-work' : ['services', 'resources', 'contact'].includes(link.id) ? 'sb-more' : 'sb-top'}
-      className={({ isActive }) => `sb-link group ${isLinkActive(link.id, isActive) ? 'is-active' : ''}`}
-    >
-      {({ isActive }) => (
-        <>
-          {/* One shared pill: layoutId slides it between rows as the active
-              section changes, so scrolling visibly moves the nav. */}
-          {isLinkActive(link.id, isActive) && (
-            <motion.span
-              layoutId="sb-active-pill"
-              aria-hidden="true"
-              className="sb-pill"
-              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }}
-            >
-              <span className="sb-pill-bar" />
-            </motion.span>
-          )}
-          <span className="sb-icon">{link.icon}</span>
-          <span className="sb-label">{link.name}</span>
-        </>
-      )}
-    </NavLink>
+  // Desktop island: the same two groups, by id (icons share the ids).
+  const islandGroups = [group1Links, group2Links].map((g) =>
+    g.map((l) => ({ id: l.id, name: l.name, icon: l.id as NavIcon3DName })),
   );
 
   return (
     <>
-      {/* Desktop Fixed Left Sidebar (≥1024px) */}
-      <aside
-        className={`sb hidden lg:flex flex-shrink-0 h-screen sticky top-0 border-r flex-col p-4 z-40 select-none overflow-y-auto bg-[var(--sidebar-bg)] border-[var(--sand-deep)]`}
-        data-collapsed={collapsed}
-      >
-        {/* Top: Identity Block */}
-        <div className="sb-identity">
-          {/* Home: the full page from the hero down, scrollable through every section. */}
-          <Link
-            to="/"
-            onClick={goHome}
-            className="sb-home"
-            aria-label="Kellas Andrei, home"
-            aria-current={activeSection === 'home' ? 'page' : undefined}
-            title={collapsed ? 'Home' : undefined}
-          >
-            <img src="/img/drei.png" alt="" className="sb-avatar" />
-            <span className="sb-name min-w-0 t-small font-sans font-medium truncate c-primary">Kellas Andrei</span>
-          </Link>
-          {/* Collapsed, this sits over the avatar and fades in on hover. */}
-          <button
-            type="button"
-            className="sb-toggle"
-            onClick={toggleCollapsed}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={`${collapsed ? 'Expand' : 'Collapse'} sidebar  [`}
-          >
-            <SidebarSimple size={16} weight="regular" aria-hidden="true" />
-          </button>
-        </div>
-
-        {/* Vertical Nav Links, two groups */}
-        <nav className="flex flex-col w-full mt-7 mb-auto" aria-label="Sections">
-          <div className="flex flex-col gap-0.5">
-            {group1Links.map(renderDesktopNavLink)}
-          </div>
-
-          <span className="sb-group-label t-label font-mono uppercase c-tertiary">
-            <span className="sb-group-text">ENGAGE</span>
-          </span>
-          <div className="flex flex-col gap-0.5">
-            {group2Links.map(renderDesktopNavLink)}
-          </div>
-        </nav>
-
-        {/* Footer: labelled links, then preferences with real controls, so
-            nothing has to be guessed from an icon alone. */}
-        <div className="sidebar-footer sf mt-auto pt-3 border-t border-[var(--sand-deep)]">
-          <span className="sf-label">connect</span>
-          <ul className="sf-links">
-            {[
-              { label: 'GitHub', icon: 'github' as const, href: 'https://github.com/kellasandyyyy1', external: true },
-              { label: 'LinkedIn', icon: 'linkedin' as const, href: 'https://www.linkedin.com/in/andrei-wayne-kellas-03a6153a4', external: true },
-              { label: 'Email', icon: 'contact' as const, href: 'mailto:kellasandrei00@gmail.com', external: false },
-            ].map((link) => (
-              <li key={link.label}>
-                <a
-                  href={link.href}
-                  {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  className="sf-link"
-                  data-tour="sb-social"
-                  aria-label={link.label}
-                  title={collapsed ? link.label : undefined}
-                >
-                  <NavIcon3D name={link.icon} size={16} />
-                  <span className="sf-text">{link.label}</span>
-                  <ArrowUpRight weight="light" size={11} className="sf-arrow" aria-hidden="true" />
-                </a>
-              </li>
-            ))}
-          </ul>
-
-          <span className="sf-label">preferences</span>
-          <button data-sound="mute-toggle"
-            type="button"
-            role="switch"
-            aria-checked={!soundMuted}
-            onClick={() => {
-              // Clack only when unmuting, so muting is silent. The delegated click sound
-              // skips this button: at pointerdown the state hasn't flipped yet.
-              const nowMuted = toggleSound();
-              if (!nowMuted) play('switch');
-            }}
-            className="sf-row"
-            aria-label="Sound"
-            title={collapsed ? (soundMuted ? 'Sound off' : 'Sound on') : undefined}
-          >
-            <NavIcon3D name={soundMuted ? 'mute' : 'sound'} size={16} />
-            <span className="sf-text">Sound</span>
-            <span className="sf-switch" aria-hidden="true"><i /></span>
-          </button>
-
-          <div className="sf-theme" role="group" aria-label="Theme" data-mode-choice={theme} data-tour="theme">
-            <span className="sf-theme-thumb" aria-hidden="true" />
-            <button
-              type="button"
-              aria-pressed={theme === 'light'}
-              onClick={() => { if (theme !== 'light') toggleTheme(); }}
-              className="sf-theme-opt"
-              data-sound="switch"
-              aria-label="Light theme"
-            >
-              <NavIcon3D name="sun" size={14} />
-              <span>light</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={theme === 'dark'}
-              onClick={() => { if (theme !== 'dark') toggleTheme(); }}
-              className="sf-theme-opt"
-              data-sound="switch"
-              aria-label="Dark theme"
-            >
-              <NavIcon3D name="moon" size={14} />
-              <span>dark</span>
-            </button>
-          </div>
-
-          <button type="button" className="sf-replay" onClick={replayIntroTour}>
-            replay intro
-          </button>
-        </div>
-      </aside>
+      {/* Desktop (≥1024px): a floating Dynamic Island at the top. */}
+      <DesktopIsland
+        groups={islandGroups}
+        activeSection={activeSection}
+        onHome={goHome}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        soundMuted={soundMuted}
+        onToggleSound={() => {
+          // Clack only when unmuting, so muting is silent.
+          const nowMuted = toggleSound();
+          if (!nowMuted) play('switch');
+        }}
+        onReplayTour={replayIntroTour}
+      />
 
       {/* Tablet Header (768px - 1023px) */}
       <header className={`hidden md:flex lg:hidden w-full border-b px-6 py-3.5 items-center justify-between sticky top-0 z-50 transition-colors bg-[var(--cream)] border-[var(--sand-deep)]`}>
