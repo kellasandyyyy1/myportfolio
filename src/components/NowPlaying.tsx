@@ -1,15 +1,14 @@
 import * as React from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-import { ArrowSquareOut, FastForward, Pause, Play, Repeat, Rewind } from '@phosphor-icons/react';
-import { fmtTime, type AudioStatus } from './useYouTubeAudio';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ArrowSquareOut, Pause, Play, Repeat, SkipBack, SkipForward } from '@phosphor-icons/react';
+import { fmtTime, trackArt, trackUrl, type AudioStatus, type Track } from './useYouTubeAudio';
 
-export const TRACK = {
-  id: '6da5__GEito',
-  title: 'Thinking About You',
-  artist: 'Calvin Harris ft. Ayah Marar',
-  art: 'https://i.ytimg.com/vi/6da5__GEito/mqdefault.jpg',
-  url: 'https://youtu.be/6da5__GEito',
-};
+/** The playlist, in play order. `start` skips into a video (seconds). */
+export const PLAYLIST: Track[] = [
+  { id: '6da5__GEito', title: 'Thinking About You', artist: 'Calvin Harris ft. Ayah Marar' },
+  { id: 'aWUWC21_HE8', title: 'Thinkin Bout You (Live on SNL)', artist: 'Frank Ocean', start: 81 },
+  { id: '8Ee4QjCEHHc', title: 'Slide', artist: 'Calvin Harris ft. Frank Ocean & Migos' },
+];
 
 /** Apple Music's playing indicator: four bars bouncing out of step. */
 export function EqBars({ playing, className = '' }: { playing: boolean; className?: string }) {
@@ -25,21 +24,39 @@ export function EqBars({ playing, className = '' }: { playing: boolean; classNam
 
 export interface NowPlayingProps {
   status: AudioStatus;
+  track: Track;
+  index: number;
+  count: number;
   current: number;
   duration: number;
   loop: boolean;
   onToggle: () => void;
   onSeek: (seconds: number) => void;
-  onSkip: (delta: number) => void;
+  onNext: () => void;
+  onPrevious: () => void;
   onToggleLoop: () => void;
 }
 
 /**
  * Compact Now Playing, like the expanded Dynamic Island / lock-screen
  * player: small artwork with title and artist beside it, a thin scrubber
- * with times, and one row of controls.
+ * with times, and one row of controls. Changing track slides the artwork
+ * and titles over in the direction of travel.
  */
-export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, onSkip, onToggleLoop }: NowPlayingProps) {
+export function NowPlaying({
+  status,
+  track,
+  index,
+  count,
+  current,
+  duration,
+  loop,
+  onToggle,
+  onSeek,
+  onNext,
+  onPrevious,
+  onToggleLoop,
+}: NowPlayingProps) {
   const reduceMotion = useReducedMotion();
   const playing = status === 'playing';
   const loading = status === 'loading';
@@ -54,31 +71,64 @@ export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, 
     setScrub(null);
   };
 
+  // Slide direction follows the skip: forward slides left, back slides right.
+  const lastIndex = React.useRef(index);
+  const dir = index === lastIndex.current ? 1 : index > lastIndex.current || (lastIndex.current === count - 1 && index === 0) ? 1 : -1;
+  React.useEffect(() => {
+    lastIndex.current = index;
+  }, [index]);
+  const slide = {
+    initial: (d: number) => (reduceMotion ? { opacity: 0 } : { opacity: 0, x: d * 24 }),
+    animate: { opacity: 1, x: 0 },
+    exit: (d: number) => (reduceMotion ? { opacity: 0 } : { opacity: 0, x: d * -24 }),
+  };
+
   return (
     <div className="np">
       <div className="np-head">
-        <motion.img
-          src={TRACK.art}
-          alt=""
-          className="np-art"
-          draggable={false}
-          initial={false}
-          animate={{ scale: playing || reduceMotion ? 1 : 0.9 }}
-          transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.3 }}
-        />
-        <div className="np-meta">
-          <p className="np-title">{TRACK.title}</p>
-          <p className="np-artist">{TRACK.artist}</p>
-        </div>
+        <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+          <motion.div
+            key={track.id}
+            className="np-head-swap"
+            custom={dir}
+            variants={slide}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ type: 'spring', visualDuration: 0.35, bounce: 0.1 }}
+          >
+            <motion.img
+              src={trackArt(track)}
+              alt=""
+              className="np-art"
+              draggable={false}
+              initial={false}
+              animate={{ scale: playing || reduceMotion ? 1 : 0.9 }}
+              transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.3 }}
+            />
+            <div className="np-meta">
+              <p className="np-title">{track.title}</p>
+              <p className="np-artist">{track.artist}</p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
         <EqBars playing={playing} className="np-eq" />
       </div>
 
       {status === 'error' ? (
         <p className="np-error">
           Can't play here right now.{' '}
-          <a href={TRACK.url} target="_blank" rel="noopener noreferrer">
+          <a href={trackUrl(track)} target="_blank" rel="noopener noreferrer">
             Open on YouTube
           </a>
+          {count > 1 && (
+            <>
+              {' · '}
+              <button type="button" className="np-error-next" onClick={onNext}>
+                Next song
+              </button>
+            </>
+          )}
         </p>
       ) : (
         <>
@@ -107,7 +157,8 @@ export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, 
               className={`np-btn np-side${loop ? ' is-on' : ''}`}
               onClick={onToggleLoop}
               aria-pressed={loop}
-              aria-label="Repeat"
+              aria-label="Repeat playlist"
+              title="Repeat"
               whileTap={tap}
             >
               <Repeat size={15} weight="bold" />
@@ -115,12 +166,11 @@ export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, 
             <motion.button
               type="button"
               className="np-btn"
-              onClick={() => onSkip(-10)}
-              disabled={!ready}
-              aria-label="Back 10 seconds"
+              onClick={onPrevious}
+              aria-label="Previous song"
               whileTap={tap}
             >
-              <Rewind size={20} weight="fill" />
+              <SkipBack size={20} weight="fill" />
             </motion.button>
             <motion.button
               type="button"
@@ -140,16 +190,15 @@ export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, 
             <motion.button
               type="button"
               className="np-btn"
-              onClick={() => onSkip(10)}
-              disabled={!ready}
-              aria-label="Forward 10 seconds"
+              onClick={onNext}
+              aria-label="Next song"
               whileTap={tap}
             >
-              <FastForward size={20} weight="fill" />
+              <SkipForward size={20} weight="fill" />
             </motion.button>
             <a
               className="np-btn np-side"
-              href={TRACK.url}
+              href={trackUrl(track)}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open on YouTube"
@@ -158,6 +207,9 @@ export function NowPlaying({ status, current, duration, loop, onToggle, onSeek, 
               <ArrowSquareOut size={15} weight="bold" />
             </a>
           </div>
+          <p className="np-queue" aria-live="polite">
+            {index + 1} of {count}
+          </p>
         </>
       )}
     </div>

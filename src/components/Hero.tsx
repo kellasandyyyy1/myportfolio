@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { NavIcon3D } from './NavIcon3D';
 import { XeroxPortrait } from './XeroxPortrait';
+import { WorksFolder } from './WorksFolder';
 
 /**
  * Classic pixel arrow pointer, as on early Apple screens: white with a one-pixel
@@ -174,6 +175,11 @@ export function Hero({ onBookCall }: { onBookCall: () => void }) {
               book a call <span className="hx-arrow" aria-hidden="true">↗</span>
             </button>
           </nav>
+        </div>
+
+        {/* Desktop only: a folder shortcut to the works, fanning projects on hover. */}
+        <div className="hx-folder hx-in hidden lg:flex" style={{ '--d': '380ms' } as React.CSSProperties}>
+          <WorksFolder />
         </div>
       </div>
 

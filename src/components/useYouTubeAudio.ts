@@ -1,16 +1,31 @@
 import * as React from 'react';
 
 /**
- * Plays a YouTube video as background audio through the official IFrame
- * Player API. Nothing loads until the visitor presses play: the first
- * toggle() fetches YouTube's script and builds an offscreen player, so the
- * page never makes YouTube requests (or sound) on its own.
+ * Plays a playlist of YouTube videos as background audio through the
+ * official IFrame Player API. Nothing loads until the visitor presses play:
+ * the first toggle() fetches YouTube's script and builds an offscreen player,
+ * so the page never makes YouTube requests (or sound) on its own.
+ *
+ * Tracks play in order and move on when one ends; repeat loops the list.
+ * A track can start part-way in (`start`, in seconds).
  */
+
+export interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  /** Seconds into the video where the track begins. */
+  start?: number;
+}
+
+export const trackArt = (t: Track) => `https://i.ytimg.com/vi/${t.id}/mqdefault.jpg`;
+export const trackUrl = (t: Track) => `https://youtu.be/${t.id}${t.start ? `?t=${t.start}` : ''}`;
 
 type YTPlayer = {
   playVideo(): void;
   pauseVideo(): void;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
+  loadVideoById(opts: { videoId: string; startSeconds?: number }): void;
   setVolume(volume: number): void;
   getCurrentTime(): number;
   getDuration(): number;
@@ -66,23 +81,38 @@ function loadApi(): Promise<YTNamespace> {
 
 export type AudioStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'error';
 
-export function useYouTubeAudio(videoId: string) {
+export function useYouTubeAudio(tracks: Track[]) {
   const [status, setStatus] = React.useState<AudioStatus>('idle');
+  const [index, setIndex] = React.useState(0);
   const [current, setCurrent] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const [volume, setVolumeState] = React.useState(70);
   const [loop, setLoop] = React.useState(false);
-  const loopRef = React.useRef(loop);
-  loopRef.current = loop;
   const playerRef = React.useRef<YTPlayer | null>(null);
   const hostRef = React.useRef<HTMLDivElement | null>(null);
-  const volumeRef = React.useRef(volume);
-  volumeRef.current = volume;
+  // The player's callbacks are bound once; they read live values from refs.
+  const live = React.useRef({ index, loop, volume, tracks });
+  live.current = { index, loop, volume, tracks };
+
+  const track = tracks[index];
+
+  /** Switch the player to a track and play it from the track's start. */
+  const load = React.useCallback((i: number) => {
+    const t = live.current.tracks[i];
+    setIndex(i);
+    setCurrent(t.start ?? 0);
+    setDuration(0);
+    const player = playerRef.current;
+    if (!player) return;
+    setStatus('loading');
+    player.loadVideoById({ videoId: t.id, startSeconds: t.start ?? 0 });
+  }, []);
 
   const create = React.useCallback(async () => {
     setStatus('loading');
     try {
       const YT = await loadApi();
+      const t = live.current.tracks[live.current.index];
       // Offscreen host for the iframe; the visible UI is our own.
       const host = document.createElement('div');
       host.className = 'yt-audio-host';
@@ -92,13 +122,22 @@ export function useYouTubeAudio(videoId: string) {
       document.body.appendChild(host);
       hostRef.current = host;
       playerRef.current = new YT.Player(mount, {
-        videoId,
+        videoId: t.id,
         width: 200,
         height: 200,
-        playerVars: { autoplay: 1, controls: 0, disablekb: 1, playsinline: 1, rel: 0, fs: 0, iv_load_policy: 3 },
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          disablekb: 1,
+          playsinline: 1,
+          rel: 0,
+          fs: 0,
+          iv_load_policy: 3,
+          start: t.start ?? 0,
+        },
         events: {
           onReady: (e) => {
-            e.target.setVolume(volumeRef.current);
+            e.target.setVolume(live.current.volume);
             e.target.playVideo();
             setDuration(e.target.getDuration() || 0);
           },
@@ -106,16 +145,14 @@ export function useYouTubeAudio(videoId: string) {
             // -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
             if (e.data === 1) setStatus('playing');
             else if (e.data === 2) setStatus('paused');
-            else if (e.data === 0) {
-              // Repeat: straight back to the top instead of stopping.
-              if (loopRef.current) {
-                e.target.seekTo(0, true);
-                e.target.playVideo();
-              } else {
-                setStatus('ended');
-              }
-            }
             else if (e.data === 3) setStatus((s) => (s === 'playing' ? s : 'loading'));
+            else if (e.data === 0) {
+              // Next track; at the end of the list, loop or stop.
+              const { index: i, loop: repeat, tracks: list } = live.current;
+              if (i < list.length - 1) load(i + 1);
+              else if (repeat) load(0);
+              else setStatus('ended');
+            }
             setDuration(e.target.getDuration() || 0);
           },
           onError: () => setStatus('error'),
@@ -124,7 +161,7 @@ export function useYouTubeAudio(videoId: string) {
     } catch {
       setStatus('error');
     }
-  }, [videoId]);
+  }, [load]);
 
   const toggle = React.useCallback(() => {
     const player = playerRef.current;
@@ -134,11 +171,35 @@ export function useYouTubeAudio(videoId: string) {
     }
     if (status === 'playing') {
       player.pauseVideo();
+    } else if (status === 'ended') {
+      load(0);
     } else {
-      if (status === 'ended') player.seekTo(0, true);
       player.playVideo();
     }
-  }, [create, status]);
+  }, [create, load, status]);
+
+  /** Next track (wrapping), like Apple Music's skip. */
+  const next = React.useCallback(() => {
+    const { index: i, tracks: list } = live.current;
+    const to = (i + 1) % list.length;
+    if (playerRef.current) load(to);
+    else setIndex(to);
+  }, [load]);
+
+  /** Back: restart the track if it's a few seconds in, otherwise the previous one. */
+  const previous = React.useCallback(() => {
+    const { index: i, tracks: list } = live.current;
+    const t = list[i];
+    const player = playerRef.current;
+    if (player && player.getCurrentTime() - (t.start ?? 0) > 3) {
+      player.seekTo(t.start ?? 0, true);
+      setCurrent(t.start ?? 0);
+      return;
+    }
+    const to = (i - 1 + list.length) % list.length;
+    if (player) load(to);
+    else setIndex(to);
+  }, [load]);
 
   const seek = React.useCallback((seconds: number) => {
     const player = playerRef.current;
@@ -147,20 +208,12 @@ export function useYouTubeAudio(videoId: string) {
     setCurrent(seconds);
   }, []);
 
-  const skip = React.useCallback(
-    (delta: number) => {
-      const player = playerRef.current;
-      if (!player) return;
-      const to = Math.max(0, Math.min(player.getCurrentTime() + delta, (player.getDuration() || 0) - 0.5));
-      seek(to);
-    },
-    [seek],
-  );
-
   const setVolume = React.useCallback((v: number) => {
     setVolumeState(v);
     playerRef.current?.setVolume(v);
   }, []);
+
+  const toggleLoop = React.useCallback(() => setLoop((l) => !l), []);
 
   // Progress while playing.
   React.useEffect(() => {
@@ -169,6 +222,7 @@ export function useYouTubeAudio(videoId: string) {
       const player = playerRef.current;
       if (!player) return;
       setCurrent(player.getCurrentTime() || 0);
+      setDuration(player.getDuration() || 0);
     }, 250);
     return () => window.clearInterval(id);
   }, [status]);
@@ -182,17 +236,19 @@ export function useYouTubeAudio(videoId: string) {
     [],
   );
 
-  const toggleLoop = React.useCallback(() => setLoop((l) => !l), []);
-
   return {
     status,
+    track,
+    index,
+    count: tracks.length,
     current,
     duration,
     volume,
     loop,
     toggle,
+    next,
+    previous,
     seek,
-    skip,
     setVolume,
     toggleLoop,
     started: status !== 'idle',

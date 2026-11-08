@@ -3,8 +3,8 @@ import { Link, NavLink } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, type Transition } from 'motion/react';
 import { ArrowUpRight, DotsThree, Moon, MusicNotes, Sun } from '@phosphor-icons/react';
 import { NavIcon3D, type NavIcon3DName } from './NavIcon3D';
-import { EqBars, NowPlaying, TRACK } from './NowPlaying';
-import { useYouTubeAudio } from './useYouTubeAudio';
+import { EqBars, NowPlaying, PLAYLIST } from './NowPlaying';
+import { trackArt, useYouTubeAudio } from './useYouTubeAudio';
 
 /**
  * Desktop navigation as a floating "Dynamic Island" at the top of the page.
@@ -72,7 +72,7 @@ export function DesktopIsland({
   onReplayTour,
 }: DesktopIslandProps) {
   const reduceMotion = useReducedMotion();
-  const audio = useYouTubeAudio(TRACK.id);
+  const audio = useYouTubeAudio(PLAYLIST);
   const [scrolled, setScrolled] = React.useState(false);
   const [hovering, setHovering] = React.useState(false);
   const [focused, setFocused] = React.useState(false);
@@ -244,7 +244,7 @@ export function DesktopIsland({
                 </motion.nav>
               ) : (
                 <motion.div
-                  key={playing ? 'live' : 'compact'}
+                  key={playing ? `live-${audio.track.id}` : 'compact'}
                   layout="position"
                   className="di-now"
                   variants={swap}
@@ -255,8 +255,8 @@ export function DesktopIsland({
                 >
                   {playing ? (
                     <>
-                      <img src={TRACK.art} alt="" className="di-now-art" />
-                      <span className="di-now-text">{TRACK.title}</span>
+                      <img src={trackArt(audio.track)} alt="" className="di-now-art" />
+                      <span className="di-now-text">{audio.track.title}</span>
                     </>
                   ) : (
                     <>
@@ -311,7 +311,7 @@ export function DesktopIsland({
                 transition={morph}
                 type="button"
                 className={`di-icon${panel === 'music' ? ' is-on' : ''}${playing ? ' is-playing' : ''}`}
-                aria-label={playing ? `Now playing: ${TRACK.title}` : 'Music'}
+                aria-label={playing ? `Now playing: ${audio.track.title}` : 'Music'}
                 aria-expanded={panel === 'music'}
                 aria-controls="di-panel"
                 onClick={() => togglePanel('music')}
@@ -359,12 +359,16 @@ export function DesktopIsland({
                 {panel === 'music' ? (
                   <NowPlaying
                     status={audio.status}
+                    track={audio.track}
+                    index={audio.index}
+                    count={audio.count}
                     current={audio.current}
                     duration={audio.duration}
                     loop={audio.loop}
                     onToggle={audio.toggle}
                     onSeek={audio.seek}
-                    onSkip={audio.skip}
+                    onNext={audio.next}
+                    onPrevious={audio.previous}
                     onToggleLoop={audio.toggleLoop}
                   />
                 ) : (

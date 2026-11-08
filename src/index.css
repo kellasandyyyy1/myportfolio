@@ -2299,16 +2299,292 @@ span.tracking-\[0\.4em\] {
 
 .hx-stat dt::first-letter { text-transform: uppercase; }
 
+/* Tablet: portrait beside the copy, a little narrower so the copy has room,
+   and the stats stay two by two (four across is too tight for "Manila, PH"). */
 @media (min-width: 768px) {
+  .hx-top {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: center;
+  }
+}
+
+/* Desktop: four stats across and the full-size portrait. */
+@media (min-width: 1024px) {
   .hx-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-
   .hx-map { width: 40px; height: 51px; }
-
   .hx-top {
     grid-template-columns: 240px minmax(0, 1fr);
     gap: 3rem;
-    align-items: center;
   }
+}
+
+
+/* --- Works folder (WorksFolder.tsx), desktop only ---
+   An iOS-style folder in the site's sage. The front flap tips open on hover
+   and the latest projects fan up out of it. Layers, back to front: back
+   panel with its tab, a sheet of paper, the project cards, the front flap.
+
+   1024–1279px: no room for a third column, so it sits under the portrait at
+   a slightly smaller size; the fan opens up over the portrait.
+   1280px and up: its own column beside the copy, with headroom for the fan. */
+@media (min-width: 1024px) {
+  .hx-top {
+    grid-template-areas:
+      'photo intro'
+      'folder intro';
+    row-gap: 2rem;
+  }
+  .hx-window { grid-area: photo; align-self: end; }
+  .hx-intro { grid-area: intro; }
+  .hx-folder {
+    grid-area: folder;
+    align-self: start;
+    position: relative;
+    z-index: 5;
+  }
+  .hx-folder .wf {
+    transform: scale(0.857);
+    transform-origin: top left;
+    /* Give back the height the scale took off. */
+    margin-bottom: -28px;
+  }
+  /* The folder hugs the left edge here, so fan out from a little right of
+     centre to keep the leftmost card on screen. */
+  .hx-folder .wf-cards { left: calc(50% + 48px); }
+}
+
+@media (min-width: 1280px) {
+  .hx-top {
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+    grid-template-areas: 'photo intro folder';
+  }
+  .hx-window { align-self: center; }
+  .hx-folder {
+    align-self: center;
+    justify-content: center;
+    /* Headroom for the fan. */
+    padding-top: 180px;
+  }
+  .hx-folder .wf { transform: none; margin-bottom: 0; }
+  .hx-folder .wf-cards { left: 50%; }
+}
+
+.wf {
+  --wf-back: #5D7A4F;
+  --wf-front-top: #9DBA88;
+  --wf-front-bottom: #7A9867;
+  --wf-ink: #FBF8F0;
+  position: relative;
+  width: 280px;
+}
+
+.wf-stage {
+  position: relative;
+  width: 280px;
+  height: 196px;
+  perspective: 900px;
+}
+
+.wf-back {
+  position: absolute;
+  inset: 16px 0 0;
+  z-index: 1;
+  border-radius: 6px 20px 20px 20px;
+  background: linear-gradient(180deg, #67855A, var(--wf-back));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.12) inset;
+}
+
+/* The tab, with a soft slope into the panel. */
+.wf-tab {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  width: 118px;
+  height: 30px;
+  border-radius: 14px 14px 0 0;
+  background: #67855A;
+}
+
+.wf-tab::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -22px;
+  width: 34px;
+  height: 30px;
+  background: #67855A;
+  border-top-right-radius: 14px;
+  transform: skewX(38deg);
+  transform-origin: bottom left;
+}
+
+.wf-paper {
+  position: absolute;
+  top: 30px;
+  left: 18px;
+  right: 18px;
+  height: 80px;
+  z-index: 2;
+  border-radius: 12px;
+  background: #FBF8F0;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+  transform: rotate(-1.5deg);
+  transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.wf.is-open .wf-paper { transform: rotate(-3deg) translateY(-8px); }
+
+/* Cards hang from one point above the folder's middle. */
+.wf-cards {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  z-index: 3;
+  width: 0;
+  height: 0;
+}
+
+.wf-card {
+  position: absolute;
+  top: 0;
+  left: -62px;
+  width: 124px;
+  transform-origin: 50% 100%;
+}
+
+.wf-card-link {
+  display: block;
+  padding: 5px 5px 0;
+  border-radius: 14px;
+  background: #FFFDF8;
+  color: #26301F;
+  text-decoration: none;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.08),
+    0 10px 24px -10px rgb(0 0 0 / 0.35),
+    0 2px 6px rgb(0 0 0 / 0.08);
+}
+
+.wf-card-img {
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #E9E4D6;
+}
+
+.wf-card-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.wf-card-title {
+  display: block;
+  padding: 6px 4px 7px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Front flap: tips back from its bottom edge when open. */
+.wf-front {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  height: 146px;
+  border-radius: 20px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, var(--wf-front-top), var(--wf-front-bottom));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 14px 30px -12px rgb(47 74 43 / 0.55),
+    0 2px 6px rgb(47 74 43 / 0.18);
+}
+
+/* A soft sheen across the top, like the glossy iOS folder. */
+.wf-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 45%);
+  pointer-events: none;
+}
+
+.wf-front-link {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 18px 14px;
+  border-radius: inherit;
+  color: var(--wf-ink);
+  text-decoration: none;
+}
+
+.wf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wf-title {
+  font-family: var(--font-header);
+  font-size: 21px;
+  line-height: 1.1;
+  text-shadow: 0 1px 1px rgb(47 74 43 / 0.25);
+}
+
+.wf-open {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1), background-color 200ms ease;
+}
+
+.wf-front-link:hover .wf-open {
+  background: rgb(255 255 255 / 0.32);
+  transform: translate(1px, -1px) scale(1.06);
+}
+
+.wf-sub {
+  margin-top: 3px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgb(251 248 240 / 0.78);
+}
+
+.wf-count {
+  margin-top: auto;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgb(251 248 240 / 0.88);
+}
+
+.wf :is(a):focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-paper,
+  .wf-open { transition: none; }
 }
 
 /* --- Entrance: fade up 12px, staggered via --d --- */
@@ -5624,6 +5900,39 @@ span.tracking-\[0\.4em\] {
 .np :is(button, a):focus-visible {
   outline: 2px solid #B7CFA6;
   outline-offset: 2px;
+}
+
+
+/* Artwork + titles swap as one piece when the track changes. */
+.np-head { position: relative; overflow: clip; }
+
+.np-head-swap {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.np-queue {
+  margin: 0 0 2px;
+  text-align: center;
+  font-family: var(--font-geist);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgb(255 255 255 / 0.38);
+}
+
+.np-error-next {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 /* The YouTube iframe lives offscreen; the card above is its interface. */
